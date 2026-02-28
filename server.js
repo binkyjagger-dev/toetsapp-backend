@@ -7,23 +7,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── Clients ──────────────────────────────────────────────
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase  = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
 );
 
-// ── Health check ─────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({ status: 'ok', app: 'Socratische Toetsapp' });
 });
 
-// ══════════════════════════════════════════════════════════
-//  LESSEN
-// ══════════════════════════════════════════════════════════
-
-// Alle lessen ophalen
 app.get('/api/lessons', async (req, res) => {
   const { data, error } = await supabase
     .from('lessons')
@@ -33,7 +26,6 @@ app.get('/api/lessons', async (req, res) => {
   res.json(data);
 });
 
-// Nieuwe les aanmaken
 app.post('/api/lessons', async (req, res) => {
   const { id, name, content, created_at } = req.body;
   if (!id || !name || !content) return res.status(400).json({ error: 'Velden ontbreken' });
@@ -45,21 +37,14 @@ app.post('/api/lessons', async (req, res) => {
   res.json(data[0]);
 });
 
-// Les verwijderen
 app.delete('/api/lessons/:id', async (req, res) => {
   const { id } = req.params;
-  // Verwijder ook alle resultaten van deze les
   await supabase.from('results').delete().eq('lesson_id', id);
   const { error } = await supabase.from('lessons').delete().eq('id', id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
 
-// ══════════════════════════════════════════════════════════
-//  RESULTATEN
-// ══════════════════════════════════════════════════════════
-
-// Resultaten ophalen voor een les
 app.get('/api/results/:lessonId', async (req, res) => {
   const { data, error } = await supabase
     .from('results')
@@ -70,7 +55,6 @@ app.get('/api/results/:lessonId', async (req, res) => {
   res.json(data);
 });
 
-// Alle resultaten ophalen (voor dashboard stats)
 app.get('/api/results', async (req, res) => {
   const { data, error } = await supabase
     .from('results')
@@ -80,7 +64,6 @@ app.get('/api/results', async (req, res) => {
   res.json(data);
 });
 
-// Resultaat opslaan
 app.post('/api/results', async (req, res) => {
   const { id, lesson_id, lesson_name, student_name, understanding,
           refl_goed, refl_verbeteren, messages, timestamp } = req.body;
@@ -94,24 +77,16 @@ app.post('/api/results', async (req, res) => {
   res.json(data[0]);
 });
 
-// ══════════════════════════════════════════════════════════
-//  AI PROXY — verbergt de API-sleutel voor de browser
-// ══════════════════════════════════════════════════════════
-
-// Socratische vraag genereren
 app.post('/api/ai/question', async (req, res) => {
   const { lessonName, lessonContent, studentName, questionNumber, maxQuestions, messages } = req.body;
-
   const systemPrompt = `Je bent een Socratische gesprekspartner voor een economie les op de middelbare school.
 Les: "${lessonName}"
 Kernstof van de les: "${lessonContent}"
 Leerling: ${studentName}
-
 De leerling heeft net hun begrip uitgelegd. Stel één Socratische vervolgvraag die dieper ingaat op hun antwoord.
 Vraag naar oorzaken, gevolgen, uitzonderingen of toepassingen. Vraag nooit naar feitjes maar naar redenering.
 Wees warm en aanmoedigend. Houd de vraag kort (max 2 zinnen). Spreek de leerling aan met je/jij.
 Dit is vraag ${questionNumber} van ${maxQuestions}.`;
-
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -125,32 +100,22 @@ Dit is vraag ${questionNumber} van ${maxQuestions}.`;
   }
 });
 
-// Reflectie genereren
 app.post('/api/ai/reflection', async (req, res) => {
   const { messages } = req.body;
-
   const systemPrompt = `Je bent een economieleraar op de middelbare school die een Socratisch gesprek beoordeelt.
 Analyseer het gesprek en geef een eerlijke, gedifferentieerde beoordeling.
-
 Antwoord ALLEEN met JSON in exact dit formaat (geen extra tekst):
 {
   "niveau": <getal 1, 2, 3 of 4>,
   "goed": "...",
   "verbeteren": "..."
 }
-
-Niveau betekenis — wees streng en realistisch:
-1 = Onvoldoende: leerling toont nauwelijks begrip, antwoorden zijn oppervlakkig, vaag of incorrect
-2 = Matig: leerling begrijpt de basis maar mist diepgang, maakt fouten bij doorvragen, kan concepten niet goed verbinden
-3 = Goed: leerling begrijpt de stof, kan redeneren maar heeft nog hiaten bij complexere vragen
-4 = Uitstekend: leerling toont diep begrip, kan zelfstandig redeneren, legt verbanden en geeft goede voorbeelden
-
-"goed": 2-3 zinnen over wat de leerling aantoonbaar begrijpt op basis van het gesprek. Wees specifiek.
-"verbeteren": 2-3 zinnen over concrete lacunes, met een praktische studie-tip.
-
-Wees eerlijk — een leerling die vaag antwoordt is GEEN niveau 3 of 4.
-Spreek de leerling aan met je/jij. Schrijf warm maar direct.`;
-
+Niveau betekenis:
+1 = Onvoldoende: nauwelijks begrip, oppervlakkig of incorrect
+2 = Matig: begrijpt de basis maar mist diepgang
+3 = Goed: begrijpt de stof maar heeft nog hiaten
+4 = Uitstekend: diep begrip, legt verbanden, goede voorbeelden
+Wees eerlijk en streng. Spreek de leerling aan met je/jij.`;
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -166,6 +131,5 @@ Spreek de leerling aan met je/jij. Schrijf warm maar direct.`;
   }
 });
 
-// ── Start server ──────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Toetsapp backend draait op poort ${PORT}`));
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
