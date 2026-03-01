@@ -7,201 +7,185 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── Clients ──────────────────────────────────────────────
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const supabase  = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+const supabase  = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
-// ── Health check ─────────────────────────────────────────
-app.get('/', (req, res) => {
-  res.json({ status: 'ok', app: 'Socratische Toetsapp' });
-});
+app.get('/', (req, res) => res.json({ status: 'ok', app: 'Socratische Toetsapp' }));
 
-// ══════════════════════════════════════════════════════════
-//  KLASSEN
-// ══════════════════════════════════════════════════════════
-
+// KLASSEN
 app.get('/api/classes', async (req, res) => {
-  const { data, error } = await supabase
-    .from('classes')
-    .select('*')
-    .order('name', { ascending: true });
+  const { data, error } = await supabase.from('classes').select('*').order('name');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
 app.post('/api/classes', async (req, res) => {
   const { id, name, created_at } = req.body;
   if (!id || !name) return res.status(400).json({ error: 'Velden ontbreken' });
-  const { data, error } = await supabase
-    .from('classes')
-    .insert([{ id, name, created_at }])
-    .select();
+  const { data, error } = await supabase.from('classes').insert([{ id, name, created_at }]).select();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data[0]);
 });
-
 app.delete('/api/classes/:id', async (req, res) => {
-  const { id } = req.params;
-  // Unlink lessons from this class (set class_id to null)
-  await supabase.from('lessons').update({ class_id: null }).eq('class_id', id);
-  const { error } = await supabase.from('classes').delete().eq('id', id);
+  await supabase.from('lessons').update({ class_id: null }).eq('class_id', req.params.id);
+  const { error } = await supabase.from('classes').delete().eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
 
-// ══════════════════════════════════════════════════════════
-//  LESSEN
-// ══════════════════════════════════════════════════════════
-
-// Alle lessen ophalen
+// LESSEN
 app.get('/api/lessons', async (req, res) => {
-  const classId = req.query.class_id;
   let query = supabase.from('lessons').select('*').order('created_at', { ascending: false });
-  if (classId) query = query.eq('class_id', classId);
+  if (req.query.class_id) query = query.eq('class_id', req.query.class_id);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
-// Nieuwe les aanmaken
 app.post('/api/lessons', async (req, res) => {
   const { id, name, content, created_at, class_id } = req.body;
   if (!id || !name || !content) return res.status(400).json({ error: 'Velden ontbreken' });
-  const { data, error } = await supabase
-    .from('lessons')
-    .insert([{ id, name, content, created_at, class_id: class_id || null }])
-    .select();
+  const { data, error } = await supabase.from('lessons').insert([{ id, name, content, created_at, class_id: class_id || null }]).select();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data[0]);
 });
-
-// Les verwijderen
 app.delete('/api/lessons/:id', async (req, res) => {
-  const { id } = req.params;
-  // Verwijder ook alle resultaten van deze les
-  await supabase.from('results').delete().eq('lesson_id', id);
-  const { error } = await supabase.from('lessons').delete().eq('id', id);
+  await supabase.from('results').delete().eq('lesson_id', req.params.id);
+  const { error } = await supabase.from('lessons').delete().eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
 
-// ══════════════════════════════════════════════════════════
-//  RESULTATEN
-// ══════════════════════════════════════════════════════════
-
-// Resultaten ophalen voor een les
+// RESULTATEN
+app.get('/api/results', async (req, res) => {
+  const { data, error } = await supabase.from('results').select('*').order('timestamp', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
 app.get('/api/results/:lessonId', async (req, res) => {
-  const classId = req.query.class_id;
-  let query = supabase.from('results').select('*')
-    .eq('lesson_id', req.params.lessonId)
-    .order('timestamp', { ascending: false });
-  if (classId) query = query.eq('class_id', classId);
+  let query = supabase.from('results').select('*').eq('lesson_id', req.params.lessonId).order('timestamp', { ascending: false });
+  if (req.query.class_id) query = query.eq('class_id', req.query.class_id);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
-// Alle resultaten ophalen (voor dashboard stats)
-app.get('/api/results', async (req, res) => {
-  const { data, error } = await supabase
-    .from('results')
-    .select('*')
-    .order('timestamp', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
-});
-
-// Resultaat opslaan
 app.post('/api/results', async (req, res) => {
-  const { id, lesson_id, lesson_name, student_name, class_id, class_name,
-          understanding, refl_goed, refl_verbeteren, messages, timestamp } = req.body;
+  const { id, lesson_id, lesson_name, student_name, class_id, class_name, understanding, refl_goed, refl_verbeteren, messages, timestamp } = req.body;
   if (!id || !lesson_id || !student_name) return res.status(400).json({ error: 'Velden ontbreken' });
-  const { data, error } = await supabase
-    .from('results')
-    .insert([{ id, lesson_id, lesson_name, student_name, class_id: class_id || null,
-               class_name: class_name || null, understanding,
-               refl_goed, refl_verbeteren, messages, timestamp }])
-    .select();
+  const { data, error } = await supabase.from('results').insert([{ id, lesson_id, lesson_name, student_name, class_id: class_id || null, class_name: class_name || null, understanding, refl_goed, refl_verbeteren, messages, timestamp }]).select();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data[0]);
 });
+app.patch('/api/results/:id/opgaven', async (req, res) => {
+  const { opgaven, opgaven_antwoorden, opgaven_feedback } = req.body;
+  const { error } = await supabase.from('results').update({ opgaven, opgaven_antwoorden, opgaven_feedback }).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
 
-// ══════════════════════════════════════════════════════════
-//  AI PROXY — verbergt de API-sleutel voor de browser
-// ══════════════════════════════════════════════════════════
-
-// Socratische vraag genereren
+// AI: SOCRATISCHE VRAAG
 app.post('/api/ai/question', async (req, res) => {
   const { lessonName, lessonContent, studentName, questionNumber, maxQuestions, messages } = req.body;
-
   const systemPrompt = `Je bent een Socratische gesprekspartner voor een economie les op de middelbare school.
 Les: "${lessonName}"
-Kernstof van de les: "${lessonContent}"
+Kernstof: "${lessonContent}"
 Leerling: ${studentName}
-
-De leerling heeft net hun begrip uitgelegd. Stel één Socratische vervolgvraag die dieper ingaat op hun antwoord.
-Vraag naar oorzaken, gevolgen, uitzonderingen of toepassingen. Vraag nooit naar feitjes maar naar redenering.
-Wees warm en aanmoedigend. Houd de vraag kort (max 2 zinnen). Spreek de leerling aan met je/jij.
+Stel één Socratische vervolgvraag die dieper ingaat op het antwoord van de leerling.
+Vraag naar oorzaken, gevolgen, uitzonderingen of toepassingen. Nooit naar feitjes maar naar redenering.
+Wees warm en aanmoedigend. Max 2 zinnen. Spreek de leerling aan met je/jij.
 Dit is vraag ${questionNumber} van ${maxQuestions}.`;
-
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 300,
-      system: systemPrompt,
-      messages
-    });
+    const response = await anthropic.messages.create({ model: 'claude-sonnet-4-20250514', max_tokens: 300, system: systemPrompt, messages });
     res.json({ text: response.content[0].text });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Reflectie genereren
+// AI: REFLECTIE
 app.post('/api/ai/reflection', async (req, res) => {
   const { messages } = req.body;
-
-  const systemPrompt = `Je bent een economieleraar op de middelbare school die een Socratisch gesprek beoordeelt.
-Analyseer het gesprek en geef een eerlijke, gedifferentieerde beoordeling.
-
-Antwoord ALLEEN met JSON in exact dit formaat (geen extra tekst):
-{
-  "niveau": <getal 1, 2, 3 of 4>,
-  "goed": "...",
-  "verbeteren": "..."
-}
-
-Niveau betekenis — wees streng en realistisch:
-1 = Onvoldoende: leerling toont nauwelijks begrip, antwoorden zijn oppervlakkig, vaag of incorrect
-2 = Matig: leerling begrijpt de basis maar mist diepgang, maakt fouten bij doorvragen, kan concepten niet goed verbinden
-3 = Goed: leerling begrijpt de stof, kan redeneren maar heeft nog hiaten bij complexere vragen
-4 = Uitstekend: leerling toont diep begrip, kan zelfstandig redeneren, legt verbanden en geeft goede voorbeelden
-
-"goed": 2-3 zinnen over wat de leerling aantoonbaar begrijpt op basis van het gesprek. Wees specifiek.
-"verbeteren": 2-3 zinnen over concrete lacunes, met een praktische studie-tip.
-
-Wees eerlijk — een leerling die vaag antwoordt is GEEN niveau 3 of 4.
-Spreek de leerling aan met je/jij. Schrijf warm maar direct.`;
-
+  const systemPrompt = `Je bent een economieleraar die een Socratisch gesprek beoordeelt.
+Antwoord ALLEEN met JSON:
+{ "niveau": <1,2,3 of 4>, "goed": "...", "verbeteren": "..." }
+1=Onvoldoende 2=Matig 3=Goed 4=Uitstekend
+Wees streng en realistisch. Spreek leerling aan met je/jij.`;
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 600,
-      system: systemPrompt,
-      messages
-    });
-    const raw = response.content[0].text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(raw);
+    const response = await anthropic.messages.create({ model: 'claude-sonnet-4-20250514', max_tokens: 600, system: systemPrompt, messages });
+    const parsed = JSON.parse(response.content[0].text.replace(/```json|```/g, '').trim());
     res.json(parsed);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Start server ──────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
+// AI: OPGAVEN GENEREREN
+app.post('/api/ai/opgaven', async (req, res) => {
+  const { lessonName, lessonContent, studentName, understanding, reflGoed, reflVerbeteren } = req.body;
+  const niveauTekst = {
+    onvoldoende: 'Stel toegankelijke vragen die kernconcepten toetsen en stap voor stap opbouwen.',
+    matig: 'Stel vragen die concepten verbinden en laten toepassen op een situatie.',
+    goed: 'Stel vragen die hogere-orde denken vereisen: analyse en evaluatie.'
+  }[understanding] || 'Stel passende oefenvragen.';
 
+  const systemPrompt = `Je bent een ervaren economieleraar die oefenopgaven maakt voor middelbareschoolleerlingen.
+Les: "${lessonName}"
+Kernstof: "${lessonContent}"
+Begrip leerling: ${understanding}
+Wat goed ging: ${reflGoed}
+Wat verdieping nodig heeft: ${reflVerbeteren}
+Niveau-instructie: ${niveauTekst}
+
+Maak een opgave met een realistische context (3-5 zinnen) en precies 3 vragen:
+- Vraag 1: toegankelijk, toetst basiskennis
+- Vraag 2: vereist redenering en toepassing op de context  
+- Vraag 3: uitdagend, vraagt om analyse of evaluatie
+Geef bij elke vraag een modelantwoord van 2-4 zinnen.
+
+Antwoord ALLEEN met JSON:
+{
+  "context": "...",
+  "vragen": [
+    { "vraag": "...", "modelantwoord": "..." },
+    { "vraag": "...", "modelantwoord": "..." },
+    { "vraag": "...", "modelantwoord": "..." }
+  ]
+}`;
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514', max_tokens: 1400, system: systemPrompt,
+      messages: [{ role: 'user', content: 'Genereer de opgave voor ' + studentName + '.' }]
+    });
+    const parsed = JSON.parse(response.content[0].text.replace(/```json|```/g, '').trim());
+    res.json(parsed);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// AI: OPGAVEN NAKIJKEN
+app.post('/api/ai/opgaven-feedback', async (req, res) => {
+  const { lessonName, context, vragen, antwoorden } = req.body;
+  const vragenTekst = vragen.map((v, i) =>
+    `Vraag ${i+1}: ${v.vraag}\nModelantwoord: ${v.modelantwoord}\nAntwoord leerling: ${antwoorden[i] || '(geen antwoord)'}`
+  ).join('\n\n');
+  const systemPrompt = `Je bent een economieleraar die antwoorden nakijkt voor de les "${lessonName}".
+Context: "${context}"
+
+${vragenTekst}
+
+Beoordeel elk antwoord. Geef per vraag:
+- "score": exact "goed", "gedeeltelijk" of "incorrect"
+- "feedback": 1-2 zinnen. Bij goed: bevestig. Bij gedeeltelijk: benoem wat goed is en wat mist. Bij incorrect: leg vriendelijk uit wat het juiste antwoord inhoudt.
+
+Antwoord ALLEEN met JSON:
+{ "feedback": [
+  { "score": "...", "feedback": "..." },
+  { "score": "...", "feedback": "..." },
+  { "score": "...", "feedback": "..." }
+]}`;
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514', max_tokens: 900, system: systemPrompt,
+      messages: [{ role: 'user', content: 'Kijk de antwoorden na.' }]
+    });
+    const parsed = JSON.parse(response.content[0].text.replace(/```json|```/g, '').trim());
+    res.json(parsed);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// START
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
