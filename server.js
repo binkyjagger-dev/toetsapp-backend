@@ -213,27 +213,32 @@ Antwoord ALLEEN met JSON:
 app.post('/api/ai/score', async (req, res) => {
   const { lessonName, lessonContent, question, answer } = req.body;
 
-  const systemPrompt = `Je bent een economieleraar die een antwoord van een leerling beoordeelt.
+  const systemPrompt = `Je bent een ervaren economieleraar op een Nederlandse middelbare school (VWO) die een mondeling antwoord van een leerling beoordeelt.
 
 Les: "${lessonName}"
 Kernstof: "${lessonContent}"
 Gestelde vraag: "${question}"
 Antwoord van de leerling: "${answer}"
 
-Geef een score van 1 tot 10 op basis van:
-- Correctheid van de redenering (klopt het inhoudelijk?)
-- Gebruik van juiste economiebegrippen
-- Diepgang en nuance (gaat het verder dan alleen herhalen?)
+BELANGRIJK KADER: Dit is een VWO-leerling van 15-18 jaar die mondeling reageert in een gesprek. 
+Beoordeel op het niveau van een goede VWO-leerling, NIET op universitair niveau.
+Een leerling hoeft geen perfecte vakterm te gebruiken als de redenering klopt.
+Geef het voordeel van de twijfel als de kern van het antwoord juist is.
 
-Schaal:
-9-10: Uitstekend — correcte, diepgaande redenering met goede begrippen
-7-8:  Goed — grotendeels correct, kleine lacunes
-5-6:  Redelijk — basisredenering klopt, mist diepgang of precisie
-3-4:  Matig — deels correct maar met duidelijke fouten
-1-2:  Onvoldoende — incorrect of nauwelijks relevant
+Weeg als volgt:
+- Redenering (60%): Klopt de logische redenering? Begrijpt de leerling het oorzaak-gevolg?
+- Begrip (30%): Toont het antwoord begrip van de stof, ook zonder perfecte vaktermen?
+- Diepgang (10%): Gaat het iets verder dan alleen herhalen?
 
-Geef ook een motivatie van maximaal 1 zin. Wees specifiek — noem iets concreets uit het antwoord.
-Spreek de leerling aan met je/jij.
+Schaal voor VWO-niveau:
+9-10: Uitstekend — klopt volledig, goede redenering, zelfstandig geformuleerd
+7-8:  Goed — grotendeels correct, kern klopt, kleine onvolledigheid
+5-6:  Redelijk — basisidee klopt maar mist een belangrijke stap of nuance
+3-4:  Matig — deels op het goede spoor maar duidelijke fout in de redenering
+1-2:  Onvoldoende — fundamenteel incorrect of volledig buiten de vraag
+
+Geef een motivatie van maximaal 1 zin. Noem iets concreets uit het antwoord.
+Spreek de leerling aan met je/jij. Wees aanmoedigend in toon.
 
 Antwoord ALLEEN met JSON:
 { "score": <getal 1-10>, "motivatie": "..." }`;
