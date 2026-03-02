@@ -206,6 +206,54 @@ Antwoord ALLEEN met JSON:
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ══════════════════════════════════════════════════════════
+//  AI — ANTWOORD SCOREN (1-10)
+// ══════════════════════════════════════════════════════════
+
+app.post('/api/ai/score', async (req, res) => {
+  const { lessonName, lessonContent, question, answer } = req.body;
+
+  const systemPrompt = `Je bent een economieleraar die een antwoord van een leerling beoordeelt.
+
+Les: "${lessonName}"
+Kernstof: "${lessonContent}"
+Gestelde vraag: "${question}"
+Antwoord van de leerling: "${answer}"
+
+Geef een score van 1 tot 10 op basis van:
+- Correctheid van de redenering (klopt het inhoudelijk?)
+- Gebruik van juiste economiebegrippen
+- Diepgang en nuance (gaat het verder dan alleen herhalen?)
+
+Schaal:
+9-10: Uitstekend — correcte, diepgaande redenering met goede begrippen
+7-8:  Goed — grotendeels correct, kleine lacunes
+5-6:  Redelijk — basisredenering klopt, mist diepgang of precisie
+3-4:  Matig — deels correct maar met duidelijke fouten
+1-2:  Onvoldoende — incorrect of nauwelijks relevant
+
+Geef ook een motivatie van maximaal 1 zin. Wees specifiek — noem iets concreets uit het antwoord.
+Spreek de leerling aan met je/jij.
+
+Antwoord ALLEEN met JSON:
+{ "score": <getal 1-10>, "motivatie": "..." }`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 150,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: 'Beoordeel dit antwoord.' }]
+    });
+    const parsed = JSON.parse(response.content[0].text.replace(/```json|```/g, '').trim());
+    // Clamp score tussen 1 en 10
+    parsed.score = Math.max(1, Math.min(10, parseInt(parsed.score) || 5));
+    res.json(parsed);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // START
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
