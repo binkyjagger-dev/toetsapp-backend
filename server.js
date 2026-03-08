@@ -259,6 +259,126 @@ Antwoord ALLEEN met JSON:
   }
 });
 
+// ── TOETSAGENT: GENEREER TOETS ──────────────────────────────────────────────
+app.post('/api/agent/genereer-toets', async (req, res) => {
+  const {
+    klas,         // bijv. "VWO 5A"
+    toetstype,    // "so" | "pw" | "ce-prep"
+    hoofdstukken, // [{ val, label, lesbrief, n_total, n_ce }]
+    nVragen,      // aantal vragen (getal of null)
+    duur,         // minuten (getal of null)
+    punten,       // totaal punten (getal of null)
+    gapData       // { lesStats, lowLessons, totalStudents, overallAvg } of null
+  } = req.body;
+
+  if (!klas || !hoofdstukken || hoofdstukken.length === 0) {
+    return res.status(400).json({ error: 'Klas en hoofdstukken zijn verplicht.' });
+  }
+
+  const toetsTypeLabel = { so: 'Schriftelijke overhoring (SO)', pw: 'Proefwerk', 'ce-prep': 'CE-voorbereiding' }[toetstype] || toetstype;
+  const aantalVragen   = nVragen  || Math.min(hoofdstukken.length * 2, 8);
+  const totaalPunten   = punten   || aantalVragen * 5;
+  const toetsDuur      = duur     || (toetstype === 'so' ? 30 : toetstype === 'pw' ? 60 : 90);
+
+  // Hiatencontext
+  let hiatenTekst = 'Er zijn geen eerdere Toetsapp-resultaten beschikbaar voor deze klas.';
+  let hiatenLessen = [];
+  if (gapData && gapData.lesStats && gapData.lesStats.length > 0) {
+    hiatenLessen = gapData.lowLessons || [];
+    const top3Laag = gapData.lesStats.slice(0, 3);
+    hiatenTekst = `Gemiddelde klassecore: ${gapData.overallAvg.toFixed(1)}/10 (${gapData.totalStudents} leerlingen, ${gapData.totalResults || '?'} resultaten).\n`;
+    hiatenTekst += `Lessen met laagste scores (meeste aandacht nodig):\n`;
+    top3Laag.forEach(l => { hiatenTekst += `- "${l.name}": gemiddeld ${l.avg.toFixed(1)}/10\n`; });
+    if (hiatenLessen.length > 0) {
+      hiatenTekst += `\nGeef vragen uit deze lessen EXTRA gewicht in de toets.`;
+    }
+  }
+
+  // Hoofdstukkenlijst
+  const hfstTekst = hoofdstukken.map(h =>
+    `- ${h.label} (${h.lesbrief}) — ${h.n_total} leerdoelen, ${h.n_ce} in CE-syllabus`
+  ).join('\n');
+
+  const systemPrompt = `Je bent een ervaren economieleraar op een VWO-school in Nederland. Je genereert professionele toetsvragen voor klas ${klas}.
+
+REGELS:
+- Gebruik alleen stof uit de opgegeven behandelde hoofdstukken. Toets NOOIT stof die niet in de lijst staat.
+- Sluit aan bij het eindexamenprogramma Economie (CE-syllabus 2026) waar relevant.
+- Vragen zijn op VWO-niveau: helder geformuleerd, economisch correct, passend bij ${toetsTypeLabel}.
+- Mix van vraagtypen: open vragen, berekeningsvragen en contextvragen (met een korte situatieschets).
+- Verdeel punten realistisch: berekeningsvragen en analysevragen krijgen meer punten.
+- Bij CE-voorbereiding: formuleer vragen in CE-stijl (meerkeuze en open gemengd).
+- Geef bij elke vraag een beknopt correctiemodel (maximaal 3 zinnen).
+
+ANTWOORDFORMAAT — reageer ALLEEN met geldige JSON, geen uitleg daarbuiten:
+{
+  "samenvatting": "één zin over de focus van deze toets",
+  "vragen": [
+    {
+      "nr": 1,
+      "type": "open" | "berekening" | "context" | "meerkeuze",
+      "vraag": "...",
+      "context": "korte situatieschets indien van toepassing, anders null",
+      "opties": ["A. ...", "B. ...", "C. ...", "D. ..."] of null (alleen bij meerkeuze),
+      "antwoord_mc": "A" of null,
+      "punten": <getal>,
+      "leerdoel": "het leerdoel dat getoetst wordt",
+      "lesbrief": "naam van de lesbrief",
+      "ce_eindterm": "CE-eindterm indien van toepassing, anders null",
+      "bloom": "Kennen" | "Begrijpen" | "Toepassen" | "Analyseren" | "Evalueren",
+      "correctiemodel": "beknopte beschrijving van het verwachte antwoord"
+    }
+  ]
+}`;
+
+  const userPrompt = `Genereer een ${toetsTypeLabel} voor ${klas}.
+
+SPECIFICATIES:
+- Aantal vragen: ${aantalVragen}
+- Totaal punten: ${totaalPunten}
+- Duur: ${toetsDuur} minuten
+
+BEHANDELDE HOOFDSTUKKEN (alleen hieruit toetsen):
+${hfstTekst}
+
+HIATENANALYSE UIT SOCRATISCHE TOETSAPP:
+${hiatenTekst}
+
+Genereer precies ${aantalVragen} vragen. De puntentelling moet optellen tot ${totaalPunten}.`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }]
+    });
+
+    const raw    = response.content[0].text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(raw);
+
+    // Valideer en clamp punten
+    const totaalCheck = parsed.vragen.reduce((s, v) => s + (v.punten || 0), 0);
+    res.json({
+      ok: true,
+      klas,
+      toetstype: toetsTypeLabel,
+      duur: toetsDuur,
+      totaalPunten: totaalCheck,
+      samenvatting: parsed.samenvatting,
+      vragen: parsed.vragen,
+      meta: {
+        aantalHoofdstukken: hoofdstukken.length,
+        aantalLeerlingen: gapData?.totalStudents || 0,
+        hiatenLessen: hiatenLessen.map(l => l.name)
+      }
+    });
+  } catch (e) {
+    console.error('Toetsagent fout:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // START
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
