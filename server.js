@@ -41,9 +41,9 @@ app.get('/api/lessons', async (req, res) => {
   res.json(data);
 });
 app.post('/api/lessons', async (req, res) => {
-  const { id, name, content, created_at, class_id } = req.body;
+  const { id, name, content, leerdoelen, created_at, class_id } = req.body;
   if (!id || !name || !content) return res.status(400).json({ error: 'Velden ontbreken' });
-  const { data, error } = await supabase.from('lessons').insert([{ id, name, content, created_at, class_id: class_id || null }]).select();
+  const { data, error } = await supabase.from('lessons').insert([{ id, name, content, leerdoelen: leerdoelen || null, created_at, class_id: class_id || null }]).select();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data[0]);
 });
@@ -68,9 +68,9 @@ app.get('/api/results/:lessonId', async (req, res) => {
   res.json(data);
 });
 app.post('/api/results', async (req, res) => {
-  const { id, lesson_id, lesson_name, student_name, class_id, class_name, understanding, refl_goed, refl_verbeteren, messages, timestamp } = req.body;
+  const { id, lesson_id, lesson_name, student_name, class_id, class_name, understanding, refl_goed, refl_verbeteren, messages, scores, leerdoel_scores, timestamp } = req.body;
   if (!id || !lesson_id || !student_name) return res.status(400).json({ error: 'Velden ontbreken' });
-  const { data, error } = await supabase.from('results').insert([{ id, lesson_id, lesson_name, student_name, class_id: class_id || null, class_name: class_name || null, understanding, refl_goed, refl_verbeteren, messages, timestamp }]).select();
+  const { data, error } = await supabase.from('results').insert([{ id, lesson_id, lesson_name, student_name, class_id: class_id || null, class_name: class_name || null, understanding, refl_goed, refl_verbeteren, messages, scores: scores || null, leerdoel_scores: leerdoel_scores || null, timestamp }]).select();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data[0]);
 });
@@ -83,51 +83,108 @@ app.patch('/api/results/:id/opgaven', async (req, res) => {
 
 // AI: SOCRATISCHE VRAAG
 app.post('/api/ai/question', async (req, res) => {
-  const { lessonName, lessonContent, studentName, questionNumber, maxQuestions, messages } = req.body;
-  const systemPrompt = `Je bent een Socratische gesprekspartner voor een economie les op de middelbare school.
+  const { lessonName, lessonContent, leerdoelen, studentName, questionNumber, maxQuestions, messages, isOpening } = req.body;
+
+  // Kies een focusleerdoel op basis van vraagnummer
+  let focusLeerdoel = null;
+  if (!isOpening && leerdoelen) {
+    const kennen = leerdoelen.kennen || [];
+    const kunnen = leerdoelen.kunnen || [];
+    // V1 → eerste kennen-begrip, V2 → eerste kunnen-item, V3 → tweede kunnen-item (of laatste kennen)
+    if (questionNumber === 0 && kennen.length > 0)      focusLeerdoel = { type: 'kennen', tekst: kennen[0] };
+    else if (questionNumber === 1 && kunnen.length > 0)  focusLeerdoel = { type: 'kunnen', tekst: kunnen[0] };
+    else if (questionNumber === 2 && kunnen.length > 1)  focusLeerdoel = { type: 'kunnen', tekst: kunnen[1] };
+    else if (kunnen.length > 0)                          focusLeerdoel = { type: 'kunnen', tekst: kunnen[Math.min(questionNumber, kunnen.length - 1)] };
+    else if (kennen.length > 0)                          focusLeerdoel = { type: 'kennen', tekst: kennen[Math.min(questionNumber, kennen.length - 1)] };
+  }
+
+  const leerdoelenContext = leerdoelen
+    ? `\n\nLeerdoelen van deze les:\nKennen: ${(leerdoelen.kennen||[]).slice(0,6).join(', ')}\nKunnen (toepassing): ${(leerdoelen.kunnen||[]).slice(0,4).map(k => k.substring(0,80)).join(' | ')}`
+    : '';
+
+  const focusTekst = focusLeerdoel
+    ? `\n\nFocus voor deze vraag: "${focusLeerdoel.tekst}" — stel een vraag die precies dit leerdoel toetst.`
+    : '';
+
+  const systemPrompt = isOpening
+    ? `Je bent een Socratische gesprekspartner voor een economieles op VWO-niveau.
 Les: "${lessonName}"
-Kernstof: "${lessonContent}"
+Kernstof: "${lessonContent}"${leerdoelenContext}
 Leerling: ${studentName}
-Stel één Socratische vervolgvraag die dieper ingaat op het antwoord van de leerling.
-Vraag naar oorzaken, gevolgen, uitzonderingen of toepassingen. Nooit naar feitjes maar naar redenering.
-Wees warm en aanmoedigend. Max 2 zinnen. Spreek de leerling aan met je/jij.
-Dit is vraag ${questionNumber} van ${maxQuestions}.`;
+Stel één open openingsvraag: vraag de leerling in eigen woorden uit te leggen wat zij/hij van deze les heeft begrepen. Geen ja/nee vraag. Wees uitnodigend. Max 2 zinnen.`
+    : `Je bent een Socratische gesprekspartner voor een economieles op VWO-niveau.
+Les: "${lessonName}"
+Kernstof: "${lessonContent}"${leerdoelenContext}${focusTekst}
+Leerling: ${studentName}
+Dit is Socratische vraag ${questionNumber + 1} van ${maxQuestions}.
+Stel één gerichte vervolgvraag die ingaat op het antwoord van de leerling EN het opgegeven focusleerdoel toetst.
+Vraag naar redenering, oorzaak-gevolg, toepassingen of uitzonderingen — nooit naar losse feitjes.
+Wees warm en aanmoedigend. Max 2 zinnen. Spreek de leerling aan met je/jij.`;
+
   try {
-    const response = await anthropic.messages.create({ model: 'claude-sonnet-4-20250514', max_tokens: 300, system: systemPrompt, messages });
-    res.json({ text: response.content[0].text });
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: systemPrompt,
+      messages: messages || []
+    });
+    res.json({
+      text: response.content[0].text,
+      gerichtLeerdoel: focusLeerdoel   // stuur terug zodat frontend het kan opslaan
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // AI: REFLECTIE
 app.post('/api/ai/reflection', async (req, res) => {
-  const { messages } = req.body;
-  const systemPrompt = `Je bent een economieleraar die een Socratisch gesprek nauwkeurig beoordeelt.
+  const { messages, lessonName, lessonContent } = req.body;
 
-Analyseer het gesprek grondig en geef een specifieke, persoonlijke beoordeling.
+  // Parseer leerdoelen uit lessonContent als die gestructureerd is
+  let leerdoelenTekst = '';
+  if (lessonContent && lessonContent.includes('Kennen:')) {
+    leerdoelenTekst = `\n\nDe les had de volgende leerdoelen:\n${lessonContent}`;
+  } else if (lessonContent) {
+    leerdoelenTekst = `\n\nKernstof van de les: ${lessonContent}`;
+  }
 
-Antwoord ALLEEN met JSON in dit exacte formaat (geen extra tekst):
+  const systemPrompt = `Je bent een economieleraar die een Socratisch gesprek analyseert en de leerling gerichte, persoonlijke feedback geeft.
+${lessonName ? `Les: "${lessonName}"` : ''}${leerdoelenTekst}
+
+Antwoord ALLEEN met geldige JSON, geen tekst daarbuiten:
 {
   "niveau": <getal 1 t/m 6>,
   "goed": "...",
   "verbeteren": "..."
 }
 
-Niveaus — wees streng en realistisch:
-1 = Onvoldoende:  Nauwelijks begrip, antwoorden zijn onsamenhangend of incorrect
-2 = Beginnend:    Kent begrippen maar kan ze niet uitleggen of toepassen
+── BLOOM-NIVEAUS (wees streng en realistisch) ──────────────────
+1 = Onvoldoende:  Nauwelijks begrip, antwoorden zijn onsamenhangend of onjuist
+2 = Beginnend:    Herkent begrippen maar kan ze niet uitleggen of toepassen
 3 = Begrijpend:   Begrijpt de stof, legt verbanden op basis van herkenning maar niet zelfstandig
-4 = Toepassend:   Kan kennis toepassen op nieuwe situaties, met enige sturing
-5 = Analyserend:  Ontleedt situaties zelfstandig, herkent oorzaak-gevolg relaties
+4 = Toepassend:   Past kennis toe op nieuwe situaties, met enige sturing
+5 = Analyserend:  Ontleedt situaties zelfstandig, herkent oorzaak-gevolgrelaties
 6 = Verdiept:     Redeneert vanuit meerdere perspectieven, beoordeelt en nuanceert
 
-Regels voor de feedbackteksten:
-- "goed" (de TOP): 2-3 zinnen. Citeer een CONCRETE uitspraak die de leerling deed ("Je redeneerde sterk toen je zei dat..."). Leg uit waarom die redenering klopt en wat het toont over het begrip.
-- "verbeteren" (de TIP): 2-3 zinnen. Koppel aan een SPECIFIEK moment in het gesprek ("Op het moment dat je gevraagd werd naar... haakte je redenering af"). Geef één concrete volgende stap of oefenvraag.
+── REGELS VOOR "goed" (TOP) ────────────────────────────────────
+VERPLICHT: Citeer letterlijk een uitspraak die de leerling deed — tussen aanhalingstekens, zo exact mogelijk overgenomen uit het gesprek.
+Leg in 1-2 zinnen uit waarom díé specifieke redenering klopt en wat het aantoont over het begrip van de leerling.
+VERBODEN: vage zinnen als "je begrijpt de stof goed", "je hebt goed nagedacht" of "je legt verbanden". Alleen concrete citaten + uitleg.
 
-Wees specifiek — generieke feedback zoals "je begrijpt de basis" is niet toegestaan.
-Spreek de leerling aan met je/jij. Schrijf warm maar direct.`;
+── REGELS VOOR "verbeteren" (TIP) ──────────────────────────────
+VERPLICHT stap 1 — Wijs een concreet moment aan: beschrijf kort op welk moment in het gesprek de redenering haakte of een leerdoel onvoldoende aan bod kwam. Gebruik de vraag van de AI als aanknopingspunt ("Toen ik vroeg naar...").
+VERPLICHT stap 2 — Koppel aan een leerdoel: benoem expliciet welk begrip of welke vaardigheid uit de les de leerling verder moet oefenen. Gebruik de termen uit de leerdoelenlijst als die beschikbaar is.
+VERPLICHT stap 3 — Geef een concrete oefenvraag die de leerling zelf kan beantwoorden om dat leerdoel te oefenen. De oefenvraag moet zo specifiek zijn dat de leerling weet wat het goede antwoord moet bevatten.
+VERBODEN: algemene adviezen als "lees de stof nog eens door" of "oefen meer met begrippen". Altijd concreet.
+
+Schrijf warm maar direct. Spreek de leerling aan met je/jij. Maximaal 3 zinnen per veld.`;
+
   try {
-    const response = await anthropic.messages.create({ model: 'claude-sonnet-4-20250514', max_tokens: 800, system: systemPrompt, messages });
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages
+    });
     const parsed = JSON.parse(response.content[0].text.replace(/```json|```/g, '').trim());
     res.json(parsed);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -211,7 +268,7 @@ Antwoord ALLEEN met JSON:
 // ══════════════════════════════════════════════════════════
 
 app.post('/api/ai/score', async (req, res) => {
-  const { lessonName, lessonContent, question, answer } = req.body;
+  const { lessonName, lessonContent, question, answer, gerichtLeerdoel } = req.body;
 
   const systemPrompt = `Je bent een ervaren economieleraar op een Nederlandse middelbare school (VWO) die een mondeling antwoord van een leerling beoordeelt.
 
@@ -253,6 +310,7 @@ Antwoord ALLEEN met JSON:
     const parsed = JSON.parse(response.content[0].text.replace(/```json|```/g, '').trim());
     // Clamp score tussen 1 en 10
     parsed.score = Math.max(1, Math.min(10, parseInt(parsed.score) || 5));
+    if (gerichtLeerdoel) parsed.leerdoel = gerichtLeerdoel;
     res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: e.message });
