@@ -41,9 +41,19 @@ app.get('/api/lessons', async (req, res) => {
   res.json(data);
 });
 app.post('/api/lessons', async (req, res) => {
-  const { id, name, content, leerdoelen, created_at, class_id } = req.body;
+  const { id, name, content, leerdoelen, chapter_val, created_at, class_id,
+          toegestane_lesvormen, lesvorm_mode } = req.body;
   if (!id || !name || !content) return res.status(400).json({ error: 'Velden ontbreken' });
-  const { data, error } = await supabase.from('lessons').insert([{ id, name, content, leerdoelen: leerdoelen || null, created_at, class_id: class_id || null }]).select();
+  const record = {
+    id, name, content, created_at,
+    leerdoelen:           leerdoelen   || null,
+    chapter_val:          chapter_val  || null,
+    class_id:             class_id     || null,
+    // Fase 2: lesvorminstellingen
+    toegestane_lesvormen: toegestane_lesvormen || ['socratisch'],
+    lesvorm_mode:         lesvorm_mode || 'locked',
+  };
+  const { data, error } = await supabase.from('lessons').insert([record]).select();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data[0]);
 });
@@ -68,9 +78,28 @@ app.get('/api/results/:lessonId', async (req, res) => {
   res.json(data);
 });
 app.post('/api/results', async (req, res) => {
-  const { id, lesson_id, lesson_name, student_name, class_id, class_name, understanding, refl_goed, refl_verbeteren, messages, scores, leerdoel_scores, timestamp } = req.body;
+  const {
+    id, lesson_id, lesson_name, student_name, class_id, class_name,
+    understanding, refl_goed, refl_verbeteren, messages, scores, leerdoel_scores, timestamp,
+    // Nieuwe platformvelden (Fase 1):
+    lesvorm, score_norm, lesvorm_data,
+  } = req.body;
   if (!id || !lesson_id || !student_name) return res.status(400).json({ error: 'Velden ontbreken' });
-  const { data, error } = await supabase.from('results').insert([{ id, lesson_id, lesson_name, student_name, class_id: class_id || null, class_name: class_name || null, understanding, refl_goed, refl_verbeteren, messages, scores: scores || null, leerdoel_scores: leerdoel_scores || null, timestamp }]).select();
+  const record = {
+    id, lesson_id, lesson_name, student_name,
+    class_id:        class_id    || null,
+    class_name:      class_name  || null,
+    understanding,   refl_goed,   refl_verbeteren,
+    messages,
+    scores:          scores          || null,
+    leerdoel_scores: leerdoel_scores || null,
+    timestamp,
+    // Platformvelden — backwards-compatible: valt terug op 'socratisch' als lesvorm ontbreekt
+    lesvorm:      lesvorm      || 'socratisch',
+    score_norm:   score_norm   != null ? score_norm : null,
+    lesvorm_data: lesvorm_data || null,
+  };
+  const { data, error } = await supabase.from('results').insert([record]).select();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data[0]);
 });
