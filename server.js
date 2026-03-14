@@ -466,6 +466,296 @@ Genereer precies ${aantalVragen} vragen. De puntentelling moet optellen tot ${to
   }
 });
 
+
+// ═══════════════════════════════════════════════════════════
+//  WIE IS DE MOL — ENDPOINTS
+// ═══════════════════════════════════════════════════════════
+
+// Hulpfuncties
+function randCode(n, chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789') {
+  let s = '';
+  for (let i = 0; i < n; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+// ── POST /api/mol/sessie — docent maakt sessie aan ──────────────────────────
+app.post('/api/mol/sessie', async (req, res) => {
+  try {
+    const { les_id, les_naam, les_content, klas_id, klas_naam, n_rondes, leerlingen, groep_grootte } = req.body;
+
+    const sessieId    = 'mol_' + Date.now();
+    const docentCode  = randCode(6);
+    const sessieCode  = randCode(4); // leerlingen loggen in met dit
+
+    // Willekeurig groepen maken
+    const geshuffled = [...leerlingen].sort(() => Math.random() - 0.5);
+    const groepen = [];
+    const groepLabels = 'ABCDEFGHIJ'.split('');
+    for (let i = 0; i < geshuffled.length; i += groep_grootte) {
+      groepen.push({
+        id: 'groep_' + sessieId + '_' + groepLabels[groepen.length],
+        sessie_id: sessieId,
+        naam: 'Groep ' + groepLabels[groepen.length],
+        leden: geshuffled.slice(i, i + groep_grootte),
+      });
+    }
+
+    // Leerlingen aanmaken met unieke speler-codes + mol aanwijzen per groep
+    const leerlingenRows = [];
+    groepen.forEach(g => {
+      const molIndex = Math.floor(Math.random() * g.leden.length);
+      g.leden.forEach((naam, idx) => {
+        leerlingenRows.push({
+          id:          'speler_' + sessieId + '_' + randCode(8),
+          sessie_id:   sessieId,
+          naam,
+          groep_id:    g.id,
+          groep_naam:  g.naam,
+          is_mol:      idx === molIndex,
+          speler_code: randCode(5),
+          online_at:   null,
+        });
+      });
+    });
+
+    // Sessie opslaan
+    const { error: sessieErr } = await supabase.from('mol_sessies').insert([{
+      id: sessieId,
+      les_id:      les_id   || null,
+      les_naam:    les_naam || '',
+      les_content: les_content || '',
+      klas_id:     klas_id  || null,
+      klas_naam:   klas_naam || '',
+      n_rondes:    n_rondes || 3,
+      groep_grootte,
+      status:      'setup',
+      huidige_ronde: 0,
+      sessie_code: sessieCode,
+      docent_code: docentCode,
+      created_at:  Date.now(),
+    }]);
+    if (sessieErr) return res.status(500).json({ error: sessieErr.message });
+
+    // Groepen opslaan
+    const groepRows = groepen.map(g => ({ id: g.id, sessie_id: sessieId, naam: g.naam }));
+    const { error: groepErr } = await supabase.from('mol_groepen').insert(groepRows);
+    if (groepErr) return res.status(500).json({ error: groepErr.message });
+
+    // Leerlingen opslaan
+    const { error: leerlingErr } = await supabase.from('mol_leerlingen').insert(leerlingenRows);
+    if (leerlingErr) return res.status(500).json({ error: leerlingErr.message });
+
+    res.json({ sessieId, sessieCode, docentCode, groepen: groepen.map(g => g.naam), aantalLeerlingen: leerlingenRows.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── GET /api/mol/sessie/:id — volledige sessie state ────────────────────────
+app.get('/api/mol/sessie/:id', async (req, res) => {
+  try {
+    const sid = req.params.id;
+    const [{ data: sessie }, { data: leerlingen }, { data: groepen }, { data: cases }, { data: antwoorden }, { data: groepStemmen }, { data: testAntwoorden }] = await Promise.all([
+      supabase.from('mol_sessies').select('*').eq('id', sid).single(),
+      supabase.from('mol_leerlingen').select('*').eq('sessie_id', sid),
+      supabase.from('mol_groepen').select('*').eq('sessie_id', sid),
+      supabase.from('mol_cases').select('*').eq('sessie_id', sid).order('ronde_nr'),
+      supabase.from('mol_antwoorden').select('*').eq('sessie_id', sid),
+      supabase.from('mol_groep_stemmen').select('*').eq('sessie_id', sid),
+      supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sid),
+    ]);
+    if (!sessie) return res.status(404).json({ error: 'Sessie niet gevonden' });
+    res.json({ sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── GET /api/mol/login — leerling inloggen met speler-code ──────────────────
+app.get('/api/mol/login', async (req, res) => {
+  try {
+    const { sessie_code, speler_code } = req.query;
+    // Zoek sessie op code
+    const { data: sessies } = await supabase.from('mol_sessies').select('id').eq('sessie_code', sessie_code.toUpperCase());
+    if (!sessies || sessies.length === 0) return res.status(404).json({ error: 'Sessie niet gevonden. Controleer de code.' });
+    const sessieId = sessies[0].id;
+    // Zoek leerling
+    const { data: spelers } = await supabase.from('mol_leerlingen').select('*').eq('sessie_id', sessieId).eq('speler_code', speler_code.toUpperCase());
+    if (!spelers || spelers.length === 0) return res.status(404).json({ error: 'Spelcode niet gevonden. Vraag je leraar.' });
+    const speler = spelers[0];
+    // Update online_at
+    await supabase.from('mol_leerlingen').update({ online_at: Date.now() }).eq('id', speler.id);
+    res.json({ speler, sessieId });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── PATCH /api/mol/sessie/:id/status — docent stuurt spel aan ───────────────
+app.patch('/api/mol/sessie/:id/status', async (req, res) => {
+  try {
+    const { docent_code, status, huidige_ronde } = req.body;
+    const { data: sessie } = await supabase.from('mol_sessies').select('docent_code').eq('id', req.params.id).single();
+    if (!sessie || sessie.docent_code !== docent_code) return res.status(403).json({ error: 'Ongeldige docentcode' });
+    const update = { status };
+    if (huidige_ronde !== undefined) update.huidige_ronde = huidige_ronde;
+    await supabase.from('mol_sessies').update(update).eq('id', req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/mol/antwoord — leerling dient individueel antwoord in ─────────
+app.post('/api/mol/antwoord', async (req, res) => {
+  try {
+    const { sessie_id, ronde_nr, leerling_id, antwoord, argument } = req.body;
+    // Upsert — voorkom dubbele submissions
+    const { error } = await supabase.from('mol_antwoorden').upsert([{
+      id:          `antw_${sessie_id}_r${ronde_nr}_${leerling_id}`,
+      sessie_id, ronde_nr, leerling_id, antwoord, argument,
+      submitted_at: Date.now(),
+    }]);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/mol/groep-stem — groep stemt op definitief antwoord ────────────
+app.post('/api/mol/groep-stem', async (req, res) => {
+  try {
+    const { sessie_id, ronde_nr, groep_id, gekozen_leerling_id } = req.body;
+    // Haal case op voor punten
+    const { data: caseData } = await supabase.from('mol_cases').select('*').eq('sessie_id', sessie_id).eq('ronde_nr', ronde_nr).single();
+    // Haal gekozen antwoord op
+    const { data: antw } = await supabase.from('mol_antwoorden').select('antwoord,argument').eq('leerling_id', gekozen_leerling_id).eq('ronde_nr', ronde_nr).single();
+    const isCorrect = caseData && antw && antw.antwoord === 'correct';
+    const punten = isCorrect ? 10 : -5;
+    const { error } = await supabase.from('mol_groep_stemmen').upsert([{
+      id:                  `stem_${sessie_id}_r${ronde_nr}_${groep_id}`,
+      sessie_id, ronde_nr, groep_id,
+      gekozen_leerling_id,
+      gekozen_argument:    antw?.argument || '',
+      is_correct:          isCorrect,
+      punten,
+      submitted_at:        Date.now(),
+    }]);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true, punten, is_correct: isCorrect });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/mol/test-antwoord — leerling dient moltest in ─────────────────
+app.post('/api/mol/test-antwoord', async (req, res) => {
+  try {
+    const { sessie_id, leerling_id, mol_verdachte_id, mol_ronde, mol_argument } = req.body;
+    const { error } = await supabase.from('mol_test_antwoorden').upsert([{
+      id:               `test_${sessie_id}_${leerling_id}`,
+      sessie_id, leerling_id,
+      mol_verdachte_id, mol_ronde, mol_argument,
+      submitted_at:     Date.now(),
+    }]);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/mol/genereer-cases — AI genereert cases voor het spel ─────────
+app.post('/api/mol/genereer-cases', async (req, res) => {
+  try {
+    const { sessie_id, les_naam, les_content, n_rondes } = req.body;
+
+    const prompt = `Je bent een ervaren economieleraar op VWO-niveau.
+Genereer ${n_rondes} economische cases voor de lesvorm "Wie is de Mol" voor de les: "${les_naam}".
+
+Kernstof van de les:
+${les_content}
+
+Voor elke case heb je nodig:
+1. Een heldere economische situatie/vraag (1-2 zinnen)
+2. Het CORRECTE antwoord (1 zin) + een heldere economische onderbouwing (2-3 zinnen)
+3. Een PLAUSIBEL FOUT antwoord (1 zin) — dit is het antwoord dat de Mol moet verdedigen
+4. Een misleidende onderbouwing van het foute antwoord (2-3 zinnen) — klinkt economisch maar klopt niet
+
+Eisen aan de cases:
+- De vraag moet gaan over redenering en verbanden, niet over feitjes
+- Het foute antwoord moet VERLEIDELIJK klinken — een veelgemaakte redeneerf out
+- Gebruik concrete economische concepten uit de leerstof
+- Elke case moet ANDERS zijn dan de andere (andere concepten, andere situatie)
+
+Antwoord ALLEEN met geldige JSON, geen tekst daarbuiten:
+{
+  "cases": [
+    {
+      "ronde_nr": 1,
+      "vraag": "...",
+      "correct_antwoord": "correct",
+      "correct_uitleg": "...",
+      "fout_antwoord": "fout",
+      "fout_uitleg": "...",
+      "context": "..."
+    }
+  ]
+}`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const parsed = JSON.parse(response.content[0].text.replace(/```json|```/g, '').trim());
+
+    // Cases opslaan in database
+    const caseRows = parsed.cases.map(c => ({
+      id:               `case_${sessie_id}_r${c.ronde_nr}`,
+      sessie_id,
+      ronde_nr:         c.ronde_nr,
+      vraag:            c.vraag,
+      context:          c.context || '',
+      correct_antwoord: c.correct_antwoord,
+      correct_uitleg:   c.correct_uitleg,
+      fout_antwoord:    c.fout_antwoord,
+      fout_uitleg:      c.fout_uitleg,
+    }));
+
+    await supabase.from('mol_cases').insert(caseRows);
+    res.json({ ok: true, cases: caseRows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/mol/bereken-scores — bereken testscore na reveal ───────────────
+app.post('/api/mol/bereken-scores', async (req, res) => {
+  try {
+    const { sessie_id } = req.body;
+    const { data: leerlingen } = await supabase.from('mol_leerlingen').select('*').eq('sessie_id', sessie_id);
+    const { data: testAntw }   = await supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sessie_id);
+
+    const mol = leerlingen.find(l => l.is_mol);
+    if (!mol) return res.status(400).json({ error: 'Geen mol gevonden' });
+
+    // Score per leerling: mol_verdachte correct (+10), mol_ronde correct (+5)
+    for (const antw of (testAntw || [])) {
+      let score = 0;
+      if (antw.mol_verdachte_id === mol.id) score += 10;
+      score += Math.min(5, (antw.mol_argument?.length || 0) > 30 ? 5 : 2);
+      await supabase.from('mol_test_antwoorden').update({ score }).eq('id', antw.id);
+    }
+
+    res.json({ ok: true, mol_naam: mol.naam });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // START
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
