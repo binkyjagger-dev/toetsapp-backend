@@ -481,7 +481,7 @@ function randCode(n, chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789') {
 // ── POST /api/mol/sessie — docent maakt sessie aan ──────────────────────────
 app.post('/api/mol/sessie', async (req, res) => {
   try {
-    const { les_id, les_naam, les_content, klas_id, klas_naam, n_rondes, leerlingen, groep_grootte, vragen, groepsindeling } = req.body;
+    const { les_id, les_naam, les_content, klas_id, klas_naam, n_rondes, leerlingen, groep_grootte, vragen, groepsindeling, timer_discussie, timer_stem } = req.body;
 
     const sessieId    = 'mol_' + Date.now();
     const docentCode  = randCode(6);
@@ -546,6 +546,10 @@ app.post('/api/mol/sessie', async (req, res) => {
       groep_grootte,
       status:      'setup',
       huidige_ronde: 0,
+      ronde_fase:   null,
+      fase_gestart_op: null,
+      timer_discussie: timer_discussie || 120,
+      timer_stem:      timer_stem      || 60,
       sessie_code: sessieCode,
       docent_code: docentCode,
       created_at:  Date.now(),
@@ -573,8 +577,10 @@ app.post('/api/mol/sessie', async (req, res) => {
         correct_uitleg:   v.correct_uitleg || '',
         fout_antwoord:    'fout',
         fout_uitleg:      v.fout_uitleg || '',
-        vraagtype:        v.vraagtype || 'open',
-        mc_opties:        (v.mc_opties && v.mc_opties.length > 0) ? v.mc_opties : null,
+        vraagtype:                v.vraagtype || 'open',
+        mc_opties:                (v.mc_opties && v.mc_opties.length > 0) ? v.mc_opties : null,
+        timer_discussie_override: v.timer_discussie_override || null,
+        timer_stem_override:      v.timer_stem_override      || null,
       }));
       await supabase.from('mol_cases').insert(caseRows);
     }
@@ -750,6 +756,22 @@ app.get('/api/mol/login', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+
+// ── PATCH /api/mol/ronde-fase — zet ronde-fase + timestamp ──────────────────
+app.patch('/api/mol/ronde-fase', async (req, res) => {
+  try {
+    const { sessie_id, docent_code, ronde_fase, status } = req.body;
+    const { data: sessie } = await supabase.from('mol_sessies')
+      .select('docent_code').eq('id', sessie_id).single();
+    if (!sessie || sessie.docent_code !== docent_code)
+      return res.status(403).json({ error: 'Ongeldige docentcode' });
+    const update = { ronde_fase, fase_gestart_op: Date.now() };
+    if (status) update.status = status;
+    await supabase.from('mol_sessies').update(update).eq('id', sessie_id);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ── PATCH /api/mol/sessie/:id/status — docent stuurt spel aan ───────────────
@@ -989,8 +1011,10 @@ Antwoord ALLEEN met geldige JSON, geen tekst daarbuiten:
       correct_uitleg:   c.correct_uitleg,
       fout_antwoord:    c.fout_antwoord || 'fout',
       fout_uitleg:      c.fout_uitleg,
-      vraagtype:        c.vraagtype || 'open',
-      mc_opties:        c.mc_opties || null,
+      vraagtype:                c.vraagtype || 'open',
+      mc_opties:                c.mc_opties || null,
+      timer_discussie_override: c.timer_discussie_override || null,
+      timer_stem_override:      c.timer_stem_override      || null,
     }));
 
     await supabase.from('mol_cases').insert(caseRows);
