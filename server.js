@@ -585,6 +585,48 @@ app.post('/api/mol/sessie', async (req, res) => {
   }
 });
 
+
+// ── GET /api/mol/sessies — docent haalt lijst van alle sessies op ────────────
+app.get('/api/mol/sessies', async (req, res) => {
+  try {
+    const { docent_token } = req.query;
+    if (docent_token !== process.env.TEACHER_TOKEN && docent_token !== 'leraar123') {
+      return res.status(403).json({ error: 'Niet geautoriseerd' });
+    }
+    const { data, error } = await supabase
+      .from('mol_sessies')
+      .select('id, les_naam, status, created_at, sessie_code, docent_code, n_rondes, groep_grootte')
+      .order('created_at', { ascending: false });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── DELETE /api/mol/sessie/:id — docent verwijdert sessie ────────────────────
+app.delete('/api/mol/sessie/:id', async (req, res) => {
+  try {
+    const { docent_token } = req.query;
+    if (docent_token !== process.env.TEACHER_TOKEN && docent_token !== 'leraar123') {
+      return res.status(403).json({ error: 'Niet geautoriseerd' });
+    }
+    const sid = req.params.id;
+    // Verwijder alle gerelateerde data in de juiste volgorde
+    await supabase.from('mol_test_antwoorden').delete().eq('sessie_id', sid);
+    await supabase.from('mol_groep_stemmen').delete().eq('sessie_id', sid);
+    await supabase.from('mol_antwoorden').delete().eq('sessie_id', sid);
+    await supabase.from('mol_cases').delete().eq('sessie_id', sid);
+    await supabase.from('mol_leerlingen').delete().eq('sessie_id', sid);
+    await supabase.from('mol_groepen').delete().eq('sessie_id', sid);
+    const { error } = await supabase.from('mol_sessies').delete().eq('id', sid);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── GET /api/mol/sessie/:id — volledige sessie state ────────────────────────
 app.get('/api/mol/sessie/:id', async (req, res) => {
   try {
