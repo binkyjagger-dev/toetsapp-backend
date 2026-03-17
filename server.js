@@ -765,9 +765,7 @@ Voor elke case genereer je:
 Eisen:
 - Elke optie is een korte stelling (max 1 zin), niet de uitleg zelf
 - Puntenverschillen weerspiegelen de kwaliteit van het economisch redeneren
-- Het Mol-argument (0 pt) moet een veelgemaakte redeneerfout zijn${n_rondes > 1 ? '
-- Cases moeten onderling duidelijk verschillen' : ''}
-${ronde_offset > 0 ? '- Dit is een vervanging voor ronde ' + (ronde_offset + 1) + ', genereer iets anders' : ''}
+- Het Mol-argument (0 pt) moet een veelgemaakte redeneerfout zijn${n_rondes > 1 ? '\n- Cases moeten onderling duidelijk verschillen' : ''}${ronde_offset > 0 ? '\n- Dit is een vervanging voor ronde ' + (ronde_offset + 1) + ', genereer iets anders' : ''}
 
 Antwoord ALLEEN met geldige JSON:
 {
