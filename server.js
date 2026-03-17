@@ -481,42 +481,58 @@ function randCode(n, chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789') {
 // ── POST /api/mol/sessie — docent maakt sessie aan ──────────────────────────
 app.post('/api/mol/sessie', async (req, res) => {
   try {
-    const { les_id, les_naam, les_content, klas_id, klas_naam, n_rondes, leerlingen, groep_grootte } = req.body;
+    const { les_id, les_naam, les_content, klas_id, klas_naam, n_rondes, leerlingen, groep_grootte, vragen, groepsindeling } = req.body;
 
     const sessieId    = 'mol_' + Date.now();
     const docentCode  = randCode(6);
-    const sessieCode  = randCode(4); // leerlingen loggen in met dit
+    const sessieCode  = randCode(4);
 
-    // Willekeurig groepen maken
-    const geshuffled = [...leerlingen].sort(() => Math.random() - 0.5);
-    const groepen = [];
+    // Groepen opbouwen — gebruik docent-indeling als aangeleverd, anders willekeurig
     const groepLabels = 'ABCDEFGHIJ'.split('');
-    for (let i = 0; i < geshuffled.length; i += groep_grootte) {
-      groepen.push({
-        id: 'groep_' + sessieId + '_' + groepLabels[groepen.length],
-        sessie_id: sessieId,
-        naam: 'Groep ' + groepLabels[groepen.length],
-        leden: geshuffled.slice(i, i + groep_grootte),
-      });
-    }
-
-    // Leerlingen aanmaken met unieke speler-codes + mol aanwijzen per groep
+    const groepen = [];
     const leerlingenRows = [];
-    groepen.forEach(g => {
-      const molIndex = Math.floor(Math.random() * g.leden.length);
-      g.leden.forEach((naam, idx) => {
-        leerlingenRows.push({
-          id:          'speler_' + sessieId + '_' + randCode(8),
-          sessie_id:   sessieId,
-          naam,
-          groep_id:    g.id,
-          groep_naam:  g.naam,
-          is_mol:      idx === molIndex,
-          speler_code: randCode(5),
-          online_at:   null,
+
+    if (groepsindeling && groepsindeling.length > 0) {
+      // Docent heeft groepen + Mol zelf bepaald
+      groepsindeling.forEach((g, gi) => {
+        const groepId = 'groep_' + sessieId + '_' + groepLabels[gi];
+        groepen.push({ id: groepId, sessie_id: sessieId, naam: g.naam });
+        g.leden.forEach(lid => {
+          leerlingenRows.push({
+            id:          'speler_' + sessieId + '_' + randCode(8),
+            sessie_id:   sessieId,
+            naam:        lid.naam,
+            groep_id:    groepId,
+            groep_naam:  g.naam,
+            is_mol:      !!lid.isMol,
+            speler_code: randCode(5),
+            online_at:   null,
+          });
         });
       });
-    });
+    } else {
+      // Willekeurige indeling + willekeurige Mol
+      const geshuffled = [...leerlingen].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < geshuffled.length; i += groep_grootte) {
+        const groepId  = 'groep_' + sessieId + '_' + groepLabels[groepen.length];
+        const groepNaam = 'Groep ' + groepLabels[groepen.length];
+        groepen.push({ id: groepId, sessie_id: sessieId, naam: groepNaam });
+        const slice    = geshuffled.slice(i, i + groep_grootte);
+        const molIndex = Math.floor(Math.random() * slice.length);
+        slice.forEach((naam, idx) => {
+          leerlingenRows.push({
+            id:          'speler_' + sessieId + '_' + randCode(8),
+            sessie_id:   sessieId,
+            naam,
+            groep_id:    groepId,
+            groep_naam:  groepNaam,
+            is_mol:      idx === molIndex,
+            speler_code: randCode(5),
+            online_at:   null,
+          });
+        });
+      }
+    }
 
     // Sessie opslaan
     const { error: sessieErr } = await supabase.from('mol_sessies').insert([{
@@ -544,6 +560,24 @@ app.post('/api/mol/sessie', async (req, res) => {
     // Leerlingen opslaan
     const { error: leerlingErr } = await supabase.from('mol_leerlingen').insert(leerlingenRows);
     if (leerlingErr) return res.status(500).json({ error: leerlingErr.message });
+
+    // Sla vooraf gemaakte vragen op als die zijn meegegeven
+    if (vragen && vragen.length > 0) {
+      const caseRows = vragen.map(v => ({
+        id:               `case_${sessieId}_r${v.ronde_nr}`,
+        sessie_id:        sessieId,
+        ronde_nr:         v.ronde_nr,
+        vraag:            v.vraag || '',
+        context:          v.context || '',
+        correct_antwoord: 'correct',
+        correct_uitleg:   v.correct_uitleg || '',
+        fout_antwoord:    'fout',
+        fout_uitleg:      v.fout_uitleg || '',
+        vraagtype:        v.vraagtype || 'open',
+        mc_opties:        (v.mc_opties && v.mc_opties.length > 0) ? v.mc_opties : null,
+      }));
+      await supabase.from('mol_cases').insert(caseRows);
+    }
 
     res.json({ sessieId, sessieCode, docentCode, groepen: groepen.map(g => g.naam), aantalLeerlingen: leerlingenRows.length });
   } catch (e) {
@@ -609,11 +643,12 @@ app.patch('/api/mol/sessie/:id/status', async (req, res) => {
 // ── POST /api/mol/antwoord — leerling dient individueel antwoord in ─────────
 app.post('/api/mol/antwoord', async (req, res) => {
   try {
-    const { sessie_id, ronde_nr, leerling_id, antwoord, argument } = req.body;
+    const { sessie_id, ronde_nr, leerling_id, antwoord, argument, mc_optie_id } = req.body;
     // Upsert — voorkom dubbele submissions
     const { error } = await supabase.from('mol_antwoorden').upsert([{
-      id:          `antw_${sessie_id}_r${ronde_nr}_${leerling_id}`,
+      id:           `antw_${sessie_id}_r${ronde_nr}_${leerling_id}`,
       sessie_id, ronde_nr, leerling_id, antwoord, argument,
+      mc_optie_id:  mc_optie_id || null,
       submitted_at: Date.now(),
     }]);
     if (error) return res.status(500).json({ error: error.message });
@@ -627,12 +662,25 @@ app.post('/api/mol/antwoord', async (req, res) => {
 app.post('/api/mol/groep-stem', async (req, res) => {
   try {
     const { sessie_id, ronde_nr, groep_id, gekozen_leerling_id } = req.body;
-    // Haal case op voor punten
     const { data: caseData } = await supabase.from('mol_cases').select('*').eq('sessie_id', sessie_id).eq('ronde_nr', ronde_nr).single();
-    // Haal gekozen antwoord op
-    const { data: antw } = await supabase.from('mol_antwoorden').select('antwoord,argument').eq('leerling_id', gekozen_leerling_id).eq('ronde_nr', ronde_nr).single();
-    const isCorrect = caseData && antw && antw.antwoord === 'correct';
-    const punten = isCorrect ? 10 : -5;
+    const { data: antw }     = await supabase.from('mol_antwoorden').select('antwoord,argument,mc_optie_id').eq('leerling_id', gekozen_leerling_id).eq('ronde_nr', ronde_nr).single();
+
+    // Bepaal punten: MC → zoek in mc_opties, open → correct=10 / fout=0
+    let punten = 0;
+    let isCorrect = false;
+    let maxPunten = 10; // max haalbaar voor deze ronde
+    if (caseData?.vraagtype === 'mc' && caseData?.mc_opties && antw?.mc_optie_id) {
+      const opties = caseData.mc_opties;
+      const gekozen = opties.find(o => o.id === antw.mc_optie_id);
+      punten    = gekozen?.punten ?? 0;
+      isCorrect = punten === Math.max(...opties.map(o => o.punten ?? 0));
+      maxPunten = Math.max(...opties.map(o => o.punten ?? 0));
+    } else {
+      isCorrect = antw?.antwoord === 'correct';
+      punten    = isCorrect ? 10 : 0;
+      maxPunten = 10;
+    }
+
     const { error } = await supabase.from('mol_groep_stemmen').upsert([{
       id:                  `stem_${sessie_id}_r${ronde_nr}_${groep_id}`,
       sessie_id, ronde_nr, groep_id,
@@ -640,10 +688,34 @@ app.post('/api/mol/groep-stem', async (req, res) => {
       gekozen_argument:    antw?.argument || '',
       is_correct:          isCorrect,
       punten,
+      max_punten:          maxPunten,
       submitted_at:        Date.now(),
     }]);
     if (error) return res.status(500).json({ error: error.message });
-    res.json({ ok: true, punten, is_correct: isCorrect });
+    res.json({ ok: true, punten, max_punten: maxPunten, is_correct: isCorrect });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/mol/score-open — docent scoort open antwoord per groep ─────────
+app.post('/api/mol/score-open', async (req, res) => {
+  try {
+    const { sessie_id, ronde_nr, groep_id, punten, docent_code } = req.body;
+    // Verificeer docentcode
+    const { data: sessie } = await supabase.from('mol_sessies').select('docent_code').eq('id', sessie_id).single();
+    if (!sessie || sessie.docent_code !== docent_code) return res.status(403).json({ error: 'Ongeldige docentcode' });
+    // Upsert de score
+    const { error } = await supabase.from('mol_groep_stemmen').upsert([{
+      id:          `stem_${sessie_id}_r${ronde_nr}_${groep_id}`,
+      sessie_id, ronde_nr, groep_id,
+      punten:      parseInt(punten),
+      max_punten:  10,
+      is_correct:  parseInt(punten) >= 7,
+      submitted_at: Date.now(),
+    }]);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -661,6 +733,75 @@ app.post('/api/mol/test-antwoord', async (req, res) => {
     }]);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// ── POST /api/mol/genereer-cases-preview — genereert zonder op te slaan ──────
+app.post('/api/mol/genereer-cases-preview', async (req, res) => {
+  try {
+    const { les_naam, les_content, n_rondes, ronde_offset = 0 } = req.body;
+
+    const prompt = `Je bent een ervaren economieleraar op VWO-niveau.
+Genereer ${n_rondes} economische case${n_rondes > 1 ? 's' : ''} voor de lesvorm "Wie is de Mol" voor de les: "${les_naam}".
+
+Kernstof:
+${les_content}
+
+Voor elke case genereer je:
+1. Een heldere economische vraag over redenering en verbanden (1-2 zinnen)
+2. Optionele context (1 zin achtergrond)
+3. Uitleg van het correcte antwoord (2-3 zinnen)
+4. Uitleg van het Mol-argument: plausibel fout, verleidelijk, maar economisch onjuist (2-3 zinnen)
+5. Vier MC-opties met gegradueerde puntenscore:
+   - Beste antwoord: 10 punten (volledig correct, scherpe redenering)
+   - Redelijk antwoord: 7 punten (grotendeels correct, mist nuance)
+   - Matig antwoord: 3 punten (gedeeltelijk correct, bevat een denkfout)
+   - Mol-argument: 0 punten (plausibel fout — dit is het argument dat de Mol krijgt)
+   De volgorde van de opties moet willekeurig zijn (niet altijd 10pt als eerste).
+
+Eisen:
+- Elke optie is een korte stelling (max 1 zin), niet de uitleg zelf
+- Puntenverschillen weerspiegelen de kwaliteit van het economisch redeneren
+- Het Mol-argument (0 pt) moet een veelgemaakte redeneerfout zijn${n_rondes > 1 ? '
+- Cases moeten onderling duidelijk verschillen' : ''}
+${ronde_offset > 0 ? '- Dit is een vervanging voor ronde ' + (ronde_offset + 1) + ', genereer iets anders' : ''}
+
+Antwoord ALLEEN met geldige JSON:
+{
+  "cases": [
+    {
+      "ronde_nr": ${ronde_offset + 1},
+      "vraag": "...",
+      "context": "...",
+      "correct_uitleg": "...",
+      "fout_uitleg": "...",
+      "mc_opties": [
+        {"tekst": "...", "punten": 10, "is_mol": false},
+        {"tekst": "...", "punten": 7,  "is_mol": false},
+        {"tekst": "...", "punten": 3,  "is_mol": false},
+        {"tekst": "...", "punten": 0,  "is_mol": true}
+      ]
+    }
+  ]
+}`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const parsed = JSON.parse(response.content[0].text.replace(/```json|```/g, '').trim());
+    // Nummereer rondes correct bij offset
+    parsed.cases = parsed.cases.map((c, i) => {
+      // Voeg unieke IDs toe aan mc_opties
+      const opties = (c.mc_opties || []).map(o => ({ ...o, id: randCode(7) }));
+      return { ...c, ronde_nr: ronde_offset + i + 1, mc_opties: opties };
+    });
+    res.json({ ok: true, cases: parsed.cases });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -719,10 +860,12 @@ Antwoord ALLEEN met geldige JSON, geen tekst daarbuiten:
       ronde_nr:         c.ronde_nr,
       vraag:            c.vraag,
       context:          c.context || '',
-      correct_antwoord: c.correct_antwoord,
+      correct_antwoord: c.correct_antwoord || 'correct',
       correct_uitleg:   c.correct_uitleg,
-      fout_antwoord:    c.fout_antwoord,
+      fout_antwoord:    c.fout_antwoord || 'fout',
       fout_uitleg:      c.fout_uitleg,
+      vraagtype:        c.vraagtype || 'open',
+      mc_opties:        c.mc_opties || null,
     }));
 
     await supabase.from('mol_cases').insert(caseRows);
