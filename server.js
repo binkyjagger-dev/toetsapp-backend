@@ -604,6 +604,91 @@ app.get('/api/mol/sessies', async (req, res) => {
   }
 });
 
+
+// ── POST /api/mol/sessie/:id/hergebruik — reset groepen maar behoud cases ────
+app.post('/api/mol/sessie/:id/hergebruik', async (req, res) => {
+  try {
+    const { docent_token, groepsindeling, n_rondes, groep_grootte } = req.body;
+    if (docent_token !== process.env.TEACHER_TOKEN && docent_token !== 'leraar123') {
+      return res.status(403).json({ error: 'Niet geautoriseerd' });
+    }
+    const sid = req.params.id;
+
+    // Verwijder alleen student-gerelateerde data, behoud cases
+    await supabase.from('mol_test_antwoorden').delete().eq('sessie_id', sid);
+    await supabase.from('mol_groep_stemmen').delete().eq('sessie_id', sid);
+    await supabase.from('mol_antwoorden').delete().eq('sessie_id', sid);
+    await supabase.from('mol_leerlingen').delete().eq('sessie_id', sid);
+    await supabase.from('mol_groepen').delete().eq('sessie_id', sid);
+
+    // Nieuwe groepen + leerlingen aanmaken
+    const groepLabels = 'ABCDEFGHIJ'.split('');
+    const nieuweGroepen = [];
+    const nieuweLeerlingen = [];
+
+    groepsindeling.forEach((g, gi) => {
+      const groepId = 'groep_' + sid + '_new_' + Date.now() + '_' + gi;
+      nieuweGroepen.push({ id: groepId, sessie_id: sid, naam: g.naam });
+      g.leden.forEach(lid => {
+        nieuweLeerlingen.push({
+          id:          'speler_' + sid + '_' + randCode(8),
+          sessie_id:   sid,
+          naam:        lid.naam,
+          groep_id:    groepId,
+          groep_naam:  g.naam,
+          is_mol:      !!lid.isMol,
+          speler_code: randCode(5),
+          online_at:   null,
+        });
+      });
+    });
+
+    await supabase.from('mol_groepen').insert(nieuweGroepen);
+    await supabase.from('mol_leerlingen').insert(nieuweLeerlingen);
+
+    // Reset sessie naar setup
+    const updates = { status: 'setup', huidige_ronde: 0 };
+    if (n_rondes)    updates.n_rondes    = n_rondes;
+    if (groep_grootte) updates.groep_grootte = groep_grootte;
+    await supabase.from('mol_sessies').update(updates).eq('id', sid);
+
+    res.json({ ok: true, aantalLeerlingen: nieuweLeerlingen.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── GET /api/mol/sessie/:id/resultaten — volledige resultaten voor archief ───
+app.get('/api/mol/sessie/:id/resultaten', async (req, res) => {
+  try {
+    const { docent_token } = req.query;
+    if (docent_token !== process.env.TEACHER_TOKEN && docent_token !== 'leraar123') {
+      return res.status(403).json({ error: 'Niet geautoriseerd' });
+    }
+    const sid = req.params.id;
+    const [
+      { data: sessie },
+      { data: leerlingen },
+      { data: groepen },
+      { data: cases },
+      { data: antwoorden },
+      { data: groepStemmen },
+      { data: testAntwoorden },
+    ] = await Promise.all([
+      supabase.from('mol_sessies').select('*').eq('id', sid).single(),
+      supabase.from('mol_leerlingen').select('*').eq('sessie_id', sid),
+      supabase.from('mol_groepen').select('*').eq('sessie_id', sid),
+      supabase.from('mol_cases').select('*').eq('sessie_id', sid).order('ronde_nr'),
+      supabase.from('mol_antwoorden').select('*').eq('sessie_id', sid),
+      supabase.from('mol_groep_stemmen').select('*').eq('sessie_id', sid),
+      supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sid),
+    ]);
+    res.json({ sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── DELETE /api/mol/sessie/:id — docent verwijdert sessie ────────────────────
 app.delete('/api/mol/sessie/:id', async (req, res) => {
   try {
