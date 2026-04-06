@@ -789,6 +789,19 @@ app.patch('/api/mol/sessie/:id/status', async (req, res) => {
   }
 });
 
+
+// ── POST /api/mol/heartbeat — leerling stuurt periodiek ping ────────────────
+app.post('/api/mol/heartbeat', async (req, res) => {
+  try {
+    const { leerling_id } = req.body;
+    if (!leerling_id) return res.status(400).json({ error: 'leerling_id ontbreekt' });
+    await supabase.from('mol_leerlingen')
+      .update({ online_at: Date.now() })
+      .eq('id', leerling_id);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── POST /api/mol/antwoord — leerling dient individueel antwoord in ─────────
 app.post('/api/mol/antwoord', async (req, res) => {
   try {
