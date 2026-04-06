@@ -867,8 +867,9 @@ app.post('/api/mol/antwoord', async (req, res) => {
     const iederKlaar = alleLeerlingen && alleAntwoorden &&
       alleAntwoorden.length >= alleLeerlingen.length;
     if (iederKlaar) {
+      // Sla discussiefase over — direct naar stemfase
       await supabase.from('mol_sessies')
-        .update({ ronde_fase: 'discussie', fase_gestart_op: Date.now() })
+        .update({ ronde_fase: 'stem', fase_gestart_op: Date.now() })
         .eq('id', sessie_id);
     }
     res.json({ ok: true, ieder_klaar: iederKlaar });
