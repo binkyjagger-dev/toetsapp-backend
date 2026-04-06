@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToetsAgent — Stanislas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:       #0D2137;
+  --navy-2:     #142b47;
+  --navy-3:     #1a3456;
+  --gold:       #C5A028;
+  --gold-light: #e2bb42;
+  --gold-dim:   rgba(197,160,40,0.15);
+  --surface:    rgba(255,255,255,0.05);
+  --surface-2:  rgba(255,255,255,0.08);
+  --border:     rgba(255,255,255,0.09);
+  --border-2:   rgba(255,255,255,0.14);
+  --text:       #dde4ed;
+  --muted:      #6e8daa;
+  --green:      #34d399;
+  --green-dim:  rgba(52,211,153,0.12);
+  --red:        #f87171;
+  --red-dim:    rgba(248,113,113,0.1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--navy);
+  font-family: 'Outfit', sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1rem 4rem;
+  background-image:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(197,160,40,0.13) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 100% 100%, rgba(52,211,153,0.05) 0%, transparent 50%);
+}
+
+.card {
+  width: 100%;
+  max-width: 640px;
+  background: var(--navy-2);
+  border: 1px solid var(--border-2);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  animation: rise 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Header */
+.card-header {
+  padding: 1.75rem 2rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(197,160,40,0.07) 0%, transparent 60%);
+  position: relative;
+  overflow: hidden;
+}
+.card-header::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 140px; height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(197,160,40,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.brand {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.55rem;
+  color: #fff;
+  line-height: 1.2;
+  margin-bottom: 0.4rem;
+}
+.card-sub {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Body */
+.card-body { padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 1.4rem; }
+
+/* Form group */
+.form-group { display: flex; flex-direction: column; gap: 0.45rem; }
+.label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.label-icon { font-size: 0.9rem; }
+.required { color: var(--gold); font-size: 0.65rem; margin-left: 0.2rem; }
+
+/* Native select */
+select {
+  appearance: none;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236e8daa' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+  width: 100%;
+}
+select:focus { outline: none; border-color: var(--gold); background-color: var(--surface-2); }
+select option { background: #142b47; }
+
+/* ── Custom multi-select dropdown ── */
+.multi-select-wrap { position: relative; }
+
+.multi-trigger {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  transition: border-color 0.2s, background 0.2s;
+  user-select: none;
+}
+.multi-trigger:hover,
+.multi-trigger.open { border-color: var(--gold); background: var(--surface-2); }
+
+.multi-trigger-text { font-size: 0.88rem; color: var(--text); flex: 1; min-width: 0; }
+.multi-trigger-text.placeholder { color: var(--muted); }
+
+.multi-arrow {
+  width: 20px; height: 20px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.2s;
+}
+.multi-arrow.open { transform: rotate(180deg); }
+.multi-arrow svg { stroke: var(--muted); }
+
+.multi-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0; right: 0;
+  background: #142b47;
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 100;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45);
+  display: none;
+  animation: dropIn 0.18s ease both;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.multi-dropdown.open { display: block; }
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-section-head {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  padding: 0.65rem 1rem 0.3rem;
+  border-top: 1px solid var(--border);
+}
+.dropdown-section-head:first-child { border-top: none; }
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  transition: background 0.12s;
+  font-size: 0.87rem;
+}
+.dropdown-item:hover { background: rgba(255,255,255,0.05); }
+.dropdown-item.checked { background: rgba(197,160,40,0.07); }
+
+.check-box {
+  width: 18px; height: 18px; flex-shrink: 0;
+  border-radius: 5px;
+  border: 1.5px solid var(--border-2);
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.dropdown-item.checked .check-box {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.check-box svg { display: none; }
+.dropdown-item.checked .check-box svg { display: block; }
+
+.item-label { flex: 1; color: var(--text); }
+.item-sub   { font-size: 0.73rem; color: var(--muted); }
+
+/* Chips for selected */
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; min-height: 0; }
+.chip {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  background: var(--gold-dim);
+  border: 1px solid rgba(197,160,40,0.3);
+  color: var(--gold-light);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.22rem 0.6rem;
+  border-radius: 99px;
+  animation: popIn 0.15s ease both;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.chip-x {
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 0.8rem;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+.chip-x:hover { opacity: 1; }
+
+/* Info box */
+.info-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  display: none;
+  line-height: 1.55;
+}
+.info-box.visible { display: block; }
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 0.2rem 0; }
+.info-label { color: var(--muted); font-size: 0.78rem; }
+.info-val { font-weight: 600; font-size: 0.85rem; color: var(--text); }
+.info-val.gold { color: var(--gold-light); }
+.info-val.green { color: var(--green); }
+.info-divider { height: 1px; background: var(--border); margin: 0.4rem 0; }
+
+/* Preview leerdoelen count */
+.leerdoelen-preview {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.stat-pill {
+  flex: 1;
+  min-width: 120px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  text-align: center;
+}
+.stat-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.6rem;
+  line-height: 1;
+  margin-bottom: 0.2rem;
+}
+.stat-num.gold { color: var(--gold-light); }
+.stat-num.green { color: var(--green); }
+.stat-num.muted { color: var(--muted); }
+.stat-label { font-size: 0.7rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* Generate button */
+.btn-generate {
+  width: 100%;
+  padding: 0.95rem;
+  background: linear-gradient(135deg, var(--gold) 0%, #a8891f 100%);
+  border: none;
+  border-radius: 12px;
+  color: var(--navy);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 20px rgba(197,160,40,0.3);
+  position: relative;
+  overflow: hidden;
+}
+.btn-generate::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.btn-generate:hover:not(:disabled)::before { opacity: 1; }
+.btn-generate:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(197,160,40,0.4); }
+.btn-generate:active:not(:disabled) { transform: translateY(0); }
+.btn-generate:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Loading state */
+.btn-generate .spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(13,33,55,0.3);
+  border-top-color: var(--navy);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn-generate.loading .btn-label { display: none; }
+.btn-generate.loading .spinner { display: block; }
+
+/* Success state */
+.success-box {
+  background: var(--green-dim);
+  border: 1px solid rgba(52,211,153,0.3);
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  display: none;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.success-box.visible { display: flex; animation: rise 0.3s ease both; }
+.success-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 0.05rem; }
+.success-title { font-weight: 600; font-size: 0.9rem; color: var(--green); margin-bottom: 0.2rem; }
+.success-desc  { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+
+/* Scrollbar */
+.multi-dropdown::-webkit-scrollbar { width: 5px; }
+.multi-dropdown::-webkit-scrollbar-track { background: transparent; }
+.multi-dropdown::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+
+@media (max-width: 480px) {
+  .card-body { padding: 1.25rem; }
+  .card-header { padding: 1.25rem; }
+}
+
+  /* CE badges */
+  .ce-badge {
+    font-size: 0.62rem; font-weight: 700; padding: 0.15rem 0.45rem;
+    border-radius: 99px; flex-shrink: 0; letter-spacing: 0.04em;
+  }
+  .ce-high { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.25); }
+  .ce-mid  { background: rgba(197,160,40,0.15);  color: #e2bb42; border: 1px solid rgba(197,160,40,0.25); }
+  .ce-low  { background: rgba(248,113,113,0.12); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
+
+  .item-content { flex: 1; min-width: 0; }
+
+  /* Dropdown search */
+  .dropdown-search {
+    padding: 0.6rem 1rem; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: #142b47; z-index: 2;
+  }
+  .dropdown-search input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; padding: 0.45rem 0.75rem;
+    color: var(--text); font-family: 'Outfit', sans-serif; font-size: 0.85rem;
+    outline: none;
+  }
+  .dropdown-search input:focus { border-color: var(--gold); }
+  .dropdown-search input::placeholder { color: var(--muted); }
+  .dropdown-item.hidden { display: none; }
+
+
+  /* ── Gap analyse panel ── */
+  .gap-panel {
+    background: rgba(74,158,255,0.05);
+    border: 1px solid rgba(74,158,255,0.2);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .gap-header {
+    padding: 0.9rem 1.1rem 0.7rem;
+    border-bottom: 1px solid rgba(74,158,255,0.12);
+    background: rgba(74,158,255,0.04);
+  }
+  .gap-title {
+    font-weight: 700; font-size: 0.88rem; color: #7ec8ff;
+    display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem;
+  }
+  .gap-icon { font-size: 0.95rem; }
+  .gap-badge {
+    font-size: 0.62rem; font-weight: 700; padding: 0.12rem 0.4rem;
+    border-radius: 99px; background: rgba(74,158,255,0.15);
+    color: #7ec8ff; border: 1px solid rgba(74,158,255,0.25);
+    display: none;
+  }
+  .gap-badge.visible { display: inline; }
+  .gap-sub { font-size: 0.78rem; color: var(--muted); }
+
+  .gap-loading {
+    padding: 1.1rem; display: none; align-items: center;
+    gap: 0.6rem; font-size: 0.82rem; color: var(--muted);
+  }
+  .gap-loading.visible { display: flex; }
+  .gap-spinner {
+    width: 16px; height: 16px; flex-shrink: 0;
+    border: 2px solid rgba(74,158,255,0.2);
+    border-top-color: #4a9eff; border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  .gap-empty {
+    padding: 1.1rem; text-align: center; font-size: 0.8rem;
+    color: var(--muted); line-height: 1.55; display: none;
+  }
+  .gap-empty.visible { display: block; }
+  .gap-empty-icon { font-size: 1.5rem; margin-bottom: 0.4rem; }
+
+  .gap-results { padding: 0.9rem 1.1rem; display: none; flex-direction: column; gap: 0.75rem; }
+  .gap-results.visible { display: flex; }
+
+  .gap-stats-row { display: flex; gap: 0.6rem; }
+  .gap-stat {
+    flex: 1; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.55rem 0.75rem; text-align: center;
+  }
+  .gap-stat-num { font-weight: 700; font-size: 1.15rem; line-height: 1; margin-bottom: 0.15rem; }
+  .gap-stat-lbl { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+
+  .gap-label-sm {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); font-weight: 600;
+  }
+
+  .gap-bar-row {
+    display: flex; align-items: center; gap: 0.6rem; font-size: 0.78rem;
+  }
+  .gap-bar-name {
+    width: 160px; flex-shrink: 0; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 0.76rem;
+  }
+  .gap-bar-track {
+    flex: 1; height: 7px; background: rgba(255,255,255,0.07);
+    border-radius: 99px; overflow: hidden;
+  }
+  .gap-bar-fill {
+    height: 100%; border-radius: 99px;
+    transition: width 0.6s cubic-bezier(0.22,1,0.36,1);
+  }
+  .gap-bar-val { width: 28px; text-align: right; font-size: 0.75rem; font-weight: 600; flex-shrink: 0; }
+
+  .gap-focus {
+    background: rgba(255,140,66,0.07); border: 1px solid rgba(255,140,66,0.22);
+    border-radius: 8px; padding: 0.7rem 0.9rem; font-size: 0.8rem;
+    line-height: 1.55; color: var(--muted); display: none;
+  }
+  .gap-focus.visible { display: block; }
+  .gap-focus strong { color: #ffb380; font-weight: 600; }
+
+
+  /* ── Review scherm ── */
+  .review-box {
+    background: rgba(52,211,153,0.05); border: 1.5px solid rgba(52,211,153,0.25);
+    border-radius: 14px; overflow: hidden; display: none;
+    animation: rise 0.35s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .review-box.visible { display: block; }
+  .review-header {
+    padding: 1rem 1.25rem 0.85rem;
+    border-bottom: 1px solid rgba(52,211,153,0.12);
+    background: rgba(52,211,153,0.04);
+  }
+  .review-title-row { display: flex; align-items: flex-start; gap: 0.65rem; margin-bottom: 0.55rem; }
+  .review-icon { font-size: 1.3rem; margin-top: 0.05rem; flex-shrink: 0; }
+  .review-title { font-weight: 700; font-size: 0.95rem; color: var(--green); }
+  .review-meta  { font-size: 0.76rem; color: var(--muted); margin-top: 0.1rem; }
+  .review-samenvatting {
+    font-size: 0.82rem; color: var(--muted); line-height: 1.55;
+    font-style: italic; padding-left: 1.9rem;
+  }
+  .review-vragen { padding: 0.75rem 1.25rem; display: flex; flex-direction: column; gap: 0.65rem; }
+
+  .vraag-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.85rem 1rem; position: relative;
+  }
+  .vraag-card-top { display: flex; align-items: flex-start; gap: 0.65rem; margin-bottom: 0.5rem; }
+  .vraag-nr {
+    width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.8rem; background: var(--gold-dim);
+    color: var(--gold-light); border: 1px solid rgba(197,160,40,0.25);
+  }
+  .vraag-content { flex: 1; }
+  .vraag-context {
+    font-size: 0.78rem; color: var(--muted); line-height: 1.5;
+    background: rgba(255,255,255,0.03); border-radius: 6px;
+    padding: 0.45rem 0.65rem; margin-bottom: 0.45rem;
+    border-left: 2px solid rgba(255,255,255,0.1); font-style: italic;
+  }
+  .vraag-tekst { font-size: 0.88rem; color: var(--text); line-height: 1.55; margin-bottom: 0.5rem; }
+  .vraag-opties { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.5rem; }
+  .vraag-optie { font-size: 0.82rem; color: var(--muted); padding: 0.2rem 0; }
+  .vraag-optie.correct { color: var(--green); font-weight: 600; }
+
+  .vraag-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.45rem; }
+  .vtag {
+    font-size: 0.63rem; font-weight: 600; padding: 0.15rem 0.45rem;
+    border-radius: 99px; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .vtag-type    { background: rgba(74,158,255,0.12);  color: #7ec8ff; }
+  .vtag-bloom   { background: rgba(155,109,255,0.12); color: #c9b8ff; }
+  .vtag-ce      { background: rgba(46,204,196,0.12);  color: var(--teal); }
+  .vtag-punten  { background: rgba(197,160,40,0.15);  color: var(--gold-light); }
+  .vtag-hiat    { background: rgba(255,90,90,0.12);   color: #ff9090; }
+
+  .vraag-leerdoel { font-size: 0.75rem; color: var(--muted); line-height: 1.4; }
+  .vraag-correctie {
+    font-size: 0.78rem; color: var(--muted); line-height: 1.5;
+    background: rgba(52,211,153,0.05); border-radius: 6px;
+    padding: 0.45rem 0.65rem; margin-top: 0.45rem;
+    border-left: 2px solid rgba(52,211,153,0.25);
+  }
+  .vraag-correctie-label { font-size: 0.63rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--green); margin-bottom: 0.2rem; }
+
+  .review-footer {
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid rgba(52,211,153,0.12);
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    background: rgba(52,211,153,0.04);
+    flex-wrap: wrap;
+  }
+  .review-totaal { font-size: 0.85rem; color: var(--text); font-weight: 600; }
+  .review-totaal span { color: var(--green); }
+
+  .btn-print {
+    background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3);
+    color: var(--green); font-family: 'Outfit', sans-serif; font-size: 0.82rem;
+    font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn-print:hover { background: rgba(52,211,153,0.18); }
+
+  /* Error box */
+  .error-box {
+    background: rgba(248,113,113,0.07); border: 1px solid rgba(248,113,113,0.3);
+    border-radius: 12px; padding: 1rem 1.25rem;
+    display: none; align-items: flex-start; gap: 0.75rem;
+  }
+  .error-box.visible { display: flex; }
+  .error-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .error-title { font-weight: 600; font-size: 0.88rem; color: #f87171; margin-bottom: 0.2rem; }
+  .error-desc  { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+
+  @media print {
+    body { background: white; color: black; padding: 0; }
+    .card { box-shadow: none; border: none; max-width: 100%; }
+    .card-header, .card-body > *:not(#review-box) { display: none !important; }
+    #review-box { display: block !important; border: none; background: white; }
+    .review-header { background: white; border-bottom: 1px solid #ccc; }
+    .review-title  { color: #1a1a2e; }
+    .review-meta, .review-samenvatting { color: #555; }
+    .vraag-card { background: white; border: 1px solid #ddd; break-inside: avoid; }
+    .vraag-nr   { background: #f0f0f0; color: #1a1a2e; border: 1px solid #ccc; }
+    .vraag-tekst, .vraag-context, .vraag-leerdoel { color: #222; }
+    .vtag { border: 1px solid #ccc; background: #f5f5f5; color: #444; }
+    .vraag-correctie { background: #f9f9f9; border-left: 2px solid #ccc; }
+    .review-footer { border-top: 1px solid #ccc; background: white; }
+    .btn-print, .review-box .btn-print { display: none; }
+    .gap-panel, .error-box { display: none !important; }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-header">
+    <div class="brand">Stanislascollege · Economie VWO</div>
+    <div class="card-title">Toetsagent starten</div>
+    <div class="card-sub">Selecteer klas en behandelde hoofdstukken — de agent genereert een toets op maat.</div>
+  </div>
+
+  <div class="card-body">
+
+    <!-- KLAS -->
+    <div class="form-group">
+      <label class="label" for="klas-select">
+        <span class="label-icon">🎓</span> Klas <span class="required">*</span>
+      </label>
+      <select id="klas-select" onchange="updatePreview(); fetchGapData(this.value)">
+        <option value="">— Kies een klas —</option>
+        <option value="vwo4a">VWO 4A</option>
+        <option value="vwo4b">VWO 4B</option>
+        <option value="vwo5a">VWO 5A</option>
+        <option value="vwo5b">VWO 5B</option>
+        <option value="vwo6a">VWO 6A</option>
+      </select>
+    </div>
+
+    <!-- TOETSTYPE -->
+    <div class="form-group">
+      <label class="label" for="type-select">
+        <span class="label-icon">📝</span> Toetstype <span class="required">*</span>
+      </label>
+      <select id="type-select" onchange="updatePreview()">
+        <option value="">— Kies type —</option>
+        <option value="so">Schriftelijke overhoring (SO)</option>
+        <option value="pw">Proefwerk</option>
+        <option value="ce-prep">CE-voorbereiding</option>
+      </select>
+    </div>
+
+    <!-- HOOFDSTUKKEN MULTI-SELECT -->
+    <div class="form-group">
+      <div class="label">
+        <span class="label-icon">📚</span> Behandelde hoofdstukken <span class="required">*</span>
+      </div>
+
+      <div class="multi-select-wrap" id="multi-wrap">
+        <div class="multi-trigger" id="multi-trigger" onclick="toggleDropdown()">
+          <span class="multi-trigger-text placeholder" id="trigger-text">— Selecteer hoofdstukken —</span>
+          <span class="multi-arrow" id="multi-arrow">
+            <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 1l5 5 5-5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="multi-dropdown" id="multi-dropdown">
+
+          <div class="dropdown-search">
+            <input type="text" id="chapter-search" placeholder="Zoek hoofdstuk…" oninput="filterChapters(this.value)" onclick="event.stopPropagation()">
+          </div>
+
+          <div class="dropdown-section-head">Levensloop 6e druk</div>
+          <div class="dropdown-item" data-val="ll-h1" data-label="H1 — Schaarste & keuzes" data-n="52" data-nce="28" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — Schaarste & keuzes</div><div class="item-sub">52 leerdoelen &nbsp;·&nbsp; 28 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">54% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="ll-h2" data-label="H2 — Inkomen & arbeid" data-n="58" data-nce="31" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Inkomen & arbeid</div><div class="item-sub">58 leerdoelen &nbsp;·&nbsp; 31 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">53% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="ll-h3" data-label="H3 — Risico & informatie" data-n="35" data-nce="28" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Risico & informatie</div><div class="item-sub">35 leerdoelen &nbsp;·&nbsp; 28 in CE-syllabus</div></div>
+            <span class="ce-badge ce-high">80% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="ll-h4" data-label="H4 — Sparen & beleggen" data-n="26" data-nce="17" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H4 — Sparen & beleggen</div><div class="item-sub">26 leerdoelen &nbsp;·&nbsp; 17 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">65% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="ll-h5" data-label="H5 — Pensioen & levensloop" data-n="19" data-nce="11" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H5 — Pensioen & levensloop</div><div class="item-sub">19 leerdoelen &nbsp;·&nbsp; 11 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">58% CE</span>
+          </div>
+          <div class="dropdown-section-head">Vraag en Aanbod 4e druk</div>
+          <div class="dropdown-item" data-val="va-h1" data-label="H1 — Vraag & betalingsbereidheid" data-n="40" data-nce="24" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — Vraag & betalingsbereidheid</div><div class="item-sub">40 leerdoelen &nbsp;·&nbsp; 24 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">60% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="va-h2" data-label="H2 — Elasticiteit" data-n="20" data-nce="16" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Elasticiteit</div><div class="item-sub">20 leerdoelen &nbsp;·&nbsp; 16 in CE-syllabus</div></div>
+            <span class="ce-badge ce-high">80% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="va-h3" data-label="H3 — Aanbod & kosten" data-n="44" data-nce="33" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Aanbod & kosten</div><div class="item-sub">44 leerdoelen &nbsp;·&nbsp; 33 in CE-syllabus</div></div>
+            <span class="ce-badge ce-high">75% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="va-h4" data-label="H4 — Externe effecten & overheid" data-n="43" data-nce="23" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H4 — Externe effecten & overheid</div><div class="item-sub">43 leerdoelen &nbsp;·&nbsp; 23 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">53% CE</span>
+          </div>
+          <div class="dropdown-section-head">Marktgedrag 2e druk</div>
+          <div class="dropdown-item" data-val="mg-h1" data-label="H1 — Marktevenwicht" data-n="24" data-nce="15" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — Marktevenwicht</div><div class="item-sub">24 leerdoelen &nbsp;·&nbsp; 15 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">62% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="mg-h2" data-label="H2 — Monopolistische concurrentie" data-n="11" data-nce="7" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Monopolistische concurrentie</div><div class="item-sub">11 leerdoelen &nbsp;·&nbsp; 7 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">64% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="mg-h3" data-label="H3 — Oligopolie & speltheorie" data-n="26" data-nce="18" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Oligopolie & speltheorie</div><div class="item-sub">26 leerdoelen &nbsp;·&nbsp; 18 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">69% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="mg-h4" data-label="H4 — Monopolie" data-n="12" data-nce="11" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H4 — Monopolie</div><div class="item-sub">12 leerdoelen &nbsp;·&nbsp; 11 in CE-syllabus</div></div>
+            <span class="ce-badge ce-high">92% CE</span>
+          </div>
+          <div class="dropdown-section-head">Marktresultaat en Overheidsinvloed 1e druk</div>
+          <div class="dropdown-item" data-val="mr-h1" data-label="H1 — Surplus & doelmatigheid" data-n="26" data-nce="21" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — Surplus & doelmatigheid</div><div class="item-sub">26 leerdoelen &nbsp;·&nbsp; 21 in CE-syllabus</div></div>
+            <span class="ce-badge ce-high">81% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="mr-h2" data-label="H2 — Overheidsingrijpen & surplus" data-n="21" data-nce="17" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Overheidsingrijpen & surplus</div><div class="item-sub">21 leerdoelen &nbsp;·&nbsp; 17 in CE-syllabus</div></div>
+            <span class="ce-badge ce-high">81% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="mr-h3" data-label="H3 — Marktmacht & prijsdiscriminatie" data-n="25" data-nce="14" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Marktmacht & prijsdiscriminatie</div><div class="item-sub">25 leerdoelen &nbsp;·&nbsp; 14 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">56% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="mr-h4" data-label="H4 — Informatieproblemen" data-n="25" data-nce="17" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H4 — Informatieproblemen</div><div class="item-sub">25 leerdoelen &nbsp;·&nbsp; 17 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">68% CE</span>
+          </div>
+          <div class="dropdown-section-head">Welvaart 1e druk</div>
+          <div class="dropdown-item" data-val="wv-h1" data-label="H1 — BBP & welvaartsmeting" data-n="43" data-nce="19" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — BBP & welvaartsmeting</div><div class="item-sub">43 leerdoelen &nbsp;·&nbsp; 19 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">44% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="wv-h2" data-label="H2 — Structurele groei" data-n="30" data-nce="11" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Structurele groei</div><div class="item-sub">30 leerdoelen &nbsp;·&nbsp; 11 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">37% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="wv-h3" data-label="H3 — Kringloop & bestedingen" data-n="44" data-nce="26" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Kringloop & bestedingen</div><div class="item-sub">44 leerdoelen &nbsp;·&nbsp; 26 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">59% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="wv-h4" data-label="H4 — Arbeidsmarkt & werkloosheid" data-n="31" data-nce="16" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H4 — Arbeidsmarkt & werkloosheid</div><div class="item-sub">31 leerdoelen &nbsp;·&nbsp; 16 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">52% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="wv-h5" data-label="H5 — Brede welvaart" data-n="18" data-nce="10" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H5 — Brede welvaart</div><div class="item-sub">18 leerdoelen &nbsp;·&nbsp; 10 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">56% CE</span>
+          </div>
+          <div class="dropdown-section-head">Economisch Beleid 2e druk</div>
+          <div class="dropdown-item" data-val="eb-h1" data-label="H1 — Geld & geldschepping" data-n="49" data-nce="23" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — Geld & geldschepping</div><div class="item-sub">49 leerdoelen &nbsp;·&nbsp; 23 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">47% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="eb-h2" data-label="H2 — Groei & conjunctuur" data-n="39" data-nce="32" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Groei & conjunctuur</div><div class="item-sub">39 leerdoelen &nbsp;·&nbsp; 32 in CE-syllabus</div></div>
+            <span class="ce-badge ce-high">82% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="eb-h3" data-label="H3 — Conjunctuurbeleid" data-n="41" data-nce="21" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Conjunctuurbeleid</div><div class="item-sub">41 leerdoelen &nbsp;·&nbsp; 21 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">51% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="eb-h4" data-label="H4 — IS-MB-GA model" data-n="30" data-nce="10" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H4 — IS-MB-GA model</div><div class="item-sub">30 leerdoelen &nbsp;·&nbsp; 10 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">33% CE</span>
+          </div>
+          <div class="dropdown-section-head">Economische Modellen 2e druk</div>
+          <div class="dropdown-item" data-val="em-h1" data-label="H1 — Economisch model & kringloop" data-n="52" data-nce="21" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — Economisch model & kringloop</div><div class="item-sub">52 leerdoelen &nbsp;·&nbsp; 21 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">40% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="em-h2" data-label="H2 — Conjunctuur & bestedingen" data-n="28" data-nce="20" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Conjunctuur & bestedingen</div><div class="item-sub">28 leerdoelen &nbsp;·&nbsp; 20 in CE-syllabus</div></div>
+            <span class="ce-badge ce-high">71% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="em-h3" data-label="H3 — Open economie" data-n="19" data-nce="13" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Open economie</div><div class="item-sub">19 leerdoelen &nbsp;·&nbsp; 13 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">68% CE</span>
+          </div>
+          <div class="dropdown-section-head">Monetaire Zaken 2e druk</div>
+          <div class="dropdown-item" data-val="mz-h1" data-label="H1 — Functies van geld" data-n="21" data-nce="5" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — Functies van geld</div><div class="item-sub">21 leerdoelen &nbsp;·&nbsp; 5 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">24% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="mz-h2" data-label="H2 — Ruil & arbeidsdeling" data-n="28" data-nce="4" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Ruil & arbeidsdeling</div><div class="item-sub">28 leerdoelen &nbsp;·&nbsp; 4 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">14% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="mz-h3" data-label="H3 — Geldhoeveelheid" data-n="24" data-nce="7" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Geldhoeveelheid</div><div class="item-sub">24 leerdoelen &nbsp;·&nbsp; 7 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">29% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="mz-h4" data-label="H4 — Inflatie & koopkracht" data-n="30" data-nce="14" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H4 — Inflatie & koopkracht</div><div class="item-sub">30 leerdoelen &nbsp;·&nbsp; 14 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">47% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="mz-h5" data-label="H5 — Monetair beleid & ECB" data-n="23" data-nce="6" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H5 — Monetair beleid & ECB</div><div class="item-sub">23 leerdoelen &nbsp;·&nbsp; 6 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">26% CE</span>
+          </div>
+          <div class="dropdown-section-head">Arbeid 2e druk</div>
+          <div class="dropdown-item" data-val="ar-h1" data-label="H1 — Arbeidsmarkt & beroepsbevolking" data-n="27" data-nce="18" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — Arbeidsmarkt & beroepsbevolking</div><div class="item-sub">27 leerdoelen &nbsp;·&nbsp; 18 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">67% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="ar-h2" data-label="H2 — Arbeidsaanbod & -vraag" data-n="20" data-nce="3" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Arbeidsaanbod & -vraag</div><div class="item-sub">20 leerdoelen &nbsp;·&nbsp; 3 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">15% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="ar-h3" data-label="H3 — Arbeidsproductiviteit" data-n="23" data-nce="10" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Arbeidsproductiviteit</div><div class="item-sub">23 leerdoelen &nbsp;·&nbsp; 10 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">43% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="ar-h4" data-label="H4 — CAO & arbeidsvoorwaarden" data-n="29" data-nce="3" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H4 — CAO & arbeidsvoorwaarden</div><div class="item-sub">29 leerdoelen &nbsp;·&nbsp; 3 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">10% CE</span>
+          </div>
+          <div class="dropdown-section-head">Gedragseconomie 2e druk</div>
+          <div class="dropdown-item" data-val="ge-h1" data-label="H1 — Rationaliteit & keuzegedrag" data-n="11" data-nce="0" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — Rationaliteit & keuzegedrag</div><div class="item-sub">11 leerdoelen &nbsp;·&nbsp; 0 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">0% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="ge-h2" data-label="H2 — Denkfouten & biases" data-n="28" data-nce="1" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Denkfouten & biases</div><div class="item-sub">28 leerdoelen &nbsp;·&nbsp; 1 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">4% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="ge-h3" data-label="H3 — Overheidsbeleid & nudging" data-n="22" data-nce="2" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Overheidsbeleid & nudging</div><div class="item-sub">22 leerdoelen &nbsp;·&nbsp; 2 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">9% CE</span>
+          </div>
+          <div class="dropdown-section-head">Wereldeconomie 3e druk</div>
+          <div class="dropdown-item" data-val="we-h1" data-label="H1 — Globalisering & handel" data-n="36" data-nce="4" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — Globalisering & handel</div><div class="item-sub">36 leerdoelen &nbsp;·&nbsp; 4 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">11% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="we-h2" data-label="H2 — Buitenlandse handel" data-n="26" data-nce="12" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Buitenlandse handel</div><div class="item-sub">26 leerdoelen &nbsp;·&nbsp; 12 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">46% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="we-h3" data-label="H3 — Wisselkoersen" data-n="30" data-nce="16" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Wisselkoersen</div><div class="item-sub">30 leerdoelen &nbsp;·&nbsp; 16 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">53% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="we-h4" data-label="H4 — EMU & muntunie" data-n="21" data-nce="15" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H4 — EMU & muntunie</div><div class="item-sub">21 leerdoelen &nbsp;·&nbsp; 15 in CE-syllabus</div></div>
+            <span class="ce-badge ce-high">71% CE</span>
+          </div>
+          <div class="dropdown-section-head">Ongelijkheid 2e druk</div>
+          <div class="dropdown-item" data-val="on-h1" data-label="H1 — Inkomensverdeling" data-n="13" data-nce="5" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H1 — Inkomensverdeling</div><div class="item-sub">13 leerdoelen &nbsp;·&nbsp; 5 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">38% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="on-h2" data-label="H2 — Statistieken ongelijkheid" data-n="5" data-nce="1" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H2 — Statistieken ongelijkheid</div><div class="item-sub">5 leerdoelen &nbsp;·&nbsp; 1 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">20% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="on-h3" data-label="H3 — Oorzaken & gevolgen" data-n="3" data-nce="1" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H3 — Oorzaken & gevolgen</div><div class="item-sub">3 leerdoelen &nbsp;·&nbsp; 1 in CE-syllabus</div></div>
+            <span class="ce-badge ce-low">33% CE</span>
+          </div>
+          <div class="dropdown-item" data-val="on-h4" data-label="H4 — Vermogen & kapitaal" data-n="7" data-nce="3" onclick="toggleItem(this)">
+            <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#0D2137" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="item-content"><div class="item-label">H4 — Vermogen & kapitaal</div><div class="item-sub">7 leerdoelen &nbsp;·&nbsp; 3 in CE-syllabus</div></div>
+            <span class="ce-badge ce-mid">43% CE</span>
+          </div>
+
+        </div>
+
+        </div>
+      </div>
+
+      <!-- Chips -->
+      <div class="chips" id="chips-wrap"></div>
+    </div>
+
+    <!-- PREVIEW -->
+    <div class="info-box" id="info-box">
+      <div class="info-row">
+        <span class="info-label">Klas</span>
+        <span class="info-val gold" id="prev-klas">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Hoofdstukken geselecteerd</span>
+        <span class="info-val" id="prev-hfst">—</span>
+      </div>
+      <div class="info-row" id="prev-specs-row" style="display:none">
+        <span class="info-label">Toetsspecificaties</span>
+        <span class="info-val" id="prev-specs">—</span>
+      </div>
+      <div class="info-divider"></div>
+      <div class="leerdoelen-preview">
+        <div class="stat-pill">
+          <div class="stat-num gold" id="stat-total">—</div>
+          <div class="stat-label">Leerdoelen</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-num green" id="stat-ce">—</div>
+          <div class="stat-label">In CE-syllabus</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-num muted" id="stat-pct">—</div>
+          <div class="stat-label">CE-dekking</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AANTAL VRAGEN / DUUR / PUNTEN -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;" id="specs-grid">
+      <div class="form-group">
+        <label class="label" for="n-vragen">
+          <span class="label-icon">🔢</span> Vragen
+        </label>
+        <select id="n-vragen" onchange="updatePreview()">
+          <option value="">—</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="8">8</option>
+          <option value="10">10</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="label" for="duur">
+          <span class="label-icon">⏱</span> Duur
+        </label>
+        <select id="duur" onchange="updatePreview()">
+          <option value="">—</option>
+          <option value="30">30 min</option>
+          <option value="45">45 min</option>
+          <option value="60">60 min</option>
+          <option value="90">90 min</option>
+          <option value="100">100 min</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="label" for="punten">
+          <span class="label-icon">🏅</span> Punten
+        </label>
+        <select id="punten" onchange="updatePreview()">
+          <option value="">—</option>
+          <option value="20">20</option>
+          <option value="30">30</option>
+          <option value="40">40</option>
+          <option value="50">50</option>
+          <option value="60">60</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- GAP ANALYSE PANEL -->
+    <div class="gap-panel" id="gap-panel">
+      <div class="gap-header">
+        <div class="gap-title">
+          <span class="gap-icon">📡</span>
+          Hiatenanalyse — Socratische Toetsapp
+          <span class="gap-badge" id="gap-badge"></span>
+        </div>
+        <div class="gap-sub" id="gap-sub">Selecteer een klas om leerlingresultaten op te halen.</div>
+      </div>
+      <div class="gap-loading" id="gap-loading">
+        <div class="gap-spinner"></div>
+        <span>Resultaten ophalen…</span>
+      </div>
+      <div class="gap-empty" id="gap-empty">
+        <div class="gap-empty-icon">📭</div>
+        <div>Nog geen resultaten voor deze klas in de Toetsapp.<br>De agent genereert een gebalanceerde toets op basis van de CE-syllabus.</div>
+      </div>
+      <div class="gap-results" id="gap-results">
+        <div class="gap-stats-row" id="gap-stats-row"></div>
+        <div class="gap-label-sm">Gemiddelde score per les (laag → hoog)</div>
+        <div class="gap-bars" id="gap-bars"></div>
+        <div class="gap-focus" id="gap-focus"></div>
+      </div>
+    </div>
+
+    <!-- GENERATE BUTTON -->
+    <button class="btn-generate" id="btn-gen" disabled onclick="generate()">
+      <span class="btn-label">✦ &nbsp;Toets genereren</span>
+      <div class="spinner"></div>
+    </button>
+
+    <!-- REVIEW SCHERM -->
+    <div class="review-box" id="review-box">
+      <div class="review-header">
+        <div class="review-title-row">
+          <span class="review-icon">✅</span>
+          <div>
+            <div class="review-title" id="review-title">Toets gegenereerd</div>
+            <div class="review-meta" id="review-meta"></div>
+          </div>
+        </div>
+        <div class="review-samenvatting" id="review-samenvatting"></div>
+      </div>
+      <div class="review-vragen" id="review-vragen"></div>
+      <div class="review-footer">
+        <div class="review-totaal" id="review-totaal"></div>
+        <button class="btn-print" onclick="printToets()">📄 &nbsp;Afdrukken / PDF opslaan</button>
+      </div>
+    </div>
+
+    <!-- ERROR BOX -->
+    <div class="error-box" id="error-box">
+      <div class="error-icon">⚠️</div>
+      <div>
+        <div class="error-title">Fout bij genereren</div>
+        <div class="error-desc" id="error-desc"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+
+const API_BASE = 'https://toetsapp-backend-production.up.railway.app';
+let gapData = null; // opgeslagen hiaat-data voor generatie
+
+async function fetchGapData(klasValue) {
+  const panel   = document.getElementById('gap-panel');
+  const loading = document.getElementById('gap-loading');
+  const empty   = document.getElementById('gap-empty');
+  const results = document.getElementById('gap-results');
+  const sub     = document.getElementById('gap-sub');
+  const badge   = document.getElementById('gap-badge');
+
+  // Reset
+  loading.classList.remove('visible');
+  empty.classList.remove('visible');
+  results.classList.remove('visible');
+  badge.classList.remove('visible');
+  gapData = null;
+
+  if (!klasValue) {
+    sub.textContent = 'Selecteer een klas om leerlingresultaten op te halen.';
+    return;
+  }
+
+  sub.textContent = 'Bezig met ophalen…';
+  loading.classList.add('visible');
+
+  try {
+    const res = await fetch(`${API_BASE}/api/results?class_id=${encodeURIComponent(klasValue)}`);
+    const data = await res.json();
+    loading.classList.remove('visible');
+
+    if (!data || data.length === 0) {
+      sub.textContent = 'Geen resultaten gevonden voor deze klas.';
+      empty.classList.add('visible');
+      return;
+    }
+
+    // Analyseer per les
+    const lesMap = {};
+    data.forEach(r => {
+      const key = r.lesson_name || 'Onbekend';
+      if (!lesMap[key]) lesMap[key] = { scores: [], count: 0, low: 0 };
+      // scores is jsonb array [{score, motivatie}]
+      if (r.scores && Array.isArray(r.scores)) {
+        r.scores.forEach(s => {
+          if (s.score != null) lesMap[key].scores.push(Number(s.score));
+        });
+      }
+      // understanding als fallback
+      const uScore = { goed: 8, matig: 5, slecht: 3 }[r.understanding] || 5;
+      if (!r.scores || !Array.isArray(r.scores) || r.scores.length === 0) {
+        lesMap[key].scores.push(uScore);
+      }
+      lesMap[key].count++;
+    });
+
+    // Bereken gemiddelden
+    const lesStats = Object.entries(lesMap).map(([name, d]) => {
+      const avg = d.scores.length ? d.scores.reduce((a,b)=>a+b,0)/d.scores.length : 5;
+      return { name, avg: Math.round(avg*10)/10, count: d.count };
+    }).sort((a,b) => a.avg - b.avg);
+
+    const totalStudents = new Set(data.map(r => r.student_name)).size;
+    const totalResults  = data.length;
+    const overallAvg    = lesStats.reduce((s,l)=>s+l.avg,0)/lesStats.length;
+    const lowLessons    = lesStats.filter(l => l.avg < 6);
+
+    gapData = { lesStats, lowLessons, totalStudents, totalResults, overallAvg };
+
+    // Render stats
+    const avgColor = overallAvg >= 7 ? '#34d399' : overallAvg >= 5.5 ? '#e2bb42' : '#f87171';
+    document.getElementById('gap-stats-row').innerHTML = `
+      <div class="gap-stat"><div class="gap-stat-num" style="color:#7ec8ff">${totalResults}</div><div class="gap-stat-lbl">Resultaten</div></div>
+      <div class="gap-stat"><div class="gap-stat-num" style="color:#7ec8ff">${totalStudents}</div><div class="gap-stat-lbl">Leerlingen</div></div>
+      <div class="gap-stat"><div class="gap-stat-num" style="color:${avgColor}">${overallAvg.toFixed(1)}</div><div class="gap-stat-lbl">Gem. score</div></div>
+      <div class="gap-stat"><div class="gap-stat-num" style="color:#f87171">${lowLessons.length}</div><div class="gap-stat-lbl">Hiaten</div></div>
+    `;
+
+    // Render bars
+    const barsEl = document.getElementById('gap-bars');
+    barsEl.innerHTML = '';
+    lesStats.slice(0, 8).forEach(l => {
+      const pct   = Math.round(l.avg / 10 * 100);
+      const color = l.avg >= 7 ? '#34d399' : l.avg >= 5.5 ? '#e2bb42' : '#f87171';
+      barsEl.innerHTML += `
+        <div class="gap-bar-row">
+          <div class="gap-bar-name" title="${l.name}">${l.name}</div>
+          <div class="gap-bar-track"><div class="gap-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+          <div class="gap-bar-val" style="color:${color}">${l.avg.toFixed(1)}</div>
+        </div>`;
+    });
+
+    // Focus-tekst
+    const focusEl = document.getElementById('gap-focus');
+    if (lowLessons.length > 0) {
+      const worst = lowLessons[0];
+      focusEl.innerHTML = `<strong>⚠ Focuspunt:</strong> "${worst.name}" scoort gemiddeld <strong style="color:#f87171">${worst.avg.toFixed(1)}/10</strong>. De agent geeft dit onderwerp extra gewicht in de toets.`;
+      focusEl.classList.add('visible');
+    } else {
+      focusEl.classList.remove('visible');
+    }
+
+    badge.textContent = `${totalResults} resultaten`;
+    badge.classList.add('visible');
+    sub.textContent = `${totalStudents} leerling${totalStudents !== 1 ? 'en' : ''} · ${lesStats.length} les${lesStats.length !== 1 ? 'sen' : ''}`;
+    results.classList.add('visible');
+
+  } catch (err) {
+    loading.classList.remove('visible');
+    sub.textContent = 'Kon geen verbinding maken met de Toetsapp.';
+    empty.classList.add('visible');
+    console.error(err);
+  }
+}
+
+const klasLabels = {
+  vwo4a:'VWO 4A', vwo4b:'VWO 4B', vwo5a:'VWO 5A', vwo5b:'VWO 5B', vwo6a:'VWO 6A'
+};
+let selected = [];   // array of {val, label, n, nCE}
+
+function toggleDropdown() {
+  const dd = document.getElementById('multi-dropdown');
+  const trigger = document.getElementById('multi-trigger');
+  const arrow = document.getElementById('multi-arrow');
+  const open = dd.classList.toggle('open');
+  trigger.classList.toggle('open', open);
+  arrow.classList.toggle('open', open);
+}
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('multi-wrap').contains(e.target)) {
+    document.getElementById('multi-dropdown').classList.remove('open');
+    document.getElementById('multi-trigger').classList.remove('open');
+    document.getElementById('multi-arrow').classList.remove('open');
+  }
+});
+
+function toggleItem(el) {
+  el.stopPropagation && el.stopPropagation();
+  const val   = el.dataset.val;
+  const label = el.dataset.label;
+  const n     = parseInt(el.dataset.n);
+  const nCE   = parseInt(el.dataset.nce || 0);
+
+  const idx = selected.findIndex(s => s.val === val);
+  if (idx === -1) {
+    selected.push({ val, label, n, nCE });
+    el.classList.add('checked');
+  } else {
+    selected.splice(idx, 1);
+    el.classList.remove('checked');
+  }
+  renderChips();
+  updatePreview();
+}
+
+function renderChips() {
+  const wrap = document.getElementById('chips-wrap');
+  wrap.innerHTML = '';
+  selected.forEach(s => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `${s.label} <span class="chip-x" onclick="removeChip('${s.val}')">×</span>`;
+    wrap.appendChild(chip);
+  });
+
+  const txt = document.getElementById('trigger-text');
+  if (selected.length === 0) {
+    txt.textContent = '— Selecteer hoofdstukken —';
+    txt.classList.add('placeholder');
+  } else {
+    txt.textContent = `${selected.length} hoofdstuk${selected.length > 1 ? 'ken' : ''} geselecteerd`;
+    txt.classList.remove('placeholder');
+  }
+}
+
+function removeChip(val) {
+  selected = selected.filter(s => s.val !== val);
+  const items = document.querySelectorAll('.dropdown-item');
+  items.forEach(el => { if (el.dataset.val === val) el.classList.remove('checked'); });
+  renderChips();
+  updatePreview();
+}
+
+function updatePreview() {
+  const klas = document.getElementById('klas-select').value;
+  const type = document.getElementById('type-select').value;
+  const box  = document.getElementById('info-box');
+  const btn  = document.getElementById('btn-gen');
+
+  const nVragen = document.getElementById('n-vragen').value;
+  const duur    = document.getElementById('duur').value;
+  const punten  = document.getElementById('punten').value;
+  const ready   = klas && type && selected.length > 0;
+  btn.disabled  = !ready;
+
+  if (ready) {
+    box.classList.add('visible');
+    const totalN  = selected.reduce((s, x) => s + x.n, 0);
+    const totalCE = selected.reduce((s, x) => s + x.nCE, 0);
+    const pct     = Math.round(totalCE / totalN * 100);
+    document.getElementById('prev-klas').textContent  = klasLabels[klas];
+    document.getElementById('prev-hfst').textContent  = selected.length;
+    document.getElementById('stat-total').textContent = totalN;
+    document.getElementById('stat-ce').textContent    = totalCE;
+    document.getElementById('stat-pct').textContent   = pct + '%';
+
+    // Specs row
+    const specsParts = [];
+    if (nVragen) specsParts.push(`${nVragen} vragen`);
+    if (duur)    specsParts.push(`${duur} min`);
+    if (punten)  specsParts.push(`${punten} punten`);
+    const specsRow = document.getElementById('prev-specs-row');
+    if (specsParts.length > 0) {
+      document.getElementById('prev-specs').textContent = specsParts.join(' · ');
+      specsRow.style.display = 'flex';
+    } else {
+      specsRow.style.display = 'none';
+    }
+  } else {
+    box.classList.remove('visible');
+  }
+}
+
+async function generate() {
+  const btn = document.getElementById('btn-gen');
+  btn.classList.add('loading');
+  btn.disabled = true;
+  document.getElementById('review-box').classList.remove('visible');
+  document.getElementById('error-box').classList.remove('visible');
+
+  const klas     = document.getElementById('klas-select');
+  const type     = document.getElementById('type-select');
+  const nVragen  = document.getElementById('n-vragen').value;
+  const duur     = document.getElementById('duur').value;
+  const punten   = document.getElementById('punten').value;
+
+  // Bouw hoofdstukken-payload (met lesbrief info van data-attrs)
+  const hfstPayload = selected.map(s => {
+    const el = document.querySelector(`.dropdown-item[data-val="${s.val}"]`);
+    return {
+      val:      s.val,
+      label:    s.label,
+      lesbrief: el ? el.closest('.multi-dropdown').querySelector(`.dropdown-section-head + .dropdown-item[data-val="${s.val}"]`)?.previousElementSibling?.textContent || s.label.split(' — ')[0] : '',
+      n_total:  s.n,
+      n_ce:     s.nCE
+    };
+  });
+
+  try {
+    const res = await fetch(API_BASE + '/api/agent/genereer-toets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        klas:         klas.options[klas.selectedIndex].text,
+        toetstype:    type.value,
+        hoofdstukken: hfstPayload,
+        nVragen:      nVragen  ? parseInt(nVragen)  : null,
+        duur:         duur     ? parseInt(duur)     : null,
+        punten:       punten   ? parseInt(punten)   : null,
+        gapData:      gapData || null
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Onbekende fout');
+
+    renderReview(data);
+
+  } catch (err) {
+    document.getElementById('error-desc').textContent = err.message;
+    document.getElementById('error-box').classList.add('visible');
+    document.getElementById('error-box').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+function renderReview(data) {
+  const hiatenSet = new Set((data.meta?.hiatenLessen || []).map(l => l.toLowerCase()));
+
+  document.getElementById('review-title').textContent =
+    `${data.toetstype} — ${data.klas}`;
+  document.getElementById('review-meta').textContent =
+    `${data.vragen.length} vragen · ${data.totaalPunten} punten · ${data.duur} min` +
+    (data.meta?.aantalLeerlingen > 0 ? ` · ${data.meta.aantalLeerlingen} leerlingen geanalyseerd` : '');
+  document.getElementById('review-samenvatting').textContent = data.samenvatting || '';
+
+  const container = document.getElementById('review-vragen');
+  container.innerHTML = '';
+
+  data.vragen.forEach(v => {
+    const isHiat = hiatenSet.size > 0 && (
+      hiatenSet.has(v.leerdoel?.toLowerCase()) ||
+      data.meta.hiatenLessen.some(l => v.leerdoel?.toLowerCase().includes(l.toLowerCase().split(' ')[0]))
+    );
+
+    let optsHtml = '';
+    if (v.type === 'meerkeuze' && v.opties) {
+      optsHtml = '<div class="vraag-opties">' +
+        v.opties.map(o => {
+          const letter = o.charAt(0);
+          const isCorrect = letter === v.antwoord_mc;
+          return `<div class="vraag-optie${isCorrect ? ' correct' : ''}">${o}${isCorrect ? ' ✓' : ''}</div>`;
+        }).join('') +
+        '</div>';
+    }
+
+    const typeLabel = { open:'Open', berekening:'Berekening', context:'Context', meerkeuze:'Meerkeuze' }[v.type] || v.type;
+
+    container.innerHTML += `
+      <div class="vraag-card">
+        <div class="vraag-card-top">
+          <div class="vraag-nr">${v.nr}</div>
+          <div class="vraag-content">
+            ${v.context ? `<div class="vraag-context">${v.context}</div>` : ''}
+            <div class="vraag-tekst">${v.vraag}</div>
+            ${optsHtml}
+            <div class="vraag-tags">
+              <span class="vtag vtag-type">${typeLabel}</span>
+              <span class="vtag vtag-bloom">${v.bloom}</span>
+              <span class="vtag vtag-punten">${v.punten} pt</span>
+              ${v.ce_eindterm ? `<span class="vtag vtag-ce">CE</span>` : ''}
+              ${isHiat ? `<span class="vtag vtag-hiat">⚠ Hiaat</span>` : ''}
+            </div>
+            <div class="vraag-leerdoel">📌 ${v.leerdoel}${v.ce_eindterm ? ` &nbsp;·&nbsp; ${v.ce_eindterm}` : ''}</div>
+            <div class="vraag-correctie">
+              <div class="vraag-correctie-label">Correctiemodel</div>
+              ${v.correctiemodel}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  const totaal = data.vragen.reduce((s, v) => s + (v.punten || 0), 0);
+  document.getElementById('review-totaal').innerHTML =
+    `Totaal: <span>${totaal} punten</span> · ${data.vragen.length} vragen · ${data.duur} min`;
+
+  document.getElementById('review-box').classList.add('visible');
+  document.getElementById('review-box').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function printToets() {
+  window.print();
+}
+
+function filterChapters(query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('.dropdown-item').forEach(el => {
+    const label = el.dataset.label.toLowerCase();
+    const section = el.previousElementSibling;
+    el.classList.toggle('hidden', q.length > 0 && !label.includes(q));
+  });
+  // Verberg lege secties
+  document.querySelectorAll('.dropdown-section-head').forEach(sec => {
+    let next = sec.nextElementSibling;
+    let hasVisible = false;
+    while (next && !next.classList.contains('dropdown-section-head')) {
+      if (!next.classList.contains('hidden')) hasVisible = true;
+      next = next.nextElementSibling;
+    }
+    sec.style.display = hasVisible || q.length === 0 ? '' : 'none';
+  });
+}
+
+</script>
+</body>
+</html>

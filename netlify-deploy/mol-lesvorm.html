@@ -1,0 +1,3237 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🕵️ Wie is de Mol — Leerplatform</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0c0f14;
+  --bg2:     #131820;
+  --bg3:     #1a2030;
+  --border:  rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.13);
+  --text:    #dde4f0;
+  --text2:   #8fa0b8;
+  --muted:   #4a5a70;
+  --gold:    #d4a843;
+  --gold-l:  #f0c764;
+  --red:     #e85c5c;
+  --red-l:   #ff8585;
+  --green:   #3ec98a;
+  --green-l: #6ef0b2;
+  --blue:    #4fa3e8;
+  --purple:  #9b7fe8;
+  --teal:    #3ec4c4;
+  --teacher: #2e6b3e;
+  --student: #007a7a;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── SCREENS ── */
+.screen { display: none; min-height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ── TOPBAR ── */
+.topbar {
+  background: rgba(12,15,20,0.95); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.5rem; height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100; flex-shrink: 0;
+}
+.topbar-brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-family: 'Syne', sans-serif; font-size: 0.9rem; }
+.topbar-right { display: flex; align-items: center; gap: 0.75rem; }
+.topbar-tag { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; padding: 0.18rem 0.55rem; border-radius: 99px; }
+.tag-docent { background: rgba(46,107,62,0.2); color: #6ef0a0; border: 1px solid rgba(46,107,62,0.35); }
+.tag-speler { background: rgba(0,122,122,0.2); color: var(--teal); border: 1px solid rgba(0,122,122,0.35); }
+.tag-mol    { background: rgba(232,92,92,0.2); color: var(--red-l); border: 1px solid rgba(232,92,92,0.35); }
+
+/* ── CONTENT ── */
+.content { flex: 1; padding: 1.75rem 1.25rem 3rem; max-width: 680px; width: 100%; margin: 0 auto; }
+.content.wide { max-width: 960px; }
+
+/* ── TYPOGRAPHY ── */
+.page-eyebrow { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 0.4rem; }
+.page-title { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; color: #fff; margin-bottom: 0.35rem; line-height: 1.15; }
+.page-sub { font-size: 0.83rem; color: var(--text2); line-height: 1.6; margin-bottom: 1.5rem; }
+
+/* ── FORM ── */
+.form-section { margin-bottom: 1.1rem; }
+.form-section label { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text2); margin-bottom: 0.4rem; }
+input, textarea, select {
+  width: 100%; padding: 0.65rem 0.85rem;
+  background: var(--bg3); border: 1.5px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+  outline: none; transition: border-color 0.15s;
+}
+input:focus, textarea:focus, select:focus { border-color: rgba(212,168,67,0.5); }
+textarea { resize: vertical; min-height: 100px; }
+select { cursor: pointer; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  padding: 0.65rem 1.3rem; border-radius: 9px; font-weight: 600;
+  font-size: 0.87rem; cursor: pointer; border: none; transition: all 0.15s;
+  font-family: 'Outfit', sans-serif; white-space: nowrap;
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-gold    { background: var(--gold); color: #0c0f14; }
+.btn-gold:hover:not(:disabled) { background: var(--gold-l); }
+.btn-green   { background: #1a6640; color: #a0f0c0; border: 1.5px solid rgba(62,201,138,0.4); }
+.btn-green:hover:not(:disabled) { background: #246050; }
+.btn-red     { background: rgba(232,92,92,0.15); color: var(--red-l); border: 1.5px solid rgba(232,92,92,0.3); }
+.btn-red:hover:not(:disabled) { background: rgba(232,92,92,0.25); }
+.btn-ghost   { background: transparent; color: var(--text2); border: 1.5px solid var(--border); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--border2); color: var(--text); }
+.btn-full    { width: 100%; }
+.btn-sm      { padding: 0.38rem 0.8rem; font-size: 0.78rem; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.1rem 1.2rem; margin-bottom: 0.75rem;
+}
+.card.highlight-gold { border-color: rgba(212,168,67,0.3); background: rgba(212,168,67,0.04); }
+.card.highlight-red  { border-color: rgba(232,92,92,0.35); background: rgba(232,92,92,0.05); }
+.card.highlight-green{ border-color: rgba(62,201,138,0.3); background: rgba(62,201,138,0.04); }
+.card.highlight-blue { border-color: rgba(79,163,232,0.3); background: rgba(79,163,232,0.04); }
+
+/* ── GROEP KAART ── */
+.groep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.65rem; margin-bottom: 1.25rem; }
+.groep-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; }
+.groep-naam { font-weight: 700; font-size: 0.85rem; color: var(--gold-l); margin-bottom: 0.5rem; }
+.groep-lid  { font-size: 0.78rem; color: var(--text2); padding: 0.18rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.groep-lid:last-child { border-bottom: none; }
+.groep-lid.is-mol { color: var(--red-l); }
+
+/* ── LEERLING RIJEN ── */
+.leerling-rij {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.6rem 0.85rem; background: var(--bg3);
+  border: 1px solid var(--border); border-radius: 9px; margin-bottom: 0.4rem;
+}
+.leerling-code { font-family: 'DM Mono', monospace; font-size: 0.82rem; font-weight: 500; color: var(--gold-l); letter-spacing: 0.05em; background: rgba(212,168,67,0.1); padding: 0.18rem 0.5rem; border-radius: 5px; }
+.leerling-naam { flex: 1; font-size: 0.85rem; font-weight: 600; }
+.leerling-groep { font-size: 0.72rem; color: var(--text2); }
+.mol-badge { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--red-l); background: rgba(232,92,92,0.12); border: 1px solid rgba(232,92,92,0.25); padding: 0.12rem 0.4rem; border-radius: 4px; }
+
+/* ── CASE KAART ── */
+.case-card { background: var(--bg2); border: 1.5px solid rgba(79,163,232,0.25); border-radius: 14px; padding: 1.3rem 1.4rem; margin-bottom: 1rem; }
+.case-ronde { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--blue); margin-bottom: 0.5rem; }
+.case-vraag { font-size: 1rem; font-weight: 600; color: #fff; line-height: 1.45; margin-bottom: 0.5rem; }
+.case-context { font-size: 0.78rem; color: var(--text2); line-height: 1.55; font-style: italic; }
+
+/* ── MOL-BRIEFING ── */
+.mol-secret { background: rgba(232,92,92,0.06); border: 1.5px solid rgba(232,92,92,0.3); border-radius: 14px; padding: 1.3rem 1.4rem; }
+.mol-secret-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--red-l); margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem; }
+.mol-fout-arg { background: rgba(232,92,92,0.08); border: 1px solid rgba(232,92,92,0.2); border-radius: 9px; padding: 0.85rem 1rem; margin-top: 0.75rem; }
+.mol-fout-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: var(--red); margin-bottom: 0.3rem; }
+.mol-fout-text { font-size: 0.82rem; color: var(--text2); line-height: 1.55; }
+
+/* ── ANTWOORD OPTIES ── */
+.antwoord-opties { display: flex; flex-direction: column; gap: 0.55rem; margin: 1rem 0; }
+.antwoord-optie {
+  padding: 0.9rem 1.1rem; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--bg3);
+  cursor: pointer; transition: all 0.15s; font-size: 0.87rem; font-weight: 600;
+  text-align: left; color: var(--text);
+}
+.antwoord-optie:hover { border-color: rgba(79,163,232,0.4); background: rgba(79,163,232,0.06); }
+.antwoord-optie.selected { border-color: var(--blue); background: rgba(79,163,232,0.1); color: #fff; }
+.antwoord-optie.correct  { border-color: var(--green); background: rgba(62,201,138,0.1); color: var(--green-l); }
+.antwoord-optie.fout     { border-color: var(--red); background: rgba(232,92,92,0.08); color: var(--red-l); }
+
+/* ── WACHTEN INDICATOR ── */
+.wacht-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.5rem; margin: 1rem 0; }
+.wacht-chip {
+  padding: 0.45rem 0.7rem; border-radius: 8px; font-size: 0.75rem; font-weight: 600;
+  border: 1px solid var(--border); background: var(--bg3); color: var(--muted);
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.wacht-chip.klaar { border-color: rgba(62,201,138,0.35); background: rgba(62,201,138,0.07); color: var(--green); }
+.wacht-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+/* ── GROEPSLID KIEZER ── */
+.groepslid-grid { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; }
+.groepslid-btn {
+  padding: 0.85rem 1.1rem; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--bg3);
+  cursor: pointer; font-size: 0.87rem; font-weight: 600; text-align: left;
+  transition: all 0.15s; display: flex; align-items: center; gap: 0.75rem;
+  color: var(--text);
+}
+.groepslid-btn:hover { border-color: rgba(212,168,67,0.4); background: rgba(212,168,67,0.06); }
+.groepslid-btn.selected { border-color: var(--gold); background: rgba(212,168,67,0.1); color: var(--gold-l); }
+.groepslid-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+
+/* ── SCORE DISPLAY ── */
+.score-row { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; }
+.score-row:last-child { border-bottom: none; }
+.score-val { font-family: 'DM Mono', monospace; font-weight: 700; font-size: 1rem; }
+.pot-display { text-align: center; padding: 1.2rem; }
+.pot-num { font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800; color: var(--gold-l); }
+.pot-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-top: 0.2rem; }
+
+/* ── REVEAL ── */
+.reveal-container { text-align: center; padding: 2rem 1rem; }
+.reveal-mol-naam { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--red-l); margin: 1rem 0 0.5rem; }
+.reveal-icon { font-size: 4rem; margin-bottom: 0.5rem; animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+/* ── STATUS BADGE ── */
+.status-badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; padding: 0.22rem 0.65rem; border-radius: 99px; }
+.status-badge .pulse-dot { width: 7px; height: 7px; border-radius: 50%; animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ── PROGRESS BAR ── */
+.progress-wrap { height: 3px; background: rgba(255,255,255,0.06); border-radius: 99px; margin-bottom: 1.5rem; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-l)); border-radius: 99px; transition: width 0.4s ease; }
+
+/* ── SESSIE CODE DISPLAY ── */
+.sessie-code-big { font-family: 'DM Mono', monospace; font-size: 2.8rem; font-weight: 500; letter-spacing: 0.3em; color: var(--gold-l); text-align: center; background: rgba(212,168,67,0.07); border: 2px solid rgba(212,168,67,0.2); border-radius: 14px; padding: 1.2rem; margin: 0.75rem 0; }
+.docent-code-small { font-family: 'DM Mono', monospace; font-size: 0.85rem; color: var(--text2); text-align: center; margin-bottom: 1rem; }
+
+/* ── LOADING ── */
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: currentColor; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── TOAST ── */
+#toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--bg3); border: 1px solid var(--border2); padding: 0.65rem 1.25rem; border-radius: 10px; font-size: 0.84rem; font-weight: 600; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── ERROR ── */
+.error-msg { color: var(--red-l); font-size: 0.78rem; background: rgba(232,92,92,0.08); border: 1px solid rgba(232,92,92,0.2); border-radius: 7px; padding: 0.5rem 0.75rem; margin-top: 0.5rem; display: none; }
+
+/* ── DIVIDER ── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+/* ── RONDE CONTROL PANEL (docent) ── */
+.ronde-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.25rem; margin-bottom: 0.75rem; }
+.ronde-panel-title { font-weight: 700; font-size: 0.9rem; color: #fff; margin-bottom: 0.25rem; }
+.ronde-panel-sub   { font-size: 0.76rem; color: var(--text2); margin-bottom: 0.85rem; }
+.phase-steps { display: flex; gap: 0.5rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+.phase-step { font-size: 0.68rem; font-weight: 700; padding: 0.22rem 0.6rem; border-radius: 5px; border: 1px solid var(--border); color: var(--muted); background: var(--bg3); }
+.phase-step.active { border-color: rgba(212,168,67,0.4); color: var(--gold-l); background: rgba(212,168,67,0.08); }
+.phase-step.done   { border-color: rgba(62,201,138,0.3); color: var(--green); background: rgba(62,201,138,0.07); }
+
+/* ── NABESPREEK KAART ── */
+.nabespreek-case { border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem; margin-bottom: 0.75rem; }
+.nabespreek-vraag { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.8rem; }
+.nabespreek-kolommen { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+@media (max-width: 500px) { .nabespreek-kolommen { grid-template-columns: 1fr; } }
+.nb-col-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.35rem; }
+.nb-col-body  { font-size: 0.78rem; line-height: 1.55; }
+
+  /* ── Vraag-editor ──────────────────────────────────────── */
+  .vraag-kaart {
+    border: 1.5px solid var(--border); border-radius: 14px;
+    background: var(--bg2); margin-bottom: 1rem; overflow: hidden;
+  }
+  .vraag-kaart-header {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem 1.1rem; border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  .vraag-ronde-badge {
+    font-size: 0.62rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--blue);
+    background: rgba(79,163,232,0.12); border: 1px solid rgba(79,163,232,0.25);
+    padding: 0.18rem 0.55rem; border-radius: 5px; white-space: nowrap;
+  }
+  .vraag-kaart-body { padding: 1rem 1.1rem; }
+
+  /* Type toggle */
+  .type-toggle { display: flex; gap: 0.4rem; margin-bottom: 1rem; }
+  .type-btn {
+    padding: 0.35rem 0.85rem; border-radius: 7px; font-size: 0.78rem;
+    font-weight: 700; cursor: pointer; border: 1.5px solid var(--border);
+    background: var(--bg3); color: var(--muted); transition: all 0.15s;
+    font-family: 'Outfit', sans-serif;
+  }
+  .type-btn.active-open   { border-color: rgba(62,196,196,0.5); background: rgba(62,196,196,0.08); color: var(--teal); }
+  .type-btn.active-mc     { border-color: rgba(155,127,232,0.5); background: rgba(155,127,232,0.08); color: var(--purple); }
+
+  /* MC opties */
+  .mc-opties-wrap { display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.75rem; }
+  .mc-optie-rij {
+    display: flex; align-items: flex-start; gap: 0.55rem;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 9px; padding: 0.55rem 0.65rem;
+    transition: border-color 0.15s;
+  }
+  .mc-optie-rij.is-correct { border-color: rgba(62,201,138,0.45); background: rgba(62,201,138,0.06); }
+  .mc-correctness-btn {
+    width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--muted);
+    background: transparent; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 0.75rem;
+    transition: all 0.15s;
+  }
+  .mc-correctness-btn.correct { border-color: var(--green); background: rgba(62,201,138,0.2); color: var(--green); }
+  .mc-optie-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 0.83rem; font-family: 'Outfit', sans-serif;
+    padding: 0; resize: none; overflow: hidden;
+    min-height: 1.3em; line-height: 1.5;
+    /* Verberg de textarea-rand die browsers soms toevoegen */
+    box-shadow: none; width: 100%;
+  }
+  /* Controlknoppen verticaal centreren t.o.v. eerste regel */
+  .mc-optie-rij .mc-correctness-btn,
+  .mc-optie-rij .mc-optie-label,
+  .mc-optie-rij .mc-punten-input,
+  .mc-optie-rij .mc-verwijder-btn {
+    margin-top: 0.15rem; flex-shrink: 0;
+  }
+  .mc-optie-label { font-size: 0.72rem; font-weight: 700; color: var(--muted); width: 16px; flex-shrink: 0; }
+  .mc-verwijder-btn {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 0.9rem; padding: 0 0.1rem; line-height: 1; transition: color 0.15s;
+  }
+  .mc-verwijder-btn:hover { color: var(--red-l); }
+  .mc-voeg-toe-btn {
+    font-size: 0.74rem; font-weight: 600; color: var(--text2);
+    background: rgba(255,255,255,0.04); border: 1px dashed var(--border);
+    border-radius: 7px; padding: 0.38rem 0.75rem; cursor: pointer;
+    width: 100%; margin-top: 0.35rem; font-family: 'Outfit', sans-serif;
+    transition: all 0.15s;
+  }
+  .mc-voeg-toe-btn:hover { border-color: var(--border2); color: var(--text); }
+
+  /* Uitleg velden */
+  .uitleg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-top: 0.75rem; }
+  @media (max-width: 560px) { .uitleg-grid { grid-template-columns: 1fr; } }
+  .uitleg-veld-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.3rem; }
+
+
+  /* ── Mol-aanwijzing in groepskaarten ───────────────────── */
+  .groep-card-interactief {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 0.9rem; margin-bottom: 0.5rem;
+  }
+  .groep-card-interactief .groep-naam {
+    font-weight: 700; font-size: 0.82rem; color: var(--gold-l);
+    margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between;
+  }
+  .groep-lid-mol-rij {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.32rem 0.5rem; border-radius: 7px; margin-bottom: 0.25rem;
+    cursor: pointer; border: 1.5px solid transparent;
+    transition: all 0.15s; font-size: 0.82rem;
+  }
+  .groep-lid-mol-rij:hover { background: rgba(255,255,255,0.04); border-color: var(--border); }
+  .groep-lid-mol-rij.is-mol {
+    background: rgba(232,92,92,0.1); border-color: rgba(232,92,92,0.4);
+  }
+  .groep-lid-mol-naam { flex: 1; font-weight: 500; color: var(--text); }
+  .groep-lid-mol-rij.is-mol .groep-lid-mol-naam { color: var(--red-l); font-weight: 700; }
+  .mol-kies-radio {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--muted); background: transparent;
+    flex-shrink: 0; transition: all 0.15s; position: relative;
+  }
+  .groep-lid-mol-rij.is-mol .mol-kies-radio {
+    border-color: var(--red); background: var(--red);
+  }
+  .groep-lid-mol-rij.is-mol .mol-kies-radio::after {
+    content: ''; position: absolute; inset: 3px;
+    border-radius: 50%; background: #fff;
+  }
+
+
+  /* ── Punten-invoer per MC optie ───────────────────────── */
+  .mc-punten-input {
+    width: 42px; text-align: center; padding: 0.18rem 0.3rem;
+    font-family: 'DM Mono', monospace; font-size: 0.82rem; font-weight: 700;
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+    border-radius: 5px; color: var(--gold-l);
+  }
+  .mc-punten-input:focus { border-color: rgba(212,168,67,0.5); outline: none; }
+
+  /* ── Open score panel docent ──────────────────────────── */
+  .open-score-panel {
+    background: rgba(79,163,232,0.05); border: 1px solid rgba(79,163,232,0.2);
+    border-radius: 11px; padding: 0.85rem 1rem; margin-top: 0.75rem;
+  }
+  .open-score-titel {
+    font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--blue); margin-bottom: 0.6rem;
+  }
+  .open-score-groep-rij {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .open-score-groep-rij:last-of-type { border-bottom: none; }
+  .open-score-groep-naam { flex: 1; font-size: 0.82rem; font-weight: 600; }
+  .open-score-slider {
+    -webkit-appearance: none; width: 100px; height: 5px;
+    border-radius: 99px; background: var(--bg3); outline: none; cursor: pointer;
+  }
+  .open-score-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--blue); cursor: pointer;
+  }
+  .open-score-val {
+    font-family: 'DM Mono', monospace; font-size: 0.85rem;
+    font-weight: 700; color: var(--gold-l); width: 28px; text-align: right;
+  }
+  .open-score-opslaan {
+    margin-top: 0.6rem; font-size: 0.76rem;
+  }
+
+  /* ── Eindscherm score-overzicht ───────────────────────── */
+  .eind-score-balk {
+    margin-bottom: 0.85rem;
+  }
+  .eind-score-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; }
+  .eind-score-naam  { font-size: 0.83rem; font-weight: 700; color: var(--text); }
+  .eind-score-perc  { font-family: 'DM Mono', monospace; font-size: 0.88rem; font-weight: 700; }
+  .eind-score-track {
+    height: 10px; background: rgba(255,255,255,0.06);
+    border-radius: 99px; overflow: hidden;
+  }
+  .eind-score-fill  {
+    height: 100%; border-radius: 99px;
+    transition: width 0.6s ease;
+  }
+  .eind-score-detail { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+
+
+  /* ── Sessie-lijst ──────────────────────────────────────── */
+  .sessie-rij {
+    display: flex; align-items: center; gap: 0.85rem;
+    padding: 0.85rem 1rem; background: var(--bg3);
+    border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 0.5rem; transition: border-color 0.15s;
+  }
+  .sessie-rij:hover { border-color: rgba(212,168,67,0.3); }
+  .sessie-info { flex: 1; min-width: 0; }
+  .sessie-les-naam {
+    font-weight: 700; font-size: 0.88rem; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sessie-meta {
+    font-size: 0.71rem; color: var(--muted); margin-top: 0.18rem;
+    display: flex; gap: 0.6rem; flex-wrap: wrap;
+  }
+  .sessie-status {
+    font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; padding: 0.15rem 0.45rem; border-radius: 4px;
+  }
+  .ss-setup     { background: rgba(212,168,67,0.12);  color: var(--gold-l); }
+  .ss-briefing  { background: rgba(62,196,196,0.12);  color: var(--teal); }
+  .ss-ronde     { background: rgba(79,163,232,0.12);  color: var(--blue); }
+  .ss-test      { background: rgba(155,127,232,0.12); color: var(--purple); }
+  .ss-reveal    { background: rgba(232,92,92,0.12);   color: var(--red-l); }
+  .ss-afgelopen { background: rgba(255,255,255,0.06); color: var(--muted); }
+  .sessie-acties { display: flex; gap: 0.4rem; flex-shrink: 0; }
+  .sessie-verwijder-btn {
+    background: none; border: 1px solid rgba(232,92,92,0.25);
+    border-radius: 6px; color: var(--muted); cursor: pointer;
+    font-size: 0.75rem; padding: 0.28rem 0.55rem;
+    transition: all 0.15s; font-family: 'Outfit', sans-serif;
+  }
+  .sessie-verwijder-btn:hover { border-color: var(--red); color: var(--red-l); background: rgba(232,92,92,0.08); }
+
+
+  /* ── Resultaten scherm ─────────────────────────────────── */
+  .res-groep-blok {
+    border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; margin-bottom: 0.85rem;
+  }
+  .res-groep-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.65rem 1rem; background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--border);
+  }
+  .res-groep-naam { font-weight: 700; font-size: 0.88rem; color: #fff; }
+  .res-mol-tag {
+    font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--red-l);
+    background: rgba(232,92,92,0.12); border: 1px solid rgba(232,92,92,0.25);
+    padding: 0.15rem 0.45rem; border-radius: 4px;
+  }
+  .res-leerling-rij {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.55rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.82rem;
+  }
+  .res-leerling-rij:last-child { border-bottom: none; }
+  .res-leerling-naam { flex: 1; font-weight: 600; }
+  .res-mol-correct { color: var(--green); font-size: 0.75rem; }
+  .res-mol-fout    { color: var(--muted); font-size: 0.75rem; }
+  .res-arg-tekst {
+    font-size: 0.72rem; color: var(--text2); font-style: italic;
+    max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .res-ronde-blok { padding: 0.85rem 1rem; }
+  .res-ronde-titel { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--blue); margin-bottom: 0.4rem; }
+  .res-score-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem; }
+  .res-score-label { font-size: 0.78rem; color: var(--text2); }
+  .res-score-val { font-family: 'DM Mono', monospace; font-size: 0.85rem; font-weight: 700; }
+
+
+  /* ── Broodkruimel ──────────────────────────────────────── */
+  .breadcrumb {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.72rem; color: var(--muted);
+  }
+  .breadcrumb-sep { opacity: 0.4; }
+  .breadcrumb-link {
+    color: var(--text2); cursor: pointer; background: none; border: none;
+    font-family: 'Outfit', sans-serif; font-size: 0.72rem;
+    padding: 0; text-decoration: none; transition: color 0.15s;
+  }
+  .breadcrumb-link:hover { color: var(--gold-l); }
+  .breadcrumb-current { color: var(--text); font-weight: 600; }
+
+  /* ── Login kaarten grid ────────────────────────────────── */
+  .login-kaarten-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 560px) { .login-kaarten-grid { grid-template-columns: 1fr; } }
+  .login-kaart {
+    border: 1.5px solid var(--border); border-radius: 14px;
+    padding: 1.25rem 1.15rem; background: var(--bg2);
+    display: flex; flex-direction: column; gap: 0.6rem;
+    cursor: pointer; transition: border-color 0.18s, background 0.18s;
+  }
+  .login-kaart:hover { border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.03); }
+  .login-kaart.goud  { border-color: rgba(212,168,67,0.3); background: rgba(212,168,67,0.04); }
+  .login-kaart.goud:hover { border-color: rgba(212,168,67,0.55); background: rgba(212,168,67,0.08); }
+  .login-kaart-icoon { font-size: 1.6rem; }
+  .login-kaart-titel { font-weight: 700; font-size: 0.92rem; color: #fff; }
+  .login-kaart-sub   { font-size: 0.77rem; color: var(--muted); line-height: 1.45; }
+
+  /* ── Leerling afsluiting ───────────────────────────────── */
+  .afsluiting-wrap {
+    text-align: center; padding: 2.5rem 1rem 1.5rem;
+    border-top: 1px solid var(--border); margin-top: 2rem;
+  }
+  .afsluiting-icoon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .afsluiting-titel { font-family: 'Syne', sans-serif; font-size: 1.2rem;
+    font-weight: 700; color: #fff; margin-bottom: 0.4rem; }
+  .afsluiting-sub   { font-size: 0.82rem; color: var(--muted); line-height: 1.6;
+    max-width: 340px; margin: 0 auto 1.25rem; }
+
+
+  /* ── Print stylesheet ───────────────────────────────────── */
+  @media print {
+    body * { visibility: hidden !important; }
+    #print-briefjes, #print-briefjes * { visibility: visible !important; }
+    #print-briefjes { position: fixed; inset: 0; background: #fff; z-index: 99999; padding: 0; margin: 0; }
+    @page { margin: 1cm; size: A4; }
+  }
+
+  /* ── Print briefjes layout ──────────────────────────────── */
+  #print-briefjes {
+    display: none; background: #fff; color: #111;
+    font-family: 'Outfit', sans-serif;
+  }
+  .briefjes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0; width: 100%;
+  }
+  .briefje {
+    border: 1.5px dashed #ccc;
+    padding: 1rem 1.1rem;
+    page-break-inside: avoid;
+    min-height: 100px;
+    display: flex; flex-direction: column; gap: 0.3rem;
+  }
+  .briefje-les   { font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.1rem; }
+  .briefje-naam  { font-size: 1rem; font-weight: 800; color: #111; margin-bottom: 0.2rem; }
+  .briefje-url   { font-size: 0.58rem; color: #666; font-family: monospace; margin-bottom: 0.4rem; word-break: break-all; }
+  .briefje-codes { display: flex; gap: 1rem; align-items: flex-end; }
+  .briefje-code-blok { display: flex; flex-direction: column; }
+  .briefje-code-label{ font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.12em; color: #888; margin-bottom: 0.1rem; }
+  .briefje-code-val  { font-family: monospace; font-size: 1.3rem; font-weight: 800;
+    letter-spacing: 0.2em; background: #f4f4f4; padding: 0.2rem 0.5rem; border-radius: 4px; color: #111; }
+  .briefje-code-blok.spelcode .briefje-code-val { color: #c05; background: #fff0f3; }
+
+  /* ── Projectie scherm ───────────────────────────────────── */
+  #screen-projectie {
+    background: #0a0d12; color: #fff;
+  }
+  .proj-header {
+    text-align: center; padding: 1.5rem 1rem 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .proj-sessie-code {
+    font-family: 'DM Mono', monospace; font-size: 3.5rem; font-weight: 500;
+    letter-spacing: 0.4em; color: #f0c764; line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+  .proj-url {
+    font-size: 0.8rem; color: rgba(255,255,255,0.45); font-family: monospace;
+    margin-bottom: 0.15rem;
+  }
+  .proj-sub {
+    font-size: 0.78rem; color: rgba(255,255,255,0.4);
+  }
+  .proj-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.85rem; padding: 1.25rem 1.5rem;
+  }
+  .proj-kaart {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 0.85rem 1rem;
+  }
+  .proj-leerling-naam {
+    font-size: 0.88rem; font-weight: 700; color: #fff;
+    margin-bottom: 0.5rem; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .proj-groep-tag {
+    font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: #d4a843; margin-bottom: 0.5rem;
+  }
+  .proj-code-rij { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem; }
+  .proj-code-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.4); }
+  .proj-code-val   { font-family: 'DM Mono', monospace; font-size: 1rem; font-weight: 600; letter-spacing: 0.15em; color: #f0c764; }
+  .proj-spelcode-val { color: #ff8585; }
+
+
+  /* ── Aftellende timer ring ──────────────────────────────── */
+  .timer-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 0.5rem; margin: 1rem 0;
+  }
+  .timer-ring-svg { transform: rotate(-90deg); }
+  .timer-ring-bg  { fill: none; stroke: rgba(255,255,255,0.08); }
+  .timer-ring-fg  { fill: none; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+  .timer-ring-fg.discussie { stroke: var(--teal); }
+  .timer-ring-fg.stem      { stroke: var(--purple); }
+  .timer-ring-fg.warning   { stroke: var(--orange); }
+  .timer-ring-fg.urgent    { stroke: var(--red); }
+  .timer-tekst {
+    font-family: 'DM Mono', monospace; font-size: 2rem; font-weight: 600;
+    color: #fff; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .timer-container { position: relative; display: inline-block; }
+  .timer-label {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--muted); text-align: center;
+  }
+  .timer-sublabel {
+    font-size: 0.78rem; color: var(--text2); text-align: center; line-height: 1.5;
+  }
+
+  /* ── Fase badge op ronde-scherm ──────────────────────────── */
+  .fase-badge {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.12em; padding: 0.22rem 0.65rem; border-radius: 99px;
+    margin-bottom: 0.75rem;
+  }
+  .fase-badge.invoer    { background: rgba(79,163,232,0.15);  color: var(--blue);   border: 1px solid rgba(79,163,232,0.3); }
+  .fase-badge.discussie { background: rgba(62,196,196,0.15);  color: var(--teal);   border: 1px solid rgba(62,196,196,0.3); }
+  .fase-badge.stem      { background: rgba(155,127,232,0.15); color: var(--purple); border: 1px solid rgba(155,127,232,0.3); }
+  .fase-badge.resultaat { background: rgba(62,201,138,0.12);  color: var(--green);  border: 1px solid rgba(62,201,138,0.3); }
+
+
+  /* ── Groepsstem tally ───────────────────────────────────── */
+  .vote-optie {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem 1rem; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--bg3);
+    cursor: pointer; transition: all 0.15s; margin-bottom: 0.45rem;
+    color: var(--text);
+  }
+  .vote-optie:hover { border-color: rgba(155,127,232,0.4); background: rgba(155,127,232,0.06); }
+  .vote-optie.mijn-keuze { border-color: var(--purple); background: rgba(155,127,232,0.1); }
+  .vote-optie.unanim  { border-color: var(--green); background: rgba(62,201,138,0.1); }
+  .vote-label { font-weight: 700; font-size: 0.8rem; color: var(--text2); min-width: 20px; }
+  .vote-tekst { flex: 1; font-size: 0.85rem; font-weight: 600; }
+  .vote-tally {
+    display: flex; gap: 0.2rem; align-items: center;
+  }
+  .vote-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--purple); opacity: 0.9;
+  }
+  .vote-count { font-size: 0.72rem; color: var(--muted); margin-left: 0.2rem; }
+  .vote-check { color: var(--green); font-size: 1rem; }
+
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN 0: KEUZE (docent of speler)                      -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN: RESULTATEN ARCHIEF                               -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-resultaten" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Wie is de Mol — Resultaten</div>
+    <div class="topbar-right">
+      <span class="topbar-tag tag-docent">Leraar</span>
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-docent-login');laadSessieLijst();">← Terug</button>
+    </div>
+  </div>
+  <div class="content wide">
+    <div id="resultaten-loading" style="text-align:center;padding:3rem;color:var(--muted);">
+      <span class="spinner"></span> Laden...
+    </div>
+    <div id="resultaten-content" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN: HERGEBRUIK (nieuwe groepen voor bestaande vragen)-->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-hergebruik" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Wie is de Mol — Hergebruik</div>
+    <div class="topbar-right">
+      <span class="topbar-tag tag-docent">Leraar</span>
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-docent-login');laadSessieLijst();">← Terug</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="progress-wrap"><div class="progress-fill" style="width:30%"></div></div>
+    <div class="page-eyebrow">Sessie hergebruiken</div>
+    <h2 class="page-title" id="hergebruik-les-naam">Sessie</h2>
+    <p class="page-sub">De vragen blijven bewaard. Voer nieuwe leerlingen in en wijs nieuwe Mollen aan.</p>
+
+    <div class="card" style="margin-bottom:1rem;">
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--teal);margin-bottom:0.5rem;">✅ Vragen blijven bewaard</div>
+      <div id="hergebruik-cases-preview" style="font-size:0.8rem;color:var(--text2);"></div>
+    </div>
+
+    <div class="form-section">
+      <label>Nieuwe leerlingennamen (één per regel)</label>
+      <textarea id="hergebruik-leerlingen" rows="8" placeholder="Emma de Vries&#10;Daan Jansen&#10;..."></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+      <div class="form-section">
+        <label>Groepsgrootte</label>
+        <select id="hergebruik-groep-grootte">
+          <option value="3">3 leerlingen</option>
+          <option value="4" selected>4 leerlingen</option>
+          <option value="5">5 leerlingen</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-ghost" style="margin-bottom:0.75rem;" onclick="genereerHergebruikGroepen()">🎲 Groepen genereren</button>
+
+    <div id="hergebruik-groepen-wrap" style="display:none;margin-bottom:1rem;">
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text2);margin-bottom:0.5rem;">
+        Groepsindeling — klik leerling om Mol aan te wijzen
+      </div>
+      <div id="hergebruik-groepen-grid"></div>
+    </div>
+
+    <div id="hergebruik-error" class="error-msg"></div>
+    <button class="btn btn-gold btn-full" id="hergebruik-start-btn" onclick="startHergebruik()">
+      Sessie opnieuw starten →
+    </button>
+  </div>
+</div>
+
+<div id="screen-keuze" class="screen active">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Wie is de Mol</div>
+    <div class="topbar-right">
+      <span style="font-size:0.75rem;color:var(--text2);">Stanislascollege · Economie</span>
+    </div>
+  </div>
+  <div class="content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding-top:3rem;">
+    <div style="font-size:3.5rem;margin-bottom:1rem;">🕵️</div>
+    <div class="page-eyebrow" style="justify-content:center;">Activerende lesvorm</div>
+    <h1 class="page-title">Wie is de Mol?</h1>
+    <p class="page-sub" style="max-width:420px;margin:0 auto 2rem;">Werk samen aan economische cases — maar pas op voor de saboteur in jouw midden.</p>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;width:100%;max-width:320px;">
+      <button class="btn btn-gold btn-full" style="font-size:1rem;padding:0.85rem;" onclick="showScreen('screen-docent-login')">
+        👩‍🏫 Ik ben de leraar
+      </button>
+      <button class="btn btn-ghost btn-full" style="font-size:1rem;padding:0.85rem;" onclick="showScreen('screen-speler-login')">
+        🎓 Ik ben een leerling
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN 1: DOCENT LOGIN (sessie-code of nieuw)           -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-docent-login" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Wie is de Mol</div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-keuze')">← Terug</button>
+    </div>
+  </div>
+  <div class="content" style="max-width:700px;">
+    <div class="page-eyebrow">Leraar</div>
+    <h2 class="page-title">Sessies</h2>
+
+    <div class="login-kaarten-grid">
+      <div class="login-kaart goud" onclick="showScreen('screen-docent-setup')">
+        <div class="login-kaart-icoon">🆕</div>
+        <div class="login-kaart-titel">Nieuwe sessie</div>
+        <div class="login-kaart-sub">Maak een nieuwe sessie aan met nieuwe leerlingen en vragen.</div>
+        <button class="btn btn-gold btn-sm" style="margin-top:auto;align-self:flex-start;">Aanmaken →</button>
+      </div>
+      <div class="login-kaart" onclick="document.getElementById('sessie-lijst-wrap').scrollIntoView({behavior:'smooth'})">
+        <div class="login-kaart-icoon">📋</div>
+        <div class="login-kaart-titel">Mijn sessies</div>
+        <div class="login-kaart-sub">Open, hergebruik of bekijk resultaten van eerdere sessies.</div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:auto;align-self:flex-start;">Bekijken ↓</button>
+      </div>
+    </div>
+
+    <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.16em;color:var(--muted);margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem;">
+      Eerdere sessies
+      <span style="flex:1;height:1px;background:var(--border);"></span>
+      <button class="btn btn-ghost btn-sm" style="font-size:0.68rem;" onclick="laadSessieLijst()">↻ Vernieuwen</button>
+    </div>
+    <div id="sessie-lijst-loading" style="text-align:center;padding:1.5rem;color:var(--muted);font-size:0.82rem;">
+      <span class="spinner"></span> Laden...
+    </div>
+    <div id="sessie-lijst-wrap" style="display:none;"></div>
+    <div id="sessie-lijst-leeg" style="display:none;font-size:0.82rem;color:var(--muted);padding:0.75rem 0;">
+      Geen eerdere sessies gevonden.
+    </div>
+    <div id="hervatten-error" class="error-msg"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN 2: DOCENT SETUP                                  -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-docent-setup" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <nav class="breadcrumb">
+        <button class="breadcrumb-link" onclick="naarSessieLijst()">🕵️ Sessies</button>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Nieuwe sessie</span>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-tag tag-docent">Leraar</span>
+      <button class="btn btn-ghost btn-sm" onclick="naarSessieLijst()">← Sessies</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="progress-wrap"><div class="progress-fill" style="width:25%"></div></div>
+    <div class="page-eyebrow">Stap 1 van 3 — Configuratie</div>
+    <h2 class="page-title">Spelconfiguratie</h2>
+
+    <div class="form-section">
+      <label>Lesnaam</label>
+      <input id="setup-les-naam" type="text" placeholder="bijv. Monetaire Zaken H4 — Inflatie">
+    </div>
+    <div class="form-section">
+      <label>Kernstof / leerdoelen (voor AI-cases)</label>
+      <textarea id="setup-les-content" rows="4" placeholder="Beschrijf de leerstof. De AI genereert hier de cases op."></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div class="form-section">
+        <label>Groepsgrootte</label>
+        <select id="setup-groep-grootte">
+          <option value="3">3 leerlingen</option>
+          <option value="4" selected>4 leerlingen</option>
+          <option value="5">5 leerlingen</option>
+        </select>
+      </div>
+      <div class="form-section">
+        <label>Aantal rondes</label>
+        <select id="setup-n-rondes">
+          <option value="1">1 ronde</option>
+          <option value="2">2 rondes</option>
+          <option value="3" selected>3 rondes</option>
+          <option value="4">4 rondes</option>
+        </select>
+      </div>
+    </div>
+    <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--teal);margin:0.75rem 0 0.5rem;display:flex;align-items:center;gap:0.5rem;">
+      ⏱ Timers (automatische voortgang)
+      <span style="flex:1;height:1px;background:var(--border);"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div class="form-section">
+        <label>Discussietijd per ronde</label>
+        <select id="setup-timer-discussie">
+          <option value="60">1 minuut</option>
+          <option value="120" selected>2 minuten</option>
+          <option value="180">3 minuten</option>
+          <option value="300">5 minuten</option>
+        </select>
+      </div>
+      <div class="form-section">
+        <label>Stemtijd per ronde</label>
+        <select id="setup-timer-stem">
+          <option value="30">30 seconden</option>
+          <option value="60" selected>1 minuut</option>
+          <option value="120">2 minuten</option>
+        </select>
+      </div>
+    </div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:-0.4rem;margin-bottom:0.75rem;">
+      Rondes lopen automatisch door. Na de laatste ronde start de moltest.
+    </div>
+    <div id="setup-error" class="error-msg"></div>
+    <button class="btn btn-gold btn-full" style="margin-top:0.5rem;" onclick="goToLeerlingenSetup()">Volgende: leerlingen invoeren →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN 3: LEERLINGEN INVOEREN                           -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-docent-leerlingen" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <nav class="breadcrumb">
+        <button class="breadcrumb-link" onclick="naarSessieLijst()">🕵️ Sessies</button>
+        <span class="breadcrumb-sep">›</span>
+        <button class="breadcrumb-link" onclick="showScreen('screen-docent-setup')">Setup</button>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Leerlingen</span>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-tag tag-docent">Leraar</span>
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-docent-setup')">← Terug</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="progress-wrap"><div class="progress-fill" style="width:50%"></div></div>
+    <div class="page-eyebrow">Stap 2 van 3 — Leerlingen</div>
+    <h2 class="page-title">Leerlingen invoeren</h2>
+    <p class="page-sub">Voer naam en achternaam in, één per regel. Of plak een komma-gescheiden lijst.</p>
+
+    <div class="form-section">
+      <label>Leerlingennamen (één per regel)</label>
+      <textarea id="leerlingen-input" rows="10" placeholder="Emma de Vries&#10;Daan Jansen&#10;Lotte Bakker&#10;Pieter van der Berg&#10;Sara Mol&#10;..."></textarea>
+    </div>
+    <div style="display:flex;gap:0.65rem;margin-bottom:0.75rem;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="genereerGroepsindeling()">🎲 Willekeurige indeling</button>
+    </div>
+    <div id="leerlingen-preview" style="display:none;margin-bottom:1rem;">
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text2);margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;">
+        <span>Groepsindeling — <span id="preview-count"></span></span>
+        <span style="font-weight:400;color:var(--muted);">Klik op een leerling om de Mol aan te wijzen</span>
+      </div>
+      <div id="preview-groepen"></div>
+    </div>
+    <div id="leerlingen-error" class="error-msg" style="margin-bottom:0.65rem;"></div>
+    <button class="btn btn-gold btn-full" id="naar-vragen-btn" onclick="naarVragenEditor()">Volgende: vragen →</button>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN 3B: DOCENT — VRAAG-EDITOR                        -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-docent-vragen" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <nav class="breadcrumb">
+        <button class="breadcrumb-link" onclick="naarSessieLijst()">🕵️ Sessies</button>
+        <span class="breadcrumb-sep">›</span>
+        <button class="breadcrumb-link" onclick="showScreen('screen-docent-setup')">Setup</button>
+        <span class="breadcrumb-sep">›</span>
+        <button class="breadcrumb-link" onclick="showScreen('screen-docent-leerlingen')">Leerlingen</button>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Vragen</span>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-tag tag-docent">Leraar</span>
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-docent-leerlingen')">← Terug</button>
+    </div>
+  </div>
+  <div class="content" style="max-width:760px;">
+    <div class="progress-wrap"><div class="progress-fill" style="width:62%"></div></div>
+    <div class="page-eyebrow">Stap 3 van 4 — Vragen</div>
+    <h2 class="page-title">Vragen per ronde</h2>
+    <p class="page-sub">De AI heeft een voorstel gemaakt. Pas de vragen aan of schrijf ze zelf. Stel ook het vraagtype in per ronde.</p>
+
+    <div id="vragen-loading" style="text-align:center;padding:2.5rem 0;color:var(--muted);">
+      <span class="spinner"></span>&nbsp; AI genereert vragen...
+    </div>
+    <div id="vragen-editor-wrap" style="display:none;"></div>
+
+    <div id="vragen-error" class="error-msg"></div>
+    <div style="display:flex;gap:0.65rem;margin-top:1rem;" id="vragen-actie-row" style="display:none;">
+      <button class="btn btn-ghost" onclick="herGenereerAlleVragen()">↻ Alles opnieuw genereren</button>
+      <button class="btn btn-gold" style="flex:1;" onclick="maakSessie()">Sessie starten →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN 4: DOCENT SESSIE-OVERZICHT (speelcodes)          -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-docent-sessie" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <nav class="breadcrumb">
+        <button class="breadcrumb-link" onclick="naarSessieLijst()">🕵️ Sessies</button>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current" id="breadcrumb-les-naam">—</span>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-tag tag-docent">Leraar</span>
+      <div id="docent-status-badge"></div>
+      <button class="btn btn-ghost btn-sm" onclick="naarSessieLijst()">← Sessies</button>
+    </div>
+  </div>
+  <div class="content wide">
+    <div class="progress-wrap"><div class="progress-fill" style="width:75%"></div></div>
+    <div class="page-eyebrow">Stap 3 van 3 — Sessie actief</div>
+    <h2 class="page-title" id="docent-les-naam">Sessie</h2>
+
+    <div class="card highlight-gold" style="margin-bottom:1.25rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--gold);margin-bottom:0.3rem;">Sessie-code voor leerlingen</div>
+          <div id="docent-sessie-code" style="font-family:'DM Mono',monospace;font-size:2rem;font-weight:500;letter-spacing:0.3em;color:var(--gold-l);"></div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--text2);margin-bottom:0.3rem;">Url voor leerlingen</div>
+          <div id="docent-speler-url" style="font-size:0.72rem;color:var(--text2);font-family:'DM Mono',monospace;word-break:break-all;max-width:300px;"></div>
+        </div>
+        <div style="border-left:1px solid rgba(255,255,255,0.08);padding-left:1rem;">
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-bottom:0.3rem;">Jouw docentcode (om te hervatten)</div>
+          <div id="docent-code-display" style="font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:600;letter-spacing:0.2em;color:var(--text2);"></div>
+          <div style="font-size:0.62rem;color:var(--muted);margin-top:0.2rem;">Bewaar dit — nodig bij hervatten</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fase-besturing -->
+    <div class="ronde-panel" id="docent-control-panel">
+      <div class="ronde-panel-title" id="docent-fase-titel">Wachten op leerlingen...</div>
+      <div class="ronde-panel-sub" id="docent-fase-sub"></div>
+      <div class="phase-steps" id="docent-phase-steps"></div>
+      <div style="display:flex;gap:0.65rem;flex-wrap:wrap;" id="docent-actie-btns"></div>
+    </div>
+
+    <!-- Online-leerlingen -->
+    <div style="margin-bottom:1.25rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.6rem;">
+        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--text2);">
+          Leerlingen — <span id="online-count">0</span> online
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn btn-ghost btn-sm" onclick="openProjectie()" title="Toon codes op groot scherm">📺 Codes tonen</button>
+          <button class="btn btn-ghost btn-sm" onclick="printBriefjes()" title="Print codes als briefjes">🖨️ Afdrukken</button>
+        </div>
+      </div>
+      <div id="docent-leerlingen-lijst"></div>
+    </div>
+
+    <!-- Groepen overzicht (na generatie) -->
+    <div id="docent-groepen-sectie" style="display:none;margin-bottom:1.25rem;">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--text2);margin-bottom:0.6rem;">Groepen + Mollen (alleen zichtbaar voor jou)</div>
+      <div class="groep-grid" id="docent-groepen-grid"></div>
+    </div>
+
+    <!-- Antwoorden overzicht per ronde -->
+    <div id="docent-antwoorden-sectie" style="display:none;">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--text2);margin-bottom:0.6rem;">Ingediende antwoorden — ronde <span id="docent-ronde-label">-</span></div>
+      <div id="docent-antwoorden-lijst"></div>
+    </div>
+
+    <!-- Nabespreek-scherm -->
+    <div id="docent-nabespreek-sectie" style="display:none;">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--gold);margin-bottom:0.75rem;">📊 Nabespreking — sabotage-momenten</div>
+      <div id="docent-nabespreek-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN 5: SPELER LOGIN                                  -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-speler-login" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Wie is de Mol</div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-keuze')">← Terug</button>
+    </div>
+  </div>
+  <div class="content" style="max-width:380px;">
+    <div style="font-size:2.5rem;text-align:center;margin-bottom:1rem;">🎓</div>
+    <div class="page-eyebrow" style="text-align:center;">Leerling</div>
+    <h2 class="page-title" style="text-align:center;">Inloggen</h2>
+    <p class="page-sub" style="text-align:center;">Vraag de sessie-code en jouw persoonlijke spelcode aan je leraar.</p>
+
+    <div class="form-section">
+      <label>Sessie-code (4 letters)</label>
+      <input id="speler-sessie-code" type="text" placeholder="bijv. KRTB" maxlength="4" style="text-transform:uppercase;font-family:'DM Mono',monospace;font-size:1.5rem;letter-spacing:0.3em;text-align:center;">
+    </div>
+    <div class="form-section">
+      <label>Jouw spelcode (5 tekens)</label>
+      <input id="speler-speler-code" type="text" placeholder="bijv. KR7T2" maxlength="5" style="text-transform:uppercase;font-family:'DM Mono',monospace;font-size:1.5rem;letter-spacing:0.2em;text-align:center;">
+    </div>
+    <div id="speler-login-error" class="error-msg"></div>
+    <button class="btn btn-gold btn-full" style="margin-top:0.5rem;" onclick="spelerLogin()">Inloggen →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN 6: SPELER — WACHTEN / BRIEFING                   -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-speler-wacht" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Wie is de Mol</div>
+    <div class="topbar-right" id="speler-topbar-right">
+      <span class="topbar-tag tag-speler" id="speler-naam-tag">Speler</span>
+    </div>
+  </div>
+  <div class="content" id="speler-wacht-content" style="text-align:center;padding-top:2rem;">
+    <div style="font-size:2.5rem;margin-bottom:1rem;">⏳</div>
+    <div class="page-eyebrow">Wachten</div>
+    <h2 class="page-title">Spel start zo...</h2>
+    <p class="page-sub">Jouw leraar start het spel. Zorg dat je scherm aan blijft.</p>
+    <div id="speler-briefing-sectie" style="display:none;text-align:left;margin-top:1.5rem;"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN 7: SPELER — RONDE (antwoorden)                   -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-speler-ronde" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Wie is de Mol</div>
+    <div class="topbar-right">
+      <span id="ronde-topbar-label" class="topbar-tag tag-speler"></span>
+    </div>
+  </div>
+  <div class="content">
+    <div class="progress-wrap"><div class="progress-fill" id="ronde-progress" style="width:40%"></div></div>
+    <div id="ronde-fase-label" class="page-eyebrow"></div>
+    <div id="ronde-content"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN 8: SPELER — MOL-TEST                             -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-speler-test" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Wie is de Mol</div>
+    <div class="topbar-right">
+      <span class="topbar-tag tag-speler">Moltest</span>
+    </div>
+  </div>
+  <div class="content">
+    <div class="progress-wrap"><div class="progress-fill" style="width:85%"></div></div>
+    <div class="page-eyebrow">Moltest</div>
+    <h2 class="page-title">Wie is de Mol?</h2>
+    <p class="page-sub">Analyseer de rondes en benoem de saboteur.</p>
+
+    <div class="card">
+      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.75rem;color:#fff;">🎯 Vraag 1 — Wie is de Mol in jouw groep?</div>
+      <div class="groepslid-grid" id="test-verdachte-keuze"></div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.75rem;color:#fff;">🔍 Vraag 2 — In welke ronde saboteerde de Mol het meest?</div>
+      <div class="antwoord-opties" id="test-ronde-keuze"></div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.5rem;color:#fff;">💬 Vraag 3 — Welk argument van de Mol was het meest misleidend en <em>waarom klopte het niet?</em></div>
+      <p style="font-size:0.75rem;color:var(--teal);margin-bottom:0.75rem;">Beschrijf het argument zo concreet mogelijk. Dit is het belangrijkste onderdeel van de test.</p>
+      <textarea id="test-argument-tekst" rows="4" placeholder="Het meest misleidende argument was... Dit klopt niet omdat..."></textarea>
+    </div>
+
+    <div id="test-error" class="error-msg"></div>
+    <button class="btn btn-gold btn-full" onclick="submitTest()">Test insturen →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN 9: REVEAL                                        -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-reveal" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Wie is de Mol</div>
+    <div class="topbar-right">
+      <span id="reveal-rol-tag" class="topbar-tag"></span>
+    </div>
+  </div>
+  <div class="content">
+    <div class="progress-wrap"><div class="progress-fill" style="width:100%"></div></div>
+    <div id="reveal-content"></div>
+    <div class="afsluiting-wrap" id="reveal-afsluiting" style="display:none;">
+      <div class="afsluiting-icoon">🎓</div>
+      <div class="afsluiting-titel">Goed gespeeld!</div>
+      <div class="afsluiting-sub">De sessie is afgelopen. Bespreek de vragen klassikaal na met je leraar.</div>
+      <button class="btn btn-ghost" onclick="sluitLeerlingAf()">Sessie afsluiten ✓</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN: PROJECTIE — codes tonen op groot scherm          -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="screen-projectie" class="screen">
+  <div class="topbar" style="background:#0a0d12;">
+    <div class="topbar-brand" style="color:#f0c764;">📺 Codes — projectiemodus</div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-sm" onclick="sluitProjectie()">✕ Sluiten</button>
+    </div>
+  </div>
+  <div class="proj-header">
+    <div class="proj-sub">Sessie-code voor alle leerlingen</div>
+    <div class="proj-sessie-code" id="proj-sessie-code">—</div>
+    <div class="proj-url" id="proj-url">—</div>
+    <div class="proj-sub">Elke leerling heeft ook een eigen spelcode — zie kaartje hieronder</div>
+  </div>
+  <div class="proj-grid" id="proj-leerlingen-grid"></div>
+</div>
+
+<!-- Print-briefjes container (onzichtbaar, alleen bij print actief) -->
+<div id="print-briefjes">
+  <div class="briefjes-grid" id="briefjes-grid"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════════════════
+const API = 'https://toetsapp-backend-production.up.railway.app';
+let docentToken = ''; // gezet vanuit URL-param of localStorage
+
+// ════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════
+let sessieId    = null;
+let sessieCode  = null;
+let docentCode  = null;
+let speler      = null;   // {id, naam, groep_id, groep_naam, is_mol, speler_code}
+let sessieState = null;   // volledige state van server
+let pollTimer   = null;
+let setupData   = {};     // tijdelijk tijdens setup
+
+// Test-state (speler)
+let testVerdachteId = null;
+let testRondeNr     = null;
+let testIngediend   = false; // voorkomt dat poll de test opnieuw toont na submitten
+
+// Render-state: voorkomt dat poll de UI overschrijft terwijl leerling bezig is
+let lastRenderedFase = null; // bijv. 'ronde_1_invoer' | 'ronde_1_wacht' | 'ronde_1_stem' | 'ronde_1_resultaat'
+
+// ════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function naarSessieLijst() {
+  clearInterval(pollTimer);
+  showScreen('screen-docent-login');
+  laadSessieLijst();
+}
+
+function sluitLeerlingAf() {
+  clearInterval(pollTimer);
+  stopHeartbeat();
+  showScreen('screen-keuze');
+}
+
+function toast(msg, duur = 2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), duur);
+}
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Onbekende fout');
+  return data;
+}
+
+function escH(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ════════════════════════════════════════════════════════════
+// SETUP — DOCENT
+// ════════════════════════════════════════════════════════════
+function goToLeerlingenSetup() {
+  const naam    = document.getElementById('setup-les-naam').value.trim();
+  const content = document.getElementById('setup-les-content').value.trim();
+  const err     = document.getElementById('setup-error');
+  if (!naam)    { err.textContent = 'Vul een lesnaam in.'; err.style.display='block'; return; }
+  if (!content) { err.textContent = 'Beschrijf de kernstof zodat de AI cases kan genereren.'; err.style.display='block'; return; }
+  err.style.display = 'none';
+  setupData.lesNaam    = naam;
+  setupData.lesContent = content;
+  setupData.nRondes       = parseInt(document.getElementById('setup-n-rondes').value);
+  setupData.groepGrootte  = parseInt(document.getElementById('setup-groep-grootte').value);
+  setupData.timerDiscussie = parseInt(document.getElementById('setup-timer-discussie').value) || 120;
+  setupData.timerStem      = parseInt(document.getElementById('setup-timer-stem').value)      || 60;
+  showScreen('screen-docent-leerlingen');
+}
+
+function parseLeerlingen() {
+  const raw = document.getElementById('leerlingen-input').value;
+  return raw.split(/[\n,]/).map(s => s.trim()).filter(s => s.length > 1);
+}
+
+// Groepsindeling state — [{naam, leden:[{naam, isMol}]}]
+let groepsindeling = [];
+
+function genereerGroepsindeling() {
+  const leerlingen = parseLeerlingen();
+  if (leerlingen.length < 2) { toast('Voer minimaal 2 leerlingen in.'); return; }
+  const gs = setupData.groepGrootte || 4;
+  const geshuffled = [...leerlingen].sort(() => Math.random() - 0.5);
+  groepsindeling = [];
+  const labels = 'ABCDEFGHIJ'.split('');
+  for (let i = 0; i < geshuffled.length; i += gs) {
+    const leden = geshuffled.slice(i, i + gs).map((naam, idx) => ({
+      naam,
+      isMol: idx === 0, // standaard: eerste leerling is Mol (docent kan aanpassen)
+    }));
+    groepsindeling.push({ naam: 'Groep ' + labels[groepsindeling.length], leden });
+  }
+  renderGroepsindeling();
+}
+
+function renderGroepsindeling() {
+  const grid = document.getElementById('preview-groepen');
+  grid.innerHTML = groepsindeling.map((g, gi) => `
+    <div class="groep-card-interactief">
+      <div class="groep-naam">
+        <span>${escH(g.naam)}</span>
+        <span style="font-size:0.65rem;color:var(--muted);font-weight:400;">
+          Mol: <span style="color:var(--red-l);">${escH(g.leden.find(l => l.isMol)?.naam || '—')}</span>
+        </span>
+      </div>
+      ${g.leden.map((l, li) => `
+        <div class="groep-lid-mol-rij${l.isMol ? ' is-mol' : ''}"
+          onclick="selecteerMol(${gi}, ${li})" title="Aanwijzen als Mol">
+          <div class="mol-kies-radio"></div>
+          <span class="groep-lid-mol-naam" style="margin-left:0.6rem;">${escH(l.naam)}</span>
+          ${l.isMol ? '<span style="font-size:0.68rem;color:var(--red-l);font-weight:700;">🕵️ Mol</span>' : ''}
+        </div>`).join('')}
+    </div>`).join('');
+  const totaal = groepsindeling.reduce((s, g) => s + g.leden.length, 0);
+  document.getElementById('preview-count').textContent =
+    `${totaal} leerlingen · ${groepsindeling.length} groep${groepsindeling.length !== 1 ? 'en' : ''}`;
+  document.getElementById('leerlingen-preview').style.display = 'block';
+}
+
+function selecteerMol(groepIdx, lidIdx) {
+  const g = groepsindeling[groepIdx];
+  if (!g) return;
+  g.leden.forEach((l, i) => { l.isMol = i === lidIdx; });
+  renderGroepsindeling();
+  toast(`🕵️ ${g.leden[lidIdx].naam} is de Mol in ${g.naam}`);
+}
+
+
+// ════════════════════════════════════════════════════════════
+// VRAAG-EDITOR STATE
+// ════════════════════════════════════════════════════════════
+let vragenData = []; // [{ronde_nr, vraag, vraagtype, correct_uitleg, fout_uitleg, mc_opties:[]}]
+
+// ── Stap: leerlingen → vraag-editor ─────────────────────────────────────────
+async function naarVragenEditor() {
+  const leerlingen = parseLeerlingen();
+  const err = document.getElementById('leerlingen-error');
+  if (leerlingen.length < setupData.groepGrootte) {
+    err.textContent = `Minimaal ${setupData.groepGrootte} leerlingen nodig.`;
+    err.style.display = 'block'; return;
+  }
+  // Genereer willekeurige indeling als docent dat nog niet gedaan heeft
+  if (groepsindeling.length === 0) {
+    setupData.groepGrootte = parseInt(document.getElementById('setup-groep-grootte').value) || 4;
+    genereerGroepsindeling();
+  }
+  err.style.display = 'none';
+  setupData.leerlingen    = leerlingen;
+  setupData.groepsindeling = groepsindeling; // met Mol-keuzes
+  showScreen('screen-docent-vragen');
+  await genereerVragenPreview();
+}
+
+async function genereerVragenPreview() {
+  document.getElementById('vragen-loading').style.display = 'block';
+  document.getElementById('vragen-editor-wrap').style.display = 'none';
+  document.getElementById('vragen-actie-row').style.display = 'none';
+  document.getElementById('vragen-error').style.display = 'none';
+  try {
+    const result = await apiFetch('/api/mol/genereer-cases-preview', {
+      method: 'POST',
+      body: JSON.stringify({
+        les_naam:    setupData.lesNaam,
+        les_content: setupData.lesContent,
+        n_rondes:    setupData.nRondes,
+      }),
+    });
+    vragenData = result.cases.map(c => ({
+      ronde_nr:       c.ronde_nr,
+      vraag:          c.vraag,
+      context:        c.context || '',
+      vraagtype:      c.mc_opties && c.mc_opties.length > 0 ? 'mc' : 'open',
+      correct_uitleg: c.correct_uitleg,
+      fout_uitleg:    c.fout_uitleg,
+      // AI-puntenvoorstel overnemen als beschikbaar
+      mc_opties: (c.mc_opties || []).map(o => ({
+        id:         o.id || uid(),
+        tekst:      o.tekst || '',
+        punten:     o.punten ?? 0,
+        is_correct: o.punten === Math.max(...(c.mc_opties || []).map(x => x.punten ?? 0)),
+        is_mol:     !!o.is_mol,
+      })),
+    }));
+    renderVragenEditor();
+  } catch(e) {
+    document.getElementById('vragen-loading').style.display = 'none';
+    document.getElementById('vragen-error').textContent = 'Genereren mislukt: ' + e.message + ' — je kunt vragen handmatig invullen.';
+    document.getElementById('vragen-error').style.display = 'block';
+    // Maak lege vragen aan
+    vragenData = Array.from({length: setupData.nRondes}, (_, i) => ({
+      ronde_nr: i + 1, vraag: '', context: '', vraagtype: 'open',
+      correct_uitleg: '', fout_uitleg: '', mc_opties: [],
+    }));
+    renderVragenEditor();
+  }
+}
+
+async function herGenereerAlleVragen() {
+  vragenData = [];
+  await genereerVragenPreview();
+}
+
+async function herGenereerVraag(rondeNr) {
+  const idx = vragenData.findIndex(v => v.ronde_nr === rondeNr);
+  if (idx === -1) return;
+  const kaart = document.getElementById(`vraag-kaart-${rondeNr}`);
+  if (kaart) kaart.style.opacity = '0.4';
+  try {
+    const result = await apiFetch('/api/mol/genereer-cases-preview', {
+      method: 'POST',
+      body: JSON.stringify({
+        les_naam:    setupData.lesNaam,
+        les_content: setupData.lesContent,
+        n_rondes:    1,
+        ronde_offset: rondeNr - 1,
+      }),
+    });
+    const c = result.cases[0];
+    vragenData[idx] = {
+      ...vragenData[idx],
+      vraag: c.vraag, context: c.context || '',
+      correct_uitleg: c.correct_uitleg, fout_uitleg: c.fout_uitleg,
+    };
+    renderVraagKaart(rondeNr);
+  } catch(e) {
+    toast('Genereren mislukt: ' + e.message);
+  } finally {
+    if (kaart) kaart.style.opacity = '1';
+  }
+}
+
+function renderVragenEditor() {
+  document.getElementById('vragen-loading').style.display = 'none';
+  const wrap = document.getElementById('vragen-editor-wrap');
+  wrap.innerHTML = vragenData.map(v => `<div id="vraag-kaart-${v.ronde_nr}"></div>`).join('');
+  vragenData.forEach(v => renderVraagKaart(v.ronde_nr));
+  document.getElementById('vragen-editor-wrap').style.display = 'block';
+  document.getElementById('vragen-actie-row').style.display = 'flex';
+}
+
+function renderVraagKaart(rondeNr) {
+  const v   = vragenData.find(x => x.ronde_nr === rondeNr);
+  const div = document.getElementById(`vraag-kaart-${rondeNr}`);
+  if (!v || !div) return;
+
+  const mcOpties = v.mc_opties.length > 0 ? v.mc_opties
+    : [{id: uid(), tekst: v.correct_uitleg.substring(0,80) || 'Correct antwoord', is_correct: true},
+       {id: uid(), tekst: v.fout_uitleg.substring(0,80) || 'Fout antwoord', is_correct: false}];
+  if (v.mc_opties.length === 0 && v.vraagtype === 'mc') v.mc_opties = mcOpties;
+
+  const labels = ['A','B','C','D'];
+
+  div.innerHTML = `
+  <div class="vraag-kaart">
+    <div class="vraag-kaart-header">
+      <span class="vraag-ronde-badge">Ronde ${rondeNr}</span>
+      <span style="font-size:0.83rem;font-weight:600;color:#fff;flex:1;">
+        ${escH(v.vraag.substring(0,60))}${v.vraag.length > 60 ? '…' : ''}
+      </span>
+      <button class="btn btn-ghost btn-sm" onclick="herGenereerVraag(${rondeNr})" title="Nieuwe AI-vraag genereren">↻ Nieuw</button>
+    </div>
+    <div class="vraag-kaart-body">
+
+      <div class="form-section">
+        <label>Vraag</label>
+        <textarea rows="2" id="vraag-tekst-${rondeNr}" oninput="updateVraag(${rondeNr},'vraag',this.value)"
+          style="font-size:0.88rem;">${escH(v.vraag)}</textarea>
+      </div>
+
+      <div class="form-section">
+        <label>Vraagtype</label>
+        <div class="type-toggle">
+          <button class="type-btn ${v.vraagtype==='open' ? 'active-open' : ''}"
+            onclick="setVraagtype(${rondeNr},'open')">📝 Open antwoord</button>
+          <button class="type-btn ${v.vraagtype==='mc' ? 'active-mc' : ''}"
+            onclick="setVraagtype(${rondeNr},'mc')">🔢 Multiple choice</button>
+        </div>
+      </div>
+
+      ${v.vraagtype === 'mc' ? renderMcOpties(rondeNr, v.mc_opties, labels) : ''}
+
+      <div class="uitleg-grid">
+        <div>
+          <div class="uitleg-veld-label" style="color:var(--green);">✅ Correct antwoord / uitleg</div>
+          <textarea rows="3" id="correct-uitleg-${rondeNr}" oninput="updateVraag(${rondeNr},'correct_uitleg',this.value)"
+            style="font-size:0.78rem;">${escH(v.correct_uitleg)}</textarea>
+        </div>
+        <div>
+          <div class="uitleg-veld-label" style="color:var(--red);">🕵️ Mol-argument (fout maar plausibel)</div>
+          <textarea rows="3" id="fout-uitleg-${rondeNr}" oninput="updateVraag(${rondeNr},'fout_uitleg',this.value)"
+            style="font-size:0.78rem;">${escH(v.fout_uitleg)}</textarea>
+        </div>
+      </div>
+      <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:0.5rem;">
+          ⏱ Timer-afwijkingen voor deze ronde (leeg = sessie-standaard)
+        </div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <label style="font-size:0.72rem;color:var(--text2);white-space:nowrap;">Discussie (sec):</label>
+            <input type="number" min="30" max="600" placeholder="standaard"
+              style="width:80px;padding:0.3rem 0.5rem;font-size:0.8rem;"
+              value="${v.timer_discussie_override || ''}"
+              oninput="updateVraag(${rondeNr},'timer_discussie_override',this.value?parseInt(this.value):null)">
+          </div>
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <label style="font-size:0.72rem;color:var(--text2);white-space:nowrap;">Stem (sec):</label>
+            <input type="number" min="15" max="300" placeholder="standaard"
+              style="width:80px;padding:0.3rem 0.5rem;font-size:0.8rem;"
+              value="${v.timer_stem_override || ''}"
+              oninput="updateVraag(${rondeNr},'timer_stem_override',this.value?parseInt(this.value):null)">
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>`;
+  // Auto-resize alle MC textareas na render
+  setTimeout(() => autoResizeAllMcInputs(rondeNr), 10);
+}
+
+function renderMcOpties(rondeNr, opties, labels) {
+  const kanToevoegen = opties.length < 4;
+  return `
+    <div class="form-section">
+      <label>
+        Multiple choice opties
+        <span style="font-weight:400;color:var(--muted);">
+          — klik ○ voor correcte optie · 🕵️ markeert het Mol-argument · pas punten aan (0–10)
+        </span>
+      </label>
+      <div class="mc-opties-wrap" id="mc-wrap-${rondeNr}">
+        ${opties.map((o, i) => `
+          <div class="mc-optie-rij${o.is_correct ? ' is-correct' : ''}${o.is_mol ? ' is-mol-arg' : ''}"
+            id="mc-rij-${o.id}"
+            style="${o.is_mol ? 'border-color:rgba(232,92,92,0.4);background:rgba(232,92,92,0.06);' : ''}">
+            <span class="mc-optie-label">${labels[i]}</span>
+            <button class="mc-correctness-btn${o.is_correct ? ' correct' : ''}"
+              onclick="toggleMcCorrect(${rondeNr},'${o.id}')" title="Markeer als beste antwoord">
+              ${o.is_correct ? '✓' : ''}
+            </button>
+            <textarea class="mc-optie-input"
+              oninput="updateMcOptie(${rondeNr},'${o.id}','tekst',this.value);autoResizeMcInput(this)"
+              placeholder="Optie ${labels[i]}..."
+              rows="1">${escH(o.tekst)}</textarea>
+            <button
+              style="font-size:0.7rem;background:none;border:none;cursor:pointer;padding:0 0.2rem;color:${o.is_mol ? 'var(--red-l)' : 'var(--muted)'};"
+              onclick="toggleMcMol(${rondeNr},'${o.id}')"
+              title="${o.is_mol ? 'Mol-argument (klik om te verwijderen)' : 'Markeer als Mol-argument (0 pt)'}">
+              🕵️
+            </button>
+            <input class="mc-punten-input" type="number" min="0" max="10" value="${o.punten ?? 0}"
+              oninput="updateMcOptie(${rondeNr},'${o.id}','punten',parseInt(this.value)||0)"
+              title="Punten voor deze optie (0–10)">
+            ${opties.length > 2 ? `<button class="mc-verwijder-btn" onclick="verwijderMcOptie(${rondeNr},'${o.id}')">×</button>` : ''}
+          </div>`).join('')}
+        ${kanToevoegen ? `<button class="mc-voeg-toe-btn" onclick="voegMcOptieToe(${rondeNr})">+ Optie toevoegen</button>` : ''}
+      </div>
+    </div>`;
+}
+
+
+function autoResizeMcInput(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function autoResizeAllMcInputs(rondeNr) {
+  const wrap = document.getElementById('mc-wrap-' + rondeNr);
+  if (!wrap) return;
+  wrap.querySelectorAll('.mc-optie-input').forEach(ta => autoResizeMcInput(ta));
+}
+
+function uid() { return Math.random().toString(36).substring(2, 9); }
+
+function updateVraag(rondeNr, veld, waarde) {
+  const v = vragenData.find(x => x.ronde_nr === rondeNr);
+  if (v) v[veld] = waarde;
+  // Header preview updaten zonder volledige re-render
+  if (veld === 'vraag') {
+    const header = document.querySelector(`#vraag-kaart-${rondeNr} .vraag-kaart-header span`);
+    if (header) header.textContent = waarde.substring(0,60) + (waarde.length > 60 ? '…' : '');
+  }
+}
+
+function setVraagtype(rondeNr, type) {
+  const v = vragenData.find(x => x.ronde_nr === rondeNr);
+  if (!v) return;
+  v.vraagtype = type;
+  // Init MC opties als nog leeg
+  if (type === 'mc' && v.mc_opties.length === 0) {
+    v.mc_opties = [
+      {id: uid(), tekst: v.correct_uitleg.substring(0,80) || '', is_correct: true,  is_mol: false, punten: 10},
+      {id: uid(), tekst: v.fout_uitleg.substring(0,80) || '',   is_correct: false, is_mol: true,  punten: 0},
+    ];
+  }
+  renderVraagKaart(rondeNr);
+}
+
+function toggleMcCorrect(rondeNr, optieId) {
+  const v = vragenData.find(x => x.ronde_nr === rondeNr);
+  if (!v) return;
+  v.mc_opties.forEach(o => { o.is_correct = o.id === optieId; });
+  renderVraagKaart(rondeNr);
+}
+
+function toggleMcMol(rondeNr, optieId) {
+  const v = vragenData.find(x => x.ronde_nr === rondeNr);
+  if (!v) return;
+  const o = v.mc_opties.find(x => x.id === optieId);
+  if (!o) return;
+  // Toggle mol-markering; zet punten automatisch op 0 bij aanwijzen
+  const wordtMol = !o.is_mol;
+  v.mc_opties.forEach(x => { x.is_mol = false; });
+  o.is_mol = wordtMol;
+  if (wordtMol) o.punten = 0;
+  renderVraagKaart(rondeNr);
+}
+
+function updateMcOptie(rondeNr, optieId, veld, waarde) {
+  const v = vragenData.find(x => x.ronde_nr === rondeNr);
+  const o = v?.mc_opties.find(x => x.id === optieId);
+  if (o) o[veld] = waarde;
+}
+
+function voegMcOptieToe(rondeNr) {
+  const v = vragenData.find(x => x.ronde_nr === rondeNr);
+  if (!v || v.mc_opties.length >= 4) return;
+  v.mc_opties.push({id: uid(), tekst: '', is_correct: false});
+  renderVraagKaart(rondeNr);
+}
+
+function verwijderMcOptie(rondeNr, optieId) {
+  const v = vragenData.find(x => x.ronde_nr === rondeNr);
+  if (!v || v.mc_opties.length <= 2) return;
+  v.mc_opties = v.mc_opties.filter(o => o.id !== optieId);
+  // Zorg dat er altijd één correct is
+  if (!v.mc_opties.some(o => o.is_correct)) v.mc_opties[0].is_correct = true;
+  renderVraagKaart(rondeNr);
+}
+
+async function maakSessie() {
+  const leerlingen = setupData.leerlingen || parseLeerlingen();
+  const err = document.getElementById('vragen-error') || document.getElementById('leerlingen-error');
+  if (!leerlingen || leerlingen.length < setupData.groepGrootte) {
+    if (err) { err.textContent = `Minimaal ${setupData.groepGrootte} leerlingen nodig.`; err.style.display = 'block'; }
+    return;
+  }
+  if (err) err.style.display = 'none';
+  const btn = document.querySelector('#vragen-actie-row .btn-gold') || document.getElementById('naar-vragen-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Aanmaken...'; }
+
+  try {
+    const result = await apiFetch('/api/mol/sessie', {
+      method: 'POST',
+      body: JSON.stringify({
+        les_naam:        setupData.lesNaam,
+        les_content:     setupData.lesContent,
+        n_rondes:        setupData.nRondes,
+        groep_grootte:   setupData.groepGrootte,
+        timer_discussie: setupData.timerDiscussie || 120,
+        timer_stem:      setupData.timerStem      || 60,
+        leerlingen:     setupData.leerlingen || leerlingen,
+        groepsindeling: setupData.groepsindeling || null, // met docent-Mol keuzes
+        vragen:         vragenData.length > 0 ? vragenData : null,
+      }),
+    });
+    sessieId   = result.sessieId;
+    sessieCode = result.sessieCode;
+    docentCode = result.docentCode;
+    localStorage.setItem('mol_docent_code', docentCode);
+    localStorage.setItem('mol_sessie_id',   sessieId);
+    laadDocentSessie();
+  } catch(e) {
+    err.textContent = 'Fout: ' + e.message;
+    err.style.display = 'block';
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Sessie starten →'; }
+  }
+}
+
+// hervat() vervangen door sessie-lijst UI
+
+// ════════════════════════════════════════════════════════════
+// DOCENT — SESSIE BEHEER
+// ════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════
+// SESSIE-LIJST (docent)
+// ════════════════════════════════════════════════════════════
+async function laadSessieLijst() {
+  const loading = document.getElementById('sessie-lijst-loading');
+  const wrap    = document.getElementById('sessie-lijst-wrap');
+  const leeg    = document.getElementById('sessie-lijst-leeg');
+  if (!loading) return;
+
+  loading.style.display = 'block';
+  wrap.style.display    = 'none';
+  leeg.style.display    = 'none';
+
+  try {
+    const sessies = await apiFetch(`/api/mol/sessies?docent_token=${encodeURIComponent(docentToken)}`);
+    loading.style.display = 'none';
+
+    if (!sessies || sessies.length === 0) {
+      leeg.style.display = 'block';
+      return;
+    }
+
+    const statusLabel = {
+      setup: 'Setup', briefing: 'Briefing', test: 'Moltest',
+      reveal: 'Onthuld', afgelopen: 'Afgelopen',
+    };
+    const statusClass = {
+      setup: 'ss-setup', briefing: 'ss-briefing', test: 'ss-test',
+      reveal: 'ss-reveal', afgelopen: 'ss-afgelopen',
+    };
+
+    wrap.innerHTML = sessies.map(s => {
+      const datum  = s.created_at ? new Date(s.created_at).toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' }) : '—';
+      const isRonde = s.status && s.status.startsWith('ronde_');
+      const statusTxt = isRonde ? `Ronde ${s.status.split('_')[1]}` : (statusLabel[s.status] || s.status);
+      const statusCls = isRonde ? 'ss-ronde' : (statusClass[s.status] || 'ss-setup');
+      return `<div class="sessie-rij">
+        <div class="sessie-info">
+          <div class="sessie-les-naam">${escH(s.les_naam || 'Naamloos')}</div>
+          <div class="sessie-meta">
+            <span>${datum}</span>
+            <span>Code: <strong style="color:var(--gold-l);font-family:'DM Mono',monospace;">${s.sessie_code}</strong></span>
+            <span>${s.n_rondes} rondes · groep ${s.groep_grootte}</span>
+          </div>
+        </div>
+        <span class="sessie-status ${statusCls}">${statusTxt}</span>
+        <div class="sessie-acties">
+          ${s.status === 'afgelopen'
+            ? `<button class="btn btn-ghost btn-sm" onclick="bekijkResultaten('${s.id}')">📊 Resultaten</button>`
+            : `<button class="btn btn-gold btn-sm" onclick="openSessie('${s.id}','${s.docent_code}','${s.sessie_code}')">Openen →</button>`
+          }
+          <button class="btn btn-ghost btn-sm" onclick="openHergebruik('${s.id}','${s.docent_code}','${escH(s.les_naam||'')}')">↺ Hergebruik</button>
+          <button class="sessie-verwijder-btn" onclick="verwijderSessie('${s.id}', '${escH(s.les_naam || 'deze sessie')}')" title="Verwijderen">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+    wrap.style.display = 'block';
+
+  } catch(e) {
+    if (loading) loading.style.display = 'none';
+    const err = document.getElementById('hervatten-error');
+    if (err) { err.textContent = 'Laden mislukt: ' + e.message; err.style.display = 'block'; }
+  }
+}
+
+function openSessie(id, dCode, sCode) {
+  sessieId   = id;
+  docentCode = dCode;
+  sessieCode = sCode;
+  localStorage.setItem('mol_docent_code', dCode);
+  localStorage.setItem('mol_sessie_id',   id);
+  laadDocentSessie();
+}
+
+async function verwijderSessie(id, naam) {
+  if (!confirm(`Sessie "${naam}" definitief verwijderen? Alle leerlingdata gaat verloren.`)) return;
+  try {
+    await apiFetch(`/api/mol/sessie/${id}?docent_token=${encodeURIComponent(docentToken)}`, { method: 'DELETE' });
+    toast(`✓ Sessie "${naam}" verwijderd`);
+    laadSessieLijst();
+  } catch(e) {
+    toast('Verwijderen mislukt: ' + e.message);
+  }
+}
+
+async function laadDocentSessie() {
+  showScreen('screen-docent-sessie');
+  document.getElementById('docent-sessie-code').textContent = sessieCode;
+  document.getElementById('docent-code-display').textContent = docentCode || '—';
+  const url = window.location.href.split('?')[0] + '?rol=speler';
+  document.getElementById('docent-speler-url').textContent = url;
+  startPoll(renderDocentSessie);
+}
+
+function startPoll(fn, interval = 4000) {
+  clearInterval(pollTimer);
+  fn();
+  pollTimer = setInterval(fn, interval);
+}
+
+async function renderDocentSessie() {
+  try {
+    sessieState = await apiFetch('/api/mol/sessie/' + sessieId);
+  } catch(e) { return; }
+
+  // Auto-advance: check of huidige fase vooruit kan
+  await checkAutoAdvance(sessieState);
+
+  const { sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden } = sessieState;
+
+  // Les-naam
+  document.getElementById('docent-les-naam').textContent = sessie.les_naam || 'Sessie';
+  const bc = document.getElementById('breadcrumb-les-naam');
+  if (bc) bc.textContent = sessie.les_naam || 'Sessie';
+
+  // Online-count
+  const nu = Date.now();
+  const online = leerlingen.filter(l => l.online_at && (nu - l.online_at) < 90000);
+  document.getElementById('online-count').textContent = `${online.length} / ${leerlingen.length}`;
+
+  // Leerlingen lijst
+  const ljDiv = document.getElementById('docent-leerlingen-lijst');
+  ljDiv.innerHTML = leerlingen.map(l => {
+    const isOnline = l.online_at && (nu - l.online_at) < 90000;
+    return `<div class="leerling-rij">
+      <div class="leerling-code">${l.speler_code}</div>
+      <div class="leerling-naam">${escH(l.naam)}</div>
+      <div class="leerling-groep">${escH(l.groep_naam)}</div>
+      ${l.is_mol ? '<span class="mol-badge">🕵️ Mol</span>' : ''}
+      <div style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:${isOnline ? 'var(--green)' : 'var(--muted)'}"></div>
+    </div>`;
+  }).join('');
+
+  // Groepen (altijd tonen voor docent)
+  document.getElementById('docent-groepen-sectie').style.display = 'block';
+  const gg = document.getElementById('docent-groepen-grid');
+  gg.innerHTML = groepen.map(g => {
+    const leden = leerlingen.filter(l => l.groep_id === g.id);
+    return `<div class="groep-card">
+      <div class="groep-naam">${escH(g.naam)}</div>
+      ${leden.map(l => `<div class="groep-lid${l.is_mol ? ' is-mol' : ''}">${escH(l.naam)}${l.is_mol ? ' 🕵️' : ''}</div>`).join('')}
+    </div>`;
+  }).join('');
+
+  // Fase-besturing
+  renderDocentFase(sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden, online);
+}
+
+function renderDocentFase(sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden, online) {
+  const status = sessie.status;
+  const ronde  = sessie.huidige_ronde;
+  const faseDiv  = document.getElementById('docent-fase-titel');
+  const subDiv   = document.getElementById('docent-fase-sub');
+  const stepsDiv = document.getElementById('docent-phase-steps');
+  const actieDiv = document.getElementById('docent-actie-btns');
+  const antSec   = document.getElementById('docent-antwoorden-sectie');
+  const nabespreek = document.getElementById('docent-nabespreek-sectie');
+
+  const casesKlaar = cases && cases.length >= sessie.n_rondes;
+
+  // Status-badge
+  const badges = { setup:'🟡 Setup', briefing:'🟢 Briefing', test:'🟣 Moltest', reveal:'🔴 Reveal', afgelopen:'⚫ Afgelopen' };
+  document.getElementById('docent-status-badge').innerHTML =
+    `<span class="status-badge" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text2);">
+      <span class="pulse-dot" style="background:var(--green);"></span>
+      ${badges[status] || status}
+    </span>`;
+
+  if (status === 'setup') {
+    const nu2 = Date.now();
+    // Check welke groepen compleet online zijn
+    const groepStatus = groepen.map(g => {
+      const leden = leerlingen.filter(l => l.groep_id === g.id);
+      const onlineCount = leden.filter(l => l.online_at && (nu2 - l.online_at) < 90000).length;
+      return { naam: g.naam, online: onlineCount, totaal: leden.length, compleet: onlineCount === leden.length && leden.length > 0 };
+    });
+    const eenCompleet = groepStatus.some(g => g.compleet);
+    const groepBadges = groepStatus.map(g =>
+      `<span style="font-size:0.72rem;padding:0.15rem 0.5rem;border-radius:5px;
+        background:${g.compleet ? 'rgba(62,201,138,0.15)' : 'rgba(255,255,255,0.05)'};
+        border:1px solid ${g.compleet ? 'rgba(62,201,138,0.35)' : 'var(--border)'};
+        color:${g.compleet ? 'var(--green)' : 'var(--muted)'};">
+        ${g.naam}: ${g.online}/${g.totaal}
+      </span>`).join(' ');
+
+    faseDiv.textContent = casesKlaar
+      ? (eenCompleet ? '🟢 Sessie start automatisch...' : '⏳ Wachten op leerlingen')
+      : '⏳ AI genereert cases...';
+    subDiv.innerHTML = `<div style="margin-bottom:0.5rem;">${online.length}/${leerlingen.length} leerlingen online</div>
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">${groepBadges}</div>
+      ${casesKlaar && eenCompleet ? '<div style="font-size:0.72rem;color:var(--green);margin-top:0.4rem;">✓ Minstens één volledige groep online — spel start automatisch</div>' : ''}`;
+    stepsDiv.innerHTML  = renderPhaseSteps(['Setup','Briefing','Rondes','Moltest','Onthulling'], 0);
+    actieDiv.innerHTML  = casesKlaar
+      ? `<button class="btn btn-ghost btn-sm" onclick="docentActie('briefing', 0)" style="opacity:0.7;">▶ Handmatig starten</button>`
+      : `<button class="btn btn-ghost" disabled><span class="spinner"></span> Cases worden gegenereerd...</button>`;
+    antSec.style.display = 'none';
+    nabespreek.style.display = 'none';
+
+  } else if (status === 'briefing') {
+    faseDiv.textContent = '📋 Leerlingen lezen briefing';
+    subDiv.textContent  = 'Leerlingen zien hun rol en groep. Start ronde 1 als iedereen gereed is.';
+    stepsDiv.innerHTML  = renderPhaseSteps(['Setup','Briefing','Rondes','Moltest','Onthulling'], 1);
+    actieDiv.innerHTML  = `<button class="btn btn-gold" onclick="startSessieAuto()">▶ Start sessie — alles loopt automatisch →</button>`;
+    antSec.style.display = 'none';
+
+  } else if (status.startsWith('ronde_')) {
+    const r = parseInt(status.split('_')[1]);
+    const caseRonde = cases.find(c => c.ronde_nr === r);
+    const antInRonde = antwoorden.filter(a => a.ronde_nr === r);
+    const alIngediend = antInRonde.length >= leerlingen.length;
+
+    faseDiv.textContent = `Ronde ${r} van ${sessie.n_rondes} — ${alIngediend ? 'iedereen ingediend' : 'individuele antwoorden'}`;
+    subDiv.textContent  = caseRonde ? `Case: "${caseRonde.vraag.substring(0, 80)}..."` : 'Case laden...';
+    stepsDiv.innerHTML  = renderPhaseSteps(['Setup','Briefing',`Ronde ${r}`,'Moltest','Onthulling'], 2);
+
+    // Antwoorden-overzicht
+    antSec.style.display = 'block';
+    document.getElementById('docent-ronde-label').textContent = r;
+    const antDiv = document.getElementById('docent-antwoorden-lijst');
+    antDiv.innerHTML = leerlingen.map(l => {
+      const ant = antInRonde.find(a => a.leerling_id === l.id);
+      return `<div class="leerling-rij">
+        <div class="leerling-naam">${escH(l.naam)}</div>
+        <div style="font-size:0.75rem;color:${ant ? 'var(--green)' : 'var(--muted)'};">${ant ? '✓ Ingediend' : '⏳ Wacht...'}</div>
+      </div>`;
+    }).join('');
+
+    // Open scoring panel als vraagtype open is
+    const caseVraagtype = caseRonde?.vraagtype || 'open';
+    const openScoringHtml = (caseVraagtype === 'open' && alIngediend)
+      ? renderOpenScorePanel(r, groepen, groepStemmen)
+      : '';
+
+    // Extra sectie voor open scoring
+    let openScoreSec = document.getElementById('docent-open-score');
+    if (!openScoreSec) {
+      openScoreSec = document.createElement('div');
+      openScoreSec.id = 'docent-open-score';
+      antSec.parentNode.insertBefore(openScoreSec, antSec.nextSibling);
+    }
+    openScoreSec.innerHTML = openScoringHtml;
+
+    // Knoppen
+    const volgendeRonde = r < sessie.n_rondes;
+    actieDiv.innerHTML = `
+      ${alIngediend
+        ? (volgendeRonde
+            ? `<button class="btn btn-gold" onclick="docentActie('ronde', ${r+1})">▶ Start ronde ${r+1} →</button>`
+            : `<button class="btn btn-gold" onclick="docentActie('test', 0)">▶ Start moltest →</button>`)
+        : `<button class="btn btn-ghost" onclick="docentActie('ronde', ${volgendeRonde ? r+1 : -1})" style="opacity:0.6;">⏭ Volgende fase (overslaan)</button>`
+      }
+      ${alIngediend ? '' : `<span style="font-size:0.75rem;color:var(--muted);">${antInRonde.length}/${leerlingen.length} ingediend</span>`}`;
+
+  } else if (status === 'test') {
+    const alIngediend = testAntwoorden.length >= leerlingen.length;
+    faseDiv.textContent = `🧪 Moltest — ${testAntwoorden.length}/${leerlingen.length} ingediend`;
+    subDiv.textContent  = alIngediend ? 'Iedereen heeft de test ingestuurd. Onthul de Mol!' : 'Leerlingen vullen de moltest in...';
+    stepsDiv.innerHTML  = renderPhaseSteps(['Setup','Briefing','Rondes','Moltest','Onthulling'], 3);
+    actieDiv.innerHTML  = `<button class="btn btn-red" onclick="docentActie('reveal', 0)">🎭 Onthul de Mol →</button>`;
+    antSec.style.display = 'none';
+
+  } else if (status === 'reveal' || status === 'afgelopen') {
+    faseDiv.textContent = '🎭 De Mol is onthuld';
+    subDiv.textContent  = 'Bespreek klassikaal de sabotage-momenten.';
+    stepsDiv.innerHTML  = renderPhaseSteps(['Setup','Briefing','Rondes','Moltest','Onthulling'], 4);
+    actieDiv.innerHTML  = `<button class="btn btn-ghost" onclick="docentActie('afgelopen', 0)">✓ Sessie afsluiten</button>`;
+    antSec.style.display = 'none';
+
+    // Nabespreek
+    nabespreek.style.display = 'block';
+    renderNabespreek(cases, antwoorden, leerlingen, groepen);
+  }
+}
+
+
+function renderOpenScorePanel(rondeNr, groepen, groepStemmen) {
+  return `<div class="open-score-panel">
+    <div class="open-score-titel">📝 Open antwoord — stel score per groep in (0–10)</div>
+    ${groepen.map(g => {
+      const bestaand = groepStemmen.find(s => s.groep_id === g.id && s.ronde_nr === rondeNr);
+      const val = bestaand?.punten ?? 5;
+      return `<div class="open-score-groep-rij">
+        <span class="open-score-groep-naam">${escH(g.naam)}</span>
+        <input class="open-score-slider" type="range" min="0" max="10" step="1"
+          value="${val}" id="slider-${rondeNr}-${g.id}"
+          oninput="document.getElementById('val-${rondeNr}-${g.id}').textContent=this.value">
+        <span class="open-score-val" id="val-${rondeNr}-${g.id}">${val}</span>
+      </div>`;
+    }).join('')}
+    <button class="btn btn-ghost btn-sm open-score-opslaan"
+      onclick="slaOpenScoresOp(${rondeNr}, ${JSON.stringify(groepen.map(g => g.id))})">
+      💾 Scores opslaan
+    </button>
+  </div>`;
+}
+
+async function slaOpenScoresOp(rondeNr, groepIds) {
+  const btn = document.querySelector('.open-score-opslaan');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+  try {
+    await Promise.all(groepIds.map(gid => {
+      const slider = document.getElementById(`slider-${rondeNr}-${gid}`);
+      const punten = slider ? parseInt(slider.value) : 5;
+      return apiFetch('/api/mol/score-open', {
+        method: 'POST',
+        body: JSON.stringify({ sessie_id: sessieId, ronde_nr: rondeNr, groep_id: gid, punten, docent_code: docentCode }),
+      });
+    }));
+    toast('✅ Scores opgeslagen');
+    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Scores opgeslagen ✓'; }
+  } catch(e) {
+    toast('Fout: ' + e.message);
+    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Scores opslaan'; }
+  }
+}
+
+function renderPhaseSteps(stappen, actief) {
+  return stappen.map((s, i) =>
+    `<span class="phase-step ${i < actief ? 'done' : i === actief ? 'active' : ''}">${i < actief ? '✓' : ''} ${s}</span>`
+  ).join('');
+}
+
+async function docentActie(actie, ronde) {
+  let newStatus = actie;
+  if (actie === 'ronde') newStatus = `ronde_${ronde}`;
+  if (actie === 'test')  newStatus = 'test';
+  if (actie === 'reveal') {
+    newStatus = 'reveal';
+    // Bereken scores
+    await apiFetch('/api/mol/bereken-scores', { method: 'POST', body: JSON.stringify({ sessie_id: sessieId }) }).catch(() => {});
+  }
+  if (actie === 'afgelopen') newStatus = 'afgelopen';
+
+  try {
+    await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
+      method: 'PATCH',
+      body: JSON.stringify({ docent_code: docentCode, status: newStatus, huidige_ronde: ronde }),
+    });
+    renderDocentSessie();
+  } catch(e) { toast('Fout: ' + e.message); }
+}
+
+function renderNabespreek(cases, antwoorden, leerlingen, groepen) {
+  const mol = leerlingen.find(l => l.is_mol);
+  const div = document.getElementById('docent-nabespreek-content');
+  if (!cases || cases.length === 0) { div.innerHTML = '<p style="color:var(--muted);">Geen cases gevonden.</p>'; return; }
+
+  div.innerHTML = cases.map(c => {
+    const molAntw = antwoorden.find(a => a.leerling_id === mol?.id && a.ronde_nr === c.ronde_nr);
+    return `<div class="nabespreek-case">
+      <div class="nabespreek-vraag">Ronde ${c.ronde_nr}: ${escH(c.vraag)}</div>
+      <div class="nabespreek-kolommen">
+        <div>
+          <div class="nb-col-title" style="color:var(--green);">✅ Correct antwoord</div>
+          <div class="nb-col-body" style="color:var(--green-l);">${escH(c.correct_uitleg)}</div>
+        </div>
+        <div>
+          <div class="nb-col-title" style="color:var(--red);">🕵️ Mol's sabotage-argument</div>
+          <div class="nb-col-body" style="color:var(--red-l);">${escH(c.fout_uitleg)}</div>
+          ${molAntw ? `<div style="margin-top:0.5rem;font-size:0.72rem;color:var(--muted);">Ingediend door ${escH(mol?.naam)}: "${escH(molAntw.argument)}"</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// SPELER — LOGIN & FLOW
+// ════════════════════════════════════════════════════════════
+async function spelerLogin() {
+  const sc  = document.getElementById('speler-sessie-code').value.trim().toUpperCase();
+  const spc = document.getElementById('speler-speler-code').value.trim().toUpperCase();
+  const err = document.getElementById('speler-login-error');
+  if (sc.length < 4 || spc.length < 5) { err.textContent = 'Vul beide codes volledig in.'; err.style.display='block'; return; }
+  err.style.display = 'none';
+
+  try {
+    const result = await apiFetch(`/api/mol/login?sessie_code=${sc}&speler_code=${spc}`);
+    speler    = result.speler;
+    sessieId  = result.sessieId;
+    sessieCode = sc;
+    localStorage.setItem('mol_speler_id',   speler.id);
+    localStorage.setItem('mol_sessie_id',   sessieId);
+    initSpelerFlow();
+    startHeartbeat();
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  }
+}
+
+let heartbeatTimer = null;
+
+function startHeartbeat() {
+  stopHeartbeat();
+  // Meteen één keer sturen
+  sendHeartbeat();
+  // Daarna elke 20 seconden
+  heartbeatTimer = setInterval(sendHeartbeat, 20000);
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+}
+
+async function sendHeartbeat() {
+  if (!speler?.id || !sessieId) return;
+  try {
+    await apiFetch('/api/mol/heartbeat', {
+      method: 'POST',
+      body: JSON.stringify({ leerling_id: speler.id }),
+    });
+  } catch(e) { /* stil falen */ }
+}
+
+function initSpelerFlow() {
+  // Reset alle sessie-state voor een schone start
+  lastRenderedFase       = null;
+  geselecteerdeOptie     = null;
+  geselecteerdeLidId     = null;
+  geselecteerdeMcOptieId = null;
+  testIngediend          = false;
+  testVerdachteId        = null;
+  testRondeNr            = null;
+  briefingGedrukt        = false;
+  document.getElementById('speler-naam-tag').textContent = speler.naam;
+  if (speler.is_mol) {
+    document.getElementById('speler-topbar-right').innerHTML +=
+      '<span class="topbar-tag tag-mol">🕵️ Mol</span>';
+  }
+  showScreen('screen-speler-wacht');
+  startPoll(pollSpelerStatus, 3500);
+}
+
+async function pollSpelerStatus() {
+  try {
+    sessieState = await apiFetch('/api/mol/sessie/' + sessieId);
+  } catch(e) { return; }
+
+  const { sessie, cases, antwoorden, groepStemmen, leerlingen, groepen, briefingKlaar, groepVotes } = sessieState;
+  if (!sessie) return; // null-safety
+  const status = sessie.status;
+
+  if (status === 'setup') {
+    // Toon hoeveel groepsleden al online zijn
+    const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
+    const nu3 = Date.now();
+    const onlineInGroep = mijnGroep.filter(l => l.online_at && (nu3 - l.online_at) < 90000).length;
+    const wTitle = document.querySelector('#screen-speler-wacht .page-title');
+    const wSub   = document.querySelector('#screen-speler-wacht .page-sub');
+    if (wTitle) wTitle.textContent = 'Wachten op groepsleden...';
+    if (wSub)   wSub.textContent  = `${onlineInGroep} van ${mijnGroep.length} groepsleden online. Het spel start automatisch zodra iedereen ingelogd is.`;
+    return;
+  }
+
+  if (status === 'briefing') {
+    const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
+    // Eerste keer renderen; daarna alleen wacht-grid updaten
+    if (!briefingGedrukt) {
+      renderSpelerBriefing(leerlingen, groepen, sessie);
+    } else {
+      updateBriefingWachtGrid(mijnGroep, briefingKlaar);
+    }
+    showScreen('screen-speler-wacht');
+    return;
+  }
+
+  if (status.startsWith('ronde_')) {
+    const ronde    = parseInt(status.split('_')[1]);
+    const faseSrv  = sessie.ronde_fase || 'invoer';
+    // Reset renderState als we naar een nieuwe ronde of fase gaan
+    if (!lastRenderedFase || !lastRenderedFase.startsWith(`ronde_${ronde}_${faseSrv}`)) {
+      lastRenderedFase = null;
+      geselecteerdeOptie = null;
+      geselecteerdeLidId = null;
+      geselecteerdeMcOptieId = null;
+    }
+    const mijnGroep  = leerlingen.filter(l => l.groep_id === speler.groep_id);
+    const caseRonde  = cases.find(c => c.ronde_nr === ronde);
+    const mijnAntwoord   = antwoorden.find(a => a.leerling_id === speler.id && a.ronde_nr === ronde);
+    const alleAntwoorden = antwoorden.filter(a => a.ronde_nr === ronde && mijnGroep.some(l => l.id === a.leerling_id));
+    const alleIngediend  = mijnGroep.every(l => antwoorden.some(a => a.leerling_id === l.id && a.ronde_nr === ronde));
+    const groepStem      = groepStemmen.find(s => s.groep_id === speler.groep_id && s.ronde_nr === ronde);
+    const timerDiscSec   = getFaseTimerSec(sessie, cases, ronde, 'discussie');
+    const timerStemSec   = getFaseTimerSec(sessie, cases, ronde, 'stem');
+    const faseTijd       = sessie.fase_gestart_op || Date.now();
+
+    const mijnGroepVotes = (groepVotes || []).filter(v => v.groep_id === speler.groep_id && v.ronde_nr === ronde);
+    renderSpelerRonde(ronde, sessie.n_rondes, caseRonde, mijnAntwoord, alleIngediend,
+      alleAntwoorden, groepStem, mijnGroep, leerlingen,
+      faseSrv, faseTijd, timerDiscSec, timerStemSec, mijnGroepVotes);
+    showScreen('screen-speler-ronde');
+    return;
+  }
+
+  if (status === 'test') {
+    if (!testIngediend) {
+      // Nog niet ingediend: toon de test
+      lastRenderedFase = null;
+      renderSpelerTest(leerlingen, sessieState);
+      showScreen('screen-speler-test');
+      clearInterval(pollTimer);
+    }
+    // Wél ingediend: wachtscherm staat al — val door naar reveal-check hieronder
+    return;
+  }
+
+  if (status === 'reveal' || status === 'afgelopen') {
+    clearInterval(pollTimer);
+    renderSpelerReveal(sessieState);
+    showScreen('screen-reveal');
+    return;
+  }
+}
+
+function renderSpelerBriefing(leerlingen, groepen, sessie) {
+  const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
+  const groepNaam = mijnGroep.length > 0 ? mijnGroep[0].groep_naam : 'Jouw groep';
+  const sec = document.getElementById('speler-briefing-sectie');
+  sec.style.display = 'block';
+  document.querySelector('#screen-speler-wacht .page-title').textContent = 'Jij bent in ' + groepNaam;
+  document.querySelector('#screen-speler-wacht .page-sub').textContent = 'Jouw groepsleden:';
+
+  let html = `<div class="card highlight-${speler.is_mol ? 'red' : 'green'}" style="margin-bottom:1rem;">`;
+  if (speler.is_mol) {
+    html += `<div class="mol-secret">
+      <div class="mol-secret-title">🕵️ Jij bent de Mol</div>
+      <p style="font-size:0.83rem;color:var(--text2);line-height:1.6;margin-bottom:0.75rem;">
+        Jouw missie: laat de groep zoveel mogelijk punten verspillen. Breng per ronde een plausibel fout argument in en verdedig het in de discussie — zonder te opvallen.
+      </p>
+      <div class="mol-fout-arg">
+        <div class="mol-fout-label">Jouw instructie per ronde</div>
+        <div class="mol-fout-text">Je ziet per ronde een fout argument dat jij moet verdedigen. Jouw individuele antwoord moet dit argument bevatten.</div>
+      </div>
+    </div>`;
+  } else {
+    html += `<div style="padding:0.5rem 0;">
+      <div style="font-size:1.3rem;margin-bottom:0.5rem;">🎓</div>
+      <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.3rem;color:#fff;">Jij bent een gewone deelnemer</div>
+      <div style="font-size:0.82rem;color:var(--text2);line-height:1.6;">Werk samen om punten te verdienen. Pas op — <strong style="color:var(--red-l);">er is een Mol in jouw groep</strong>. Ontmasker hem of haar in de moltest.</div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  html += `<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text2);margin-bottom:0.5rem;">Jouw groep: ${escH(groepNaam)}</div>`;
+  html += mijnGroep.map(l => `
+    <div class="leerling-rij" style="margin-bottom:0.4rem;">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;">
+        ${l.id === speler.id ? '👤' : '🎓'}
+      </div>
+      <div style="flex:1;font-weight:${l.id === speler.id ? '700' : '500'};font-size:0.85rem;">${escH(l.naam)} ${l.id === speler.id ? '(jij)' : ''}</div>
+    </div>`).join('');
+
+  html += `<div id="briefing-start-wrap" style="margin-top:1.25rem;">
+    <button class="btn btn-gold btn-full" id="briefing-start-btn" onclick="drukOpStart()">
+      ✅ Ik heb de briefing gelezen — Start!
+    </button>
+    <div id="briefing-wacht" style="display:none;text-align:center;margin-top:0.85rem;">
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:0.5rem;">
+        Wachten op groepsleden...
+      </div>
+      <div class="wacht-grid" id="briefing-wacht-grid"></div>
+    </div>
+  </div>`;
+  sec.innerHTML = html;
+}
+
+let briefingGedrukt = false;
+
+async function drukOpStart() {
+  if (briefingGedrukt) return;
+  briefingGedrukt = true;
+  const btn = document.getElementById('briefing-start-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Wachten op groep...'; }
+  document.getElementById('briefing-wacht').style.display = 'block';
+
+  try {
+    await apiFetch('/api/mol/briefing-klaar', {
+      method: 'POST',
+      body: JSON.stringify({ sessie_id: sessieId, leerling_id: speler.id }),
+    });
+  } catch(e) { console.error('briefing-klaar fout:', e.message); }
+}
+
+function updateBriefingWachtGrid(mijnGroep, briefingKlaar) {
+  const grid = document.getElementById('briefing-wacht-grid');
+  if (!grid) return;
+  const klaarIds = new Set((briefingKlaar || []).map(b => b.leerling_id));
+  grid.innerHTML = mijnGroep.map(l => {
+    const klaar = klaarIds.has(l.id);
+    return `<div class="wacht-chip ${klaar ? 'klaar' : ''}">
+      <div class="dot"></div>${escH(l.naam.split(' ')[0])}
+    </div>`;
+  }).join('');
+}
+
+function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngediend,
+  alleAntwoorden, groepStem, mijnGroep, alleLeerlingen,
+  faseSrv, faseTijd, timerDiscSec, timerStemSec, groepVotesRonde) {
+  groepVotesRonde = groepVotesRonde || [];
+  faseSrv      = faseSrv  || 'invoer';
+  faseTijd     = faseTijd || Date.now();
+  timerDiscSec = timerDiscSec || 120;
+  timerStemSec = timerStemSec || 60;
+
+  // Huidige fase: server-fase heeft prioriteit boven lokale afleiding
+  let huidigeRenderFase = `ronde_${rondeNr}_${faseSrv}`;
+
+  // Altijd topbar en progress updaten
+  document.getElementById('ronde-topbar-label').textContent = `Ronde ${rondeNr}/${nRondes}`;
+  document.getElementById('ronde-progress').style.width = `${40 + (rondeNr / nRondes) * 40}%`;
+
+  // Sla volledige re-render over als fase niet veranderd is
+  // (voorkomt dat poll het invulveld en de geselecteerde optie wist)
+  if (huidigeRenderFase === lastRenderedFase) return;
+  lastRenderedFase = huidigeRenderFase;
+
+  const content = document.getElementById('ronde-content');
+  const faseLabel = document.getElementById('ronde-fase-label');
+
+  if (!caseData) {
+    // Niet cachen in lastRenderedFase — zodat volgende poll opnieuw controleert
+    lastRenderedFase = null;
+    faseLabel.textContent = 'Ronde ' + rondeNr;
+    content.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);">
+      <span class="spinner"></span> Case wordt geladen...
+    </div>`;
+    return;
+  }
+
+  // FASE A: Nog niet iedereen ingediend — individueel antwoord
+  if (!mijnAntwoord) {
+    faseLabel.textContent = `Ronde ${rondeNr} — Stap ① Jouw antwoord`;
+    let html = `<div class="case-card">
+      <div class="case-ronde">Ronde ${rondeNr} van ${nRondes}</div>
+      <div class="case-vraag">${escH(caseData.vraag)}</div>
+      ${caseData.context ? `<div class="case-context">${escH(caseData.context)}</div>` : ''}
+    </div>`;
+
+    // Mol ziet het foute argument
+    if (speler.is_mol) {
+      html += `<div class="mol-secret" style="margin-bottom:1rem;">
+        <div class="mol-secret-title" style="font-size:0.88rem;">🕵️ Jouw sabotage-instructie</div>
+        <div class="mol-fout-arg">
+          <div class="mol-fout-label">Argument dat jij moet verdedigen</div>
+          <div class="mol-fout-text">${escH(caseData.fout_uitleg)}</div>
+        </div>
+      </div>`;
+    }
+
+    const isMc = caseData.vraagtype === 'mc' && caseData.mc_opties && caseData.mc_opties.length > 0;
+    html += `<div class="card">
+      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.75rem;color:#fff;">${isMc ? 'Kies het juiste antwoord' : 'Kies jouw standpunt'}</div>
+      <div class="antwoord-opties" id="keuze-opties">
+        ${isMc
+          ? caseData.mc_opties.map((o, i) =>
+              `<button class="antwoord-optie" id="opt-${o.id}" onclick="selecteerMcOptie('${o.id}','${o.is_correct ? 'correct' : 'fout'}')">
+                <strong style="color:var(--text2);margin-right:0.4rem;">${['A','B','C','D'][i]}</strong> ${escH(o.tekst)}
+              </button>`).join('')
+          : `<button class="antwoord-optie" id="opt-correct" onclick="selecteerOptie('correct')">
+              ✅ Het correcte economische antwoord
+            </button>
+            <button class="antwoord-optie" id="opt-fout" onclick="selecteerOptie('fout')">
+              ❌ Het alternatieve antwoord
+            </button>`
+        }
+      </div>
+    </div>
+    <div class="card" id="argument-sectie" style="display:none;">
+      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.5rem;color:#fff;">Onderbouw jouw keuze</div>
+      <textarea id="argument-input" rows="4" placeholder="Leg uit waarom jij dit antwoord kiest. Gebruik economische begrippen uit de les." autocomplete="off"></textarea>
+      <button class="btn btn-gold btn-full" style="margin-top:0.75rem;" id="submit-antwoord-btn" onclick="submitAntwoord(${rondeNr})">
+        Antwoord indienen →
+      </button>
+      <div id="antwoord-error" class="error-msg"></div>
+    </div>`;
+
+    content.innerHTML = html;
+
+    // Leeg het tekstveld altijd bij een nieuwe render van de invoer-fase
+    setTimeout(() => {
+      const ta = document.getElementById('argument-input');
+      if (ta) ta.value = '';
+      const sec = document.getElementById('argument-sectie');
+      if (sec) sec.style.display = 'none';
+    }, 10);
+
+    // Mol heeft vaste keuze (fout)
+    if (speler.is_mol) {
+      setTimeout(() => selecteerOptie('fout'), 100);
+    }
+    // Update opties naar MC als vraagtype mc is
+    if (caseData.vraagtype === 'mc' && caseData.mc_opties && caseData.mc_opties.length > 0) {
+      setTimeout(() => renderMcKeuzeVoorSpeler(caseData, rondeNr), 50);
+    }
+
+  } else if (!alleIngediend) {
+    // FASE B: Eigen antwoord ingediend — wachten op anderen
+    faseLabel.textContent = `Ronde ${rondeNr} — Stap ② Wachten`;
+    const wachtLijst = mijnGroep.map(l => {
+      const isKlaar = alleAntwoorden.some(a => a.leerling_id === l.id);
+      return `<div class="wacht-chip ${isKlaar ? 'klaar' : ''}">
+        <div class="dot"></div>${escH(l.naam.split(' ')[0])}
+      </div>`;
+    }).join('');
+
+    content.innerHTML = `<div style="text-align:center;padding:1.5rem 0 1rem;">
+      <div style="font-size:2rem;margin-bottom:0.75rem;">✅</div>
+      <div style="font-weight:700;font-size:0.95rem;color:#fff;margin-bottom:0.3rem;">Jouw antwoord is ingediend</div>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1.25rem;">Wachten tot iedereen klaar is...</p>
+      <div class="wacht-grid">${wachtLijst}</div>
+    </div>`;
+
+  } else if (!groepStem && (faseSrv === 'stem' || (faseSrv === 'invoer' && alleIngediend))) {
+    // STEM: kies groepsantwoord (direct na invoer, geen discussiefase)
+    faseLabel.textContent = `Ronde ${rondeNr} — Stap ③ Groepsstemming`;
+    const verstrekenStem = Math.floor((Date.now() - faseTijd) / 1000);
+    const resterendStem  = Math.max(0, timerStemSec - verstrekenStem);
+    const groepsleden = mijnGroep.map(l => {
+      const ant = alleAntwoorden.find(a => a.leerling_id === l.id);
+      return { leerling: l, ant };
+    });
+
+    // Bouw optie-lijst voor unaniem stemmen
+    const isMc = caseData?.vraagtype === 'mc' && caseData?.mc_opties?.length > 0;
+    const stemOpties = isMc
+      ? caseData.mc_opties.map((o, i) => ({ id: o.id, label: ['A','B','C','D'][i], tekst: o.tekst }))
+      : [{ id: 'correct', label: '✅', tekst: 'Het correcte antwoord' },
+         { id: 'fout',    label: '❌', tekst: 'Het alternatieve antwoord' }];
+
+    // Tally: welke optie heeft hoeveel stemmen?
+    const tallyMap = {};
+    groepVotesRonde.forEach(v => {
+      tallyMap[v.gekozen_optie_id] = (tallyMap[v.gekozen_optie_id] || 0) + 1;
+    });
+    const mijnVote = groepVotesRonde.find(v => v.leerling_id === speler.id);
+    const alleVotes = groepVotesRonde.length;
+    const totaalLeden = mijnGroep.length;
+    const uniekeOpties = Object.keys(tallyMap).length;
+    const unaniem = alleVotes >= totaalLeden && uniekeOpties === 1;
+
+    let html = `<div class="case-card">
+      <div class="case-ronde">Ronde ${rondeNr} — Groepsstemming</div>
+      <div class="case-vraag">${escH(caseData.vraag)}</div>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.25rem;color:#fff;">🗳️ Kies het groepsantwoord</div>
+      <p style="font-size:0.75rem;color:var(--text2);margin-bottom:0.75rem;">
+        Iedereen stemt individueel. Als jullie het eens zijn → automatisch ingediend.
+        <strong style="color:var(--teal);">${alleVotes}/${totaalLeden} hebben gestemd.</strong>
+      </p>
+      <div id="vote-opties">`;
+
+    stemOpties.forEach(opt => {
+      const aantalVoorOptie = tallyMap[opt.id] || 0;
+      const isMijnKeuze = mijnVote?.gekozen_optie_id === opt.id;
+      const isUnaniem   = unaniem && tallyMap[opt.id] === totaalLeden;
+      let cls = 'vote-optie';
+      if (isMijnKeuze) cls += ' mijn-keuze';
+      if (isUnaniem)   cls += ' unanim';
+      const dots = Array(aantalVoorOptie).fill('<div class="vote-dot"></div>').join('');
+      html += `<div class="${cls}" onclick="stemGroepsOptie('${opt.id}', ${rondeNr})" id="vote-${opt.id}">
+        <span class="vote-label">${opt.label}</span>
+        <span class="vote-tekst">${escH(opt.tekst)}</span>
+        <div class="vote-tally">
+          ${dots}
+          ${aantalVoorOptie > 0 ? `<span class="vote-count">${aantalVoorOptie}</span>` : ''}
+          ${isUnaniem ? '<span class="vote-check">✓</span>' : ''}
+        </div>
+      </div>`;
+    });
+
+    html += `</div>
+      ${unaniem ? '<div style="text-align:center;font-size:0.82rem;color:var(--green);margin-top:0.75rem;font-weight:700;">✅ Iedereen akkoord — antwoord ingediend!</div>' : ''}
+      <div id="stem-error" class="error-msg"></div>
+    </div>`;
+
+    html += buildTimerRing(timerStemSec, resterendStem, 'stem');
+    html += `<div class="timer-label" style="text-align:center;margin-top:-0.25rem;">Stemtijd</div>`;
+    content.innerHTML = html;
+
+  } else {
+    // FASE D: Stem ingediend — resultaat tonen
+    faseLabel.textContent = `Ronde ${rondeNr} — Resultaat`;
+    const isCorrect = groepStem.is_correct;
+    const punten    = groepStem.punten;
+
+    content.innerHTML = `
+      <div class="card ${isCorrect ? 'highlight-green' : 'highlight-red'}" style="text-align:center;padding:2rem 1.5rem;margin-bottom:1rem;">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem;">${isCorrect ? '✅' : '❌'}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:${isCorrect ? 'var(--green-l)' : 'var(--red-l)'};margin-bottom:0.3rem;">
+          ${isCorrect ? 'Goed!' : 'Helaas — fout antwoord'}
+        </div>
+        <div style="font-size:1.8rem;font-weight:800;color:${punten > 0 ? 'var(--green-l)' : 'var(--red-l)'};">${punten > 0 ? '+' : ''}${punten} pt</div>
+      </div>
+      <div class="card">
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--green);margin-bottom:0.4rem;">✅ Correct antwoord</div>
+        <div style="font-size:0.85rem;color:var(--text);line-height:1.6;">${escH(caseData.correct_uitleg)}</div>
+      </div>
+      <div style="text-align:center;font-size:0.8rem;color:var(--muted);padding:1rem;">
+        Wacht op je leraar voor de volgende ronde...
+      </div>`;
+  }
+}
+
+let geselecteerdeOptie = null;
+let geselecteerdeMcOptieId = null; // ID van gekozen MC optie
+function selecteerOptie(optie) {
+  geselecteerdeOptie = optie;
+  document.querySelectorAll('.antwoord-optie').forEach(b => b.classList.remove('selected'));
+  document.getElementById('opt-' + optie)?.classList.add('selected');
+  document.getElementById('argument-sectie').style.display = 'block';
+}
+
+function selecteerMcOptie(optieId, correctheid) {
+  geselecteerdeOptie     = correctheid;
+  geselecteerdeMcOptieId = optieId;
+  document.querySelectorAll('.antwoord-optie').forEach(b => b.classList.remove('selected'));
+  document.getElementById('opt-' + optieId)?.classList.add('selected');
+  // Bij MC geen open tekstveld — pre-fill argument met optie-tekst
+  const argInput = document.getElementById('argument-input');
+  const gekozenOptie = document.querySelector(`#opt-${optieId}`);
+  if (argInput && gekozenOptie) {
+    argInput.value = gekozenOptie.innerText.trim().replace(/^[A-D]\s+/, '');
+  }
+  document.getElementById('argument-sectie').style.display = 'block';
+}
+
+let geselecteerdeLidId = null;
+function selecteerGroepsLid(id) {
+  geselecteerdeLidId = id;
+  document.querySelectorAll('.groepslid-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('stem-' + id)?.classList.add('selected');
+  const btn = document.getElementById('submit-stem-btn');
+  if (btn) btn.disabled = false;
+}
+
+async function submitAntwoord(rondeNr) {
+  const arg = document.getElementById('argument-input')?.value.trim();
+  const err = document.getElementById('antwoord-error');
+  if (!geselecteerdeOptie) { err.textContent = 'Kies een standpunt.'; err.style.display='block'; return; }
+  if (!arg || arg.length < 10) { err.textContent = 'Geef een onderbouwing (minimaal 10 tekens).'; err.style.display='block'; return; }
+  err.style.display = 'none';
+  const btn = document.getElementById('submit-antwoord-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Indienen...';
+  try {
+    await apiFetch('/api/mol/antwoord', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessie_id:    sessieId,
+        ronde_nr:     rondeNr,
+        leerling_id:  speler.id,
+        antwoord:     geselecteerdeOptie,
+        argument:     arg,
+        mc_optie_id:  geselecteerdeMcOptieId || null,
+      }),
+    });
+    geselecteerdeOptie = null;
+    // Meteen re-poll zodat de overgang naar discussie snel zichtbaar is
+    await pollSpelerStatus();
+  } catch(e) {
+    err.textContent = e.message; err.style.display = 'block';
+    btn.disabled = false; btn.innerHTML = 'Antwoord indienen →';
+  }
+}
+
+async function stemGroepsOptie(optieId, rondeNr) {
+  // Leerling stemt op een optie voor het groepsantwoord
+  try {
+    const res = await apiFetch('/api/mol/groep-vote', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessie_id:        sessieId,
+        ronde_nr:         rondeNr,
+        groep_id:         speler.groep_id,
+        leerling_id:      speler.id,
+        gekozen_optie_id: optieId,
+        gekozen_antwoord: optieId,
+      }),
+    });
+    // Meteen re-poll voor live tally-update
+    await pollSpelerStatus();
+  } catch(e) {
+    toast('Stemmen mislukt: ' + e.message);
+  }
+}
+
+async function submitGroepsStem(rondeNr) {
+  const err = document.getElementById('stem-error');
+  if (!geselecteerdeLidId) { err.textContent = 'Kies een groepslid.'; err.style.display='block'; return; }
+  err.style.display = 'none';
+  const btn = document.getElementById('submit-stem-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    await apiFetch('/api/mol/groep-stem', {
+      method: 'POST',
+      body: JSON.stringify({ sessie_id: sessieId, ronde_nr: rondeNr, groep_id: speler.groep_id, gekozen_leerling_id: geselecteerdeLidId }),
+    });
+    geselecteerdeLidId = null;
+    pollSpelerStatus();
+  } catch(e) {
+    err.textContent = e.message; err.style.display = 'block';
+    btn.disabled = false; btn.innerHTML = 'Groepskeuze indienen →';
+  }
+}
+
+function renderSpelerTest(leerlingen, state) {
+  clearInterval(pollTimer);
+  const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id && l.id !== speler.id);
+  const rondeOpties = Array.from({length: state.sessie.n_rondes}, (_, i) => i + 1);
+
+  // Verdachte keuze
+  const vc = document.getElementById('test-verdachte-keuze');
+  vc.innerHTML = mijnGroep.map(l => `
+    <button class="groepslid-btn" id="verd-${l.id}" onclick="selecteerVerdachte('${l.id}')">
+      <div class="groepslid-avatar">🎓</div>
+      <div style="font-weight:700;font-size:0.88rem;">${escH(l.naam)}</div>
+    </button>`).join('');
+
+  // Ronde keuze
+  const rc = document.getElementById('test-ronde-keuze');
+  rc.innerHTML = rondeOpties.map(r => `
+    <button class="antwoord-optie" id="ronde-opt-${r}" onclick="selecteerTestRonde(${r})">Ronde ${r}</button>`).join('');
+}
+
+function selecteerVerdachte(id) {
+  testVerdachteId = id;
+  document.querySelectorAll('.groepslid-btn[id^="verd-"]').forEach(b => b.classList.remove('selected'));
+  document.getElementById('verd-' + id)?.classList.add('selected');
+}
+function selecteerTestRonde(r) {
+  testRondeNr = r;
+  document.querySelectorAll('.antwoord-optie[id^="ronde-opt-"]').forEach(b => b.classList.remove('selected'));
+  document.getElementById('ronde-opt-' + r)?.classList.add('selected');
+}
+
+async function submitTest() {
+  const arg = document.getElementById('test-argument-tekst').value.trim();
+  const err = document.getElementById('test-error');
+  if (!testVerdachteId) { err.textContent = 'Kies wie de Mol is.'; err.style.display='block'; return; }
+  if (!testRondeNr)     { err.textContent = 'Kies een ronde.'; err.style.display='block'; return; }
+  if (arg.length < 20)  { err.textContent = 'Beschrijf het argument uitgebreider (minimaal 20 tekens).'; err.style.display='block'; return; }
+  err.style.display = 'none';
+
+  try {
+    await apiFetch('/api/mol/test-antwoord', {
+      method: 'POST',
+      body: JSON.stringify({ sessie_id: sessieId, leerling_id: speler.id, mol_verdachte_id: testVerdachteId, mol_ronde: testRondeNr, mol_argument: arg }),
+    });
+    // Zet flag zodat poll het test-scherm niet opnieuw toont
+    testIngediend = true;
+    // Toon wachtscherm
+    document.querySelector('#screen-speler-wacht .page-title').textContent = 'Test ingediend ✅';
+    document.querySelector('#screen-speler-wacht .page-sub').textContent = '';
+    document.getElementById('speler-briefing-sectie').innerHTML = `
+      <div style="text-align:center;padding:1.5rem 0;">
+        <div style="font-size:2.5rem;margin-bottom:1rem;">🕵️</div>
+        <div style="font-weight:700;font-size:1rem;color:#fff;margin-bottom:0.5rem;">De Mol wordt zo onthuld...</div>
+        <p style="font-size:0.82rem;color:var(--muted);line-height:1.6;max-width:320px;margin:0 auto;">
+          Wacht tot je leraar de onthulling start. Houd je scherm aan.
+        </p>
+        <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:0.4rem;">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--red-l);animation:blink 1.2s ease-in-out infinite;"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--red-l);animation:blink 1.2s ease-in-out 0.4s infinite;"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--red-l);animation:blink 1.2s ease-in-out 0.8s infinite;"></span>
+        </div>
+      </div>`;
+    document.getElementById('speler-briefing-sectie').style.display = 'block';
+    showScreen('screen-speler-wacht');
+    startPoll(pollSpelerStatus, 3000);
+  } catch(e) {
+    err.textContent = e.message; err.style.display = 'block';
+  }
+}
+
+function renderSpelerReveal(state) {
+  const { sessie, leerlingen, cases, antwoorden, groepStemmen, testAntwoorden } = state;
+  const mol        = leerlingen.find(l => l.is_mol);
+  const isMol      = speler.is_mol;
+  const heeftGeraden = testAntwoorden.find(a => a.leerling_id === speler.id && a.mol_verdachte_id === mol?.id);
+  const mijnTest   = testAntwoorden.find(a => a.leerling_id === speler.id);
+
+  // Pot-totaal
+  const mijnGroepStems = groepStemmen.filter(s => s.groep_id === speler.groep_id);
+  const potTotaal = mijnGroepStems.reduce((sum, s) => sum + (s.punten || 0), 0);
+
+  document.getElementById('reveal-rol-tag').className = 'topbar-tag ' + (isMol ? 'tag-mol' : 'tag-speler');
+  document.getElementById('reveal-rol-tag').textContent = isMol ? '🕵️ Mol' : '🎓 Speler';
+
+  let html = `<div class="reveal-container">
+    <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.2em;color:var(--gold);margin-bottom:0.5rem;">De Mol is...</div>
+    <div class="reveal-icon">🕵️</div>
+    <div class="reveal-mol-naam">${escH(mol?.naam || '?')}</div>
+    <div style="font-size:0.83rem;color:var(--text2);margin-bottom:2rem;">${escH(mol?.groep_naam || '')} · ${sessie.les_naam}</div>
+  </div>`;
+
+  // Jouw resultaat
+  if (!isMol) {
+    html += `<div class="card ${heeftGeraden ? 'highlight-green' : 'highlight-red'}" style="text-align:center;margin-bottom:1rem;">
+      <div style="font-size:1.5rem;margin-bottom:0.4rem;">${heeftGeraden ? '🎉' : '😅'}</div>
+      <div style="font-weight:700;font-size:0.95rem;color:${heeftGeraden ? 'var(--green-l)' : 'var(--red-l)'};">
+        ${heeftGeraden ? 'Jij had de Mol geraden!' : 'Jij had de Mol niet geraden'}
+      </div>
+      <div style="font-size:0.78rem;color:var(--text2);margin-top:0.25rem;">Jij verdacht: ${escH(leerlingen.find(l => l.id === mijnTest?.mol_verdachte_id)?.naam || '?')}</div>
+    </div>`;
+  } else {
+    html += `<div class="card highlight-red" style="text-align:center;margin-bottom:1rem;">
+      <div style="font-size:1.5rem;margin-bottom:0.4rem;">🕵️</div>
+      <div style="font-weight:700;font-size:0.95rem;color:var(--red-l);">Jij was de Mol</div>
+      <div style="font-size:0.78rem;color:var(--text2);margin-top:0.25rem;">Hoeveel leerlingen raadden het?</div>
+    </div>`;
+  }
+
+  // Pot-punten met percentage en max per groep
+  const maxTotaal = mijnGroepStems.reduce((s, x) => s + (x.max_punten ?? 10), 0);
+  const pct = maxTotaal > 0 ? Math.round((potTotaal / maxTotaal) * 100) : 0;
+  const pctKleur = pct >= 70 ? 'var(--green-l)' : pct >= 40 ? 'var(--gold-l)' : 'var(--red-l)';
+  html += `<div class="card" style="margin-bottom:1rem;">
+    <div class="eind-score-balk">
+      <div class="eind-score-label">
+        <span class="eind-score-naam">Jouw groep — ${escH(speler.groep_naam || '')}</span>
+        <span class="eind-score-perc" style="color:${pctKleur};">${pct}%</span>
+      </div>
+      <div class="eind-score-track">
+        <div class="eind-score-fill" style="width:${pct}%;background:${pctKleur};"></div>
+      </div>
+      <div class="eind-score-detail">${potTotaal} van ${maxTotaal} punten behaald · ${mijnGroepStems.length} ronde${mijnGroepStems.length !== 1 ? 's' : ''}</div>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:0.75rem 0;">
+    <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+      <span style="color:var(--muted);">Behaald</span>
+      <span style="font-family:'DM Mono',monospace;font-weight:700;color:${pctKleur};">${potTotaal} pt</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-top:0.3rem;">
+      <span style="color:var(--muted);">Maximum mogelijk</span>
+      <span style="font-family:'DM Mono',monospace;font-weight:700;color:var(--text2);">${maxTotaal} pt</span>
+    </div>
+    ${maxTotaal > 0 && maxTotaal < mijnGroepStems.length * 10
+      ? `<div style="font-size:0.68rem;color:var(--muted);margin-top:0.35rem;">* Het maximum is lager dan 100% omdat niet alle opties 10 punten waard waren.</div>` : ''}
+  </div>`;
+
+  // Sabotage teruggespoeld
+  html += `<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--gold);margin-bottom:0.75rem;">📋 Sabotage-momenten</div>`;
+  cases.forEach(c => {
+    const molAntw = antwoorden.find(a => a.leerling_id === mol?.id && a.ronde_nr === c.ronde_nr);
+    html += `<div class="card" style="margin-bottom:0.65rem;">
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--blue);margin-bottom:0.4rem;">Ronde ${c.ronde_nr}</div>
+      <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.65rem;">${escH(c.vraag)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;">
+        <div>
+          <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--green);margin-bottom:0.25rem;">✅ Correct</div>
+          <div style="font-size:0.77rem;color:var(--green-l);line-height:1.5;">${escH(c.correct_uitleg)}</div>
+        </div>
+        <div>
+          <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--red);margin-bottom:0.25rem;">🕵️ Sabotage</div>
+          <div style="font-size:0.77rem;color:var(--red-l);line-height:1.5;">${escH(c.fout_uitleg)}</div>
+          ${molAntw ? `<div style="margin-top:0.4rem;font-size:0.68rem;color:var(--muted);font-style:italic;">"${escH(molAntw.argument)}"</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('reveal-content').innerHTML = html;
+  // Toon afsluitknop voor leerling
+  const afsluiting = document.getElementById('reveal-afsluiting');
+  if (afsluiting) afsluiting.style.display = 'block';
+}
+
+// ════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get('rol') === 'speler') {
+    showScreen('screen-speler-login');
+    return;
+  }
+
+  // Lees docentToken uit URL (gezet door index.html) of localStorage
+  docentToken = params.get('leraar') || localStorage.getItem('mol_docent_token') || 'leraar123';
+  if (params.get('leraar')) {
+    localStorage.setItem('mol_docent_token', params.get('leraar'));
+  }
+
+  // Toon sessie-lijst als docent-login scherm actief wordt
+  if (!params.get('rol')) {
+    laadSessieLijst();
+  }
+});
+
+function renderResultaten(data) {
+  const { sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden } = data;
+  document.getElementById('resultaten-loading').style.display = 'none';
+  const div = document.getElementById('resultaten-content');
+  div.style.display = 'block';
+  const datum = sessie.created_at
+    ? new Date(sessie.created_at).toLocaleDateString('nl-NL', {day:'numeric',month:'long',year:'numeric'}) : '—';
+  let html = `<div class="page-eyebrow">Archief</div>
+    <h2 class="page-title">${escH(sessie.les_naam || 'Sessie')}</h2>
+    <p class="page-sub">${datum} · ${sessie.n_rondes} rondes · ${leerlingen.length} leerlingen</p>
+    <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.18em;color:var(--gold);margin-bottom:0.85rem;display:flex;align-items:center;gap:0.5rem;">Groepsresultaten <span style="flex:1;height:1px;background:var(--border);"></span></div>`;
+  groepen.forEach(g => {
+    const leden=leerlingen.filter(l=>l.groep_id===g.id), mol=leden.find(l=>l.is_mol);
+    const stammen=groepStemmen.filter(s=>s.groep_id===g.id);
+    const potTotaal=stammen.reduce((s,x)=>s+(x.punten||0),0), maxTotaal=stammen.reduce((s,x)=>s+(x.max_punten||10),0);
+    const pct=maxTotaal>0?Math.round(potTotaal/maxTotaal*100):0;
+    const pctKleur=pct>=70?'var(--green-l)':pct>=40?'var(--gold-l)':'var(--red-l)';
+    html+=`<div class="res-groep-blok"><div class="res-groep-header"><span class="res-groep-naam">${escH(g.naam)}</span><span style="font-size:0.8rem;font-family:'DM Mono',monospace;font-weight:700;color:${pctKleur};">${potTotaal}/${maxTotaal} pt (${pct}%)</span></div>`;
+    html+=leden.map(l=>{
+      const test=testAntwoorden.find(t=>t.leerling_id===l.id), heeftGeraden=test&&mol&&test.mol_verdachte_id===mol.id;
+      return `<div class="res-leerling-rij"><span class="res-leerling-naam">${escH(l.naam)}${l.is_mol?' <span class="res-mol-tag">🕵️ Mol</span>':''}</span>${!l.is_mol?`<span class="${heeftGeraden?'res-mol-correct':'res-mol-fout'}">${heeftGeraden?'✓ Mol geraden':'✗ Mol gemist'}</span>`:'<span style="font-size:0.72rem;color:var(--muted);">saboteur</span>'}${test&&test.mol_argument?`<span class="res-arg-tekst" title="${escH(test.mol_argument)}">"${escH(test.mol_argument.substring(0,60))}${test.mol_argument.length>60?'…':''}"</span>`:''}</div>`;
+    }).join('');
+    html+='</div>';
+  });
+  html+=`<div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.18em;color:var(--blue);margin:1.25rem 0 0.85rem;display:flex;align-items:center;gap:0.5rem;">Rondes <span style="flex:1;height:1px;background:var(--border);"></span></div>`;
+  cases.forEach(c=>{
+    const stammen=groepStemmen.filter(s=>s.ronde_nr===c.ronde_nr);
+    html+=`<div class="card" style="margin-bottom:0.65rem;"><div class="res-ronde-titel">Ronde ${c.ronde_nr}</div><div style="font-weight:700;font-size:0.88rem;margin-bottom:0.65rem;">${escH(c.vraag)}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;margin-bottom:0.75rem;"><div><div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--green);margin-bottom:0.25rem;">✅ Correct</div><div style="font-size:0.77rem;color:var(--green-l);line-height:1.5;">${escH(c.correct_uitleg)}</div></div><div><div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--red);margin-bottom:0.25rem;">🕵️ Mol-argument</div><div style="font-size:0.77rem;color:var(--red-l);line-height:1.5;">${escH(c.fout_uitleg)}</div></div></div><div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.35rem;">Groepsscores</div>${stammen.map(st=>{const g=groepen.find(x=>x.id===st.groep_id);const kleur=(st.punten||0)>=7?'var(--green-l)':(st.punten||0)>=4?'var(--gold-l)':'var(--red-l)';return `<div class="res-score-row"><span class="res-score-label">${escH(g?.naam||'?')}</span><span class="res-score-val" style="color:${kleur};">${st.punten??'—'} pt</span></div>`;}).join('')}</div>`;
+  });
+  div.innerHTML=html;
+}
+
+let hergebruikGroepen = [];
+
+function renderHergebruikGroepen() {
+  const grid = document.getElementById('hergebruik-groepen-grid');
+  grid.innerHTML = hergebruikGroepen.map((g,gi)=>`
+    <div class="groep-card-interactief">
+      <div class="groep-naam"><span>${escH(g.naam)}</span><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">Mol: <span style="color:var(--red-l);">${escH(g.leden.find(l=>l.isMol)?.naam||'—')}</span></span></div>
+      ${g.leden.map((l,li)=>`<div class="groep-lid-mol-rij${l.isMol?' is-mol':''}" onclick="selecteerHergebruikMol(${gi},${li})"><div class="mol-kies-radio"></div><span class="groep-lid-mol-naam" style="margin-left:0.6rem;">${escH(l.naam)}</span>${l.isMol?'<span style="font-size:0.68rem;color:var(--red-l);font-weight:700;">🕵️ Mol</span>':''}</div>`).join('')}
+    </div>`).join('');
+  document.getElementById('hergebruik-groepen-wrap').style.display='block';
+}
+
+function selecteerHergebruikMol(gi, li) {
+  hergebruikGroepen[gi].leden.forEach((l,i)=>{l.isMol=i===li;});
+  renderHergebruikGroepen();
+  toast(`🕵️ ${hergebruikGroepen[gi].leden[li].naam} is Mol in ${hergebruikGroepen[gi].naam}`);
+}
+
+
+
+// ════════════════════════════════════════════════════════════
+// RESULTATEN + HERGEBRUIK — hoofd-functies
+// ════════════════════════════════════════════════════════════
+async function bekijkResultaten(id) {
+  showScreen('screen-resultaten');
+  document.getElementById('resultaten-loading').style.display = 'block';
+  document.getElementById('resultaten-content').style.display = 'none';
+  try {
+    const data = await apiFetch(`/api/mol/sessie/${id}/resultaten?docent_token=${encodeURIComponent(docentToken)}`);
+    renderResultaten(data);
+  } catch(e) {
+    document.getElementById('resultaten-loading').innerHTML =
+      `<p style="color:var(--red-l);">Laden mislukt: ${escH(e.message)}</p>`;
+  }
+}
+
+let hergebruikSessieId   = null;
+let hergebruikDocentCode = null;
+
+async function openHergebruik(id, dCode, lesNaam) {
+  hergebruikSessieId   = id;
+  hergebruikDocentCode = dCode;
+  hergebruikGroepen    = [];
+  document.getElementById('hergebruik-les-naam').textContent = lesNaam;
+  document.getElementById('hergebruik-groepen-wrap').style.display = 'none';
+  document.getElementById('hergebruik-error').style.display = 'none';
+  document.getElementById('hergebruik-leerlingen').value = '';
+  try {
+    // Haal cases op uit de reguliere sessie-state (werkt ook voor niet-afgelopen sessies)
+    const data = await apiFetch(`/api/mol/sessie/${id}`);
+    const cases = data.cases || [];
+    document.getElementById('hergebruik-cases-preview').innerHTML = cases.length > 0
+      ? cases.map(c => `<div style="padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+          <span style="color:var(--muted);font-size:0.7rem;">Ronde ${c.ronde_nr}</span>&nbsp;
+          ${escH(c.vraag.substring(0,80))}${c.vraag.length>80?'…':''}
+        </div>`).join('')
+      : '<div style="color:var(--muted);font-size:0.78rem;">Nog geen vragen — worden overgenomen uit de vraag-editor.</div>';
+  } catch(e) {
+    document.getElementById('hergebruik-cases-preview').innerHTML =
+      '<div style="color:var(--muted);font-size:0.78rem;">Vragen laden mislukt.</div>';
+  }
+  showScreen('screen-hergebruik');
+}
+
+function genereerHergebruikGroepen() {
+  const raw = document.getElementById('hergebruik-leerlingen').value;
+  const leerlingen = raw.split(/[\n,]/).map(s => s.trim()).filter(s => s.length > 1);
+  const gs  = parseInt(document.getElementById('hergebruik-groep-grootte').value) || 4;
+  const err = document.getElementById('hergebruik-error');
+  if (leerlingen.length < gs) {
+    err.textContent = `Minimaal ${gs} leerlingen nodig.`;
+    err.style.display = 'block'; return;
+  }
+  err.style.display = 'none';
+  const geshuffled = [...leerlingen].sort(() => Math.random() - 0.5);
+  hergebruikGroepen = [];
+  const labels = 'ABCDEFGHIJ'.split('');
+  for (let i = 0; i < geshuffled.length; i += gs) {
+    hergebruikGroepen.push({
+      naam: 'Groep ' + labels[hergebruikGroepen.length],
+      leden: geshuffled.slice(i, i + gs).map((naam, idx) => ({ naam, isMol: idx === 0 })),
+    });
+  }
+  renderHergebruikGroepen();
+}
+
+async function startHergebruik() {
+  const err = document.getElementById('hergebruik-error');
+  if (hergebruikGroepen.length === 0) {
+    err.textContent = 'Genereer eerst de groepsindeling.';
+    err.style.display = 'block'; return;
+  }
+  err.style.display = 'none';
+  const btn = document.getElementById('hergebruik-start-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Bezig...';
+  try {
+    const gs = parseInt(document.getElementById('hergebruik-groep-grootte').value) || 4;
+    await apiFetch(`/api/mol/sessie/${hergebruikSessieId}/hergebruik`, {
+      method: 'POST',
+      body: JSON.stringify({ docent_token: docentToken, groepsindeling: hergebruikGroepen, groep_grootte: gs }),
+    });
+    sessieId   = hergebruikSessieId;
+    docentCode = hergebruikDocentCode;
+    const { sessie } = await apiFetch('/api/mol/sessie/' + sessieId);
+    sessieCode = sessie.sessie_code;
+    localStorage.setItem('mol_sessie_id',   sessieId);
+    localStorage.setItem('mol_docent_code', docentCode);
+    toast('✅ Sessie opnieuw ingesteld');
+    laadDocentSessie();
+  } catch(e) {
+    err.textContent = 'Fout: ' + e.message;
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = 'Sessie opnieuw starten →';
+  }
+}
+
+
+// ════════════════════════════════════════════════════════════
+// CODES DELEN — projectie + print
+// ════════════════════════════════════════════════════════════
+function getSpelerUrl() {
+  return window.location.href.split('?')[0] + '?rol=speler';
+}
+
+async function ensureSessieState() {
+  if (!sessieState && sessieId) {
+    try {
+      sessieState = await apiFetch('/api/mol/sessie/' + sessieId);
+    } catch(e) { toast('Fout bij laden sessie: ' + e.message); return false; }
+  }
+  return !!sessieState;
+}
+
+async function openProjectie() {
+  if (!(await ensureSessieState())) { toast('Sessie niet gevonden'); return; }
+  const leerlingen = sessieState.leerlingen || [];
+  const url = getSpelerUrl();
+
+  document.getElementById('proj-sessie-code').textContent = sessieCode || '—';
+  document.getElementById('proj-url').textContent = url;
+
+  const grid = document.getElementById('proj-leerlingen-grid');
+  grid.innerHTML = leerlingen
+    .slice().sort((a, b) => (a.groep_naam||'').localeCompare(b.groep_naam||'') || a.naam.localeCompare(b.naam))
+    .map(l => `
+      <div class="proj-kaart">
+        <div class="proj-groep-tag">${escH(l.groep_naam)}</div>
+        <div class="proj-leerling-naam">${escH(l.naam)}</div>
+        <div class="proj-code-rij">
+          <span class="proj-code-label">Sessie</span>
+          <span class="proj-code-val">${sessieCode}</span>
+        </div>
+        <div class="proj-code-rij">
+          <span class="proj-code-label">Spelcode</span>
+          <span class="proj-code-val proj-spelcode-val">${escH(l.speler_code)}</span>
+        </div>
+      </div>`).join('');
+
+  showScreen('screen-projectie');
+}
+
+function sluitProjectie() {
+  showScreen('screen-docent-sessie');
+}
+
+async function printBriefjes() {
+  if (!(await ensureSessieState())) { toast('Sessie niet gevonden'); return; }
+  const leerlingen = sessieState.leerlingen || [];
+  const sessie     = sessieState.sessie || {};
+  const url  = getSpelerUrl();
+  const naam = sessie.les_naam || 'Wie is de Mol';
+
+  const grid = document.getElementById('briefjes-grid');
+  grid.innerHTML = leerlingen
+    .slice().sort((a, b) => (a.groep_naam||'').localeCompare(b.groep_naam||'') || a.naam.localeCompare(b.naam))
+    .map(l => `
+      <div class="briefje">
+        <div class="briefje-les">${escH(naam)} · ${escH(l.groep_naam||'')}</div>
+        <div class="briefje-naam">${escH(l.naam)}</div>
+        <div class="briefje-url">${url}</div>
+        <div class="briefje-codes">
+          <div class="briefje-code-blok">
+            <div class="briefje-code-label">Sessie-code</div>
+            <div class="briefje-code-val">${sessieCode}</div>
+          </div>
+          <div class="briefje-code-blok spelcode">
+            <div class="briefje-code-label">Jouw spelcode</div>
+            <div class="briefje-code-val">${escH(l.speler_code)}</div>
+          </div>
+        </div>
+      </div>`).join('');
+
+  document.getElementById('print-briefjes').style.display = 'block';
+  window.print();
+  document.getElementById('print-briefjes').style.display = 'none';
+}
+
+
+async function startSessieAuto() {
+  lastAutoAdvance = ''; // reset debounce
+  await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
+    method: 'PATCH',
+    body: JSON.stringify({ docent_code: docentCode, status: 'ronde_1', huidige_ronde: 1 }),
+  });
+  await advanceFase('invoer', 'ronde_1');
+  renderDocentSessie();
+}
+
+
+// ════════════════════════════════════════════════════════════
+// AUTO-ADVANCE — complete implementatie
+// ════════════════════════════════════════════════════════════
+function getTimer(sessie, cases, rondeNr, type) {
+  const c = (cases || []).find(x => x.ronde_nr === rondeNr);
+  if (type === 'discussie') return (c?.timer_discussie_override || sessie.timer_discussie || 120) * 1000;
+  if (type === 'stem')      return (c?.timer_stem_override      || sessie.timer_stem      || 60)  * 1000;
+  return 0;
+}
+
+function getFaseTimerSec(sessie, cases, r, fase) {
+  if (fase === 'discussie') return getTimer(sessie, cases, r, 'discussie') / 1000;
+  if (fase === 'stem')      return getTimer(sessie, cases, r, 'stem')      / 1000;
+  return 0;
+}
+
+async function advanceFase(newFase, newStatus) {
+  try {
+    await apiFetch('/api/mol/ronde-fase', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        sessie_id:  sessieId,
+        docent_code: docentCode,
+        ronde_fase: newFase,
+        status:     newStatus || undefined,
+      }),
+    });
+  } catch(e) { console.error('advanceFase fout:', e.message); }
+}
+
+let lastAutoAdvance = '';
+
+async function checkAutoAdvance(state) {
+  if (!state || !state.sessie) return;
+  const { sessie, leerlingen, antwoorden, groepStemmen, groepen, cases } = state;
+  if (!groepen || !leerlingen) return; // null-safety als tabellen ontbreken
+  const status = sessie.status;
+  const nu     = Date.now();
+
+  // ── AUTO-START bij setup ────────────────────────────────────
+  if (status === 'setup') {
+    const casesKlaar = Array.isArray(cases) && cases.length >= (sessie.n_rondes || 1);
+    if (!casesKlaar) return;
+
+    const eenGroepCompleet = groepen.some(g => {
+      const leden = leerlingen.filter(l => l.groep_id === g.id);
+      return leden.length > 0 && leden.every(l => l.online_at && (nu - l.online_at) < 90000);
+    });
+
+    if (eenGroepCompleet && lastAutoAdvance !== 'setup_autostart') {
+      lastAutoAdvance = 'setup_autostart';
+      // Zet sessie op briefing — leerlingen lezen en drukken zelf op Start
+      await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
+        method: 'PATCH',
+        body: JSON.stringify({ docent_code: docentCode, status: 'briefing', huidige_ronde: 0 }),
+      });
+    }
+    return;
+  }
+
+  // ── AUTO-ADVANCE briefing → ronde_1 ────────────────────────
+  // Zodra alle leerlingen van minstens één groep op Start gedrukt hebben
+  if (status === 'briefing') {
+    const klaarIds = new Set(Array.isArray(state.briefingKlaar)
+      ? state.briefingKlaar.map(b => b.leerling_id) : []);
+    const eenGroepKlaar = groepen.some(g => {
+      const leden = leerlingen.filter(l => l.groep_id === g.id);
+      return leden.length > 0 && leden.every(l => klaarIds.has(l.id));
+    });
+    if (eenGroepKlaar && lastAutoAdvance !== 'briefing_naar_ronde1') {
+      lastAutoAdvance = 'briefing_naar_ronde1';
+      await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
+        method: 'PATCH',
+        body: JSON.stringify({ docent_code: docentCode, status: 'ronde_1', huidige_ronde: 1 }),
+      });
+      await advanceFase('invoer', 'ronde_1');
+    }
+    return;
+  }
+
+  // ── AUTO-ADVANCE per ronde-fase ─────────────────────────────
+  if (!status.startsWith('ronde_')) return;
+
+  const r          = parseInt(status.split('_')[1]);
+  const fase       = sessie.ronde_fase || 'invoer';
+  const gestarted  = sessie.fase_gestart_op || Date.now();
+  const debounceKey = `${status}_${fase}`;
+  if (debounceKey === lastAutoAdvance) return;
+
+  const antInRonde    = antwoorden.filter(a => a.ronde_nr === r);
+  const alleIngediend = antInRonde.length >= leerlingen.length;
+  const alleStemmen   = groepStemmen.filter(s => s.ronde_nr === r);
+  const alleGestemd   = alleStemmen.length >= groepen.length;
+  // groepVotes per ronde (voor timer-einde meerderheid)
+  const groepVotesRonde = (state.groepVotes || []).filter(v => v.ronde_nr === r);
+
+  const timerDiscussie = getTimer(sessie, cases, r, 'discussie');
+  const timerStem      = getTimer(sessie, cases, r, 'stem');
+
+  if (fase === 'invoer' && alleIngediend) {
+    lastAutoAdvance = debounceKey;
+    await advanceFase('stem'); // direct naar stem, geen discussiefase meer
+    return;
+  }
+  if (fase === 'stem') {
+    const timerVerlopen = (nu - gestarted) >= timerStem;
+    if (timerVerlopen || alleGestemd) {
+      lastAutoAdvance = debounceKey;
+      // Bij timer-einde: submit meerderheid per groep die nog niet gestemd heeft
+      if (timerVerlopen && !alleGestemd) {
+        for (const g of groepen) {
+          const alGestem = alleStemmen.find(s => s.groep_id === g.id && s.ronde_nr === r);
+          if (!alGestem) {
+            // Bepaal meerderheid uit groepVotes
+            const groepV = groepVotesRonde.filter(v => v.groep_id === g.id);
+            if (groepV.length > 0) {
+              const tally = {};
+              groepV.forEach(v => { tally[v.gekozen_optie_id] = (tally[v.gekozen_optie_id]||0)+1; });
+              const winnaar = Object.keys(tally).sort((a,b) => tally[b]-tally[a])[0];
+              // Trigger groep-vote als definitief om groep-stem aan te maken
+              await apiFetch('/api/mol/groep-vote', {
+                method: 'POST',
+                body: JSON.stringify({
+                  sessie_id: sessieId, ronde_nr: r, groep_id: g.id,
+                  leerling_id: groepV[0].leerling_id,
+                  gekozen_optie_id: winnaar, gekozen_antwoord: winnaar,
+                }),
+              }).catch(() => {});
+            }
+          }
+        }
+      }
+      await advanceFase('resultaat');
+      return;
+    }
+  }
+  if (fase === 'resultaat' && (nu - gestarted) >= 4000) {
+    lastAutoAdvance = debounceKey;
+    if (r < sessie.n_rondes) {
+      await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
+        method: 'PATCH',
+        body: JSON.stringify({ docent_code: docentCode, status: `ronde_${r+1}`, huidige_ronde: r+1 }),
+      });
+      await advanceFase('invoer');
+    } else {
+      await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
+        method: 'PATCH',
+        body: JSON.stringify({ docent_code: docentCode, status: 'test', huidige_ronde: r }),
+      });
+    }
+  }
+}
+
+async function startSessieAuto() {
+  lastAutoAdvance = '';
+  await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
+    method: 'PATCH',
+    body: JSON.stringify({ docent_code: docentCode, status: 'ronde_1', huidige_ronde: 1 }),
+  });
+  await advanceFase('invoer', 'ronde_1');
+  renderDocentSessie();
+}
+
+function buildTimerRing(secTotaal, secResterend, type) {
+  const r = 44; const circ = 2 * Math.PI * r;
+  const pct    = Math.max(0, secResterend / secTotaal);
+  const offset = circ * (1 - pct);
+  const urgency = pct < 0.2 ? 'urgent' : pct < 0.4 ? 'warning' : type;
+  const mm = String(Math.floor(secResterend / 60)).padStart(2,'0');
+  const ss = String(Math.floor(secResterend % 60)).padStart(2,'0');
+  return `
+    <div class="timer-wrap">
+      <div class="timer-container">
+        <svg class="timer-ring-svg" width="110" height="110" viewBox="0 0 110 110">
+          <circle class="timer-ring-bg" cx="55" cy="55" r="${r}" stroke-width="8"/>
+          <circle class="timer-ring-fg ${urgency}" cx="55" cy="55" r="${r}"
+            stroke-width="8" stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
+        </svg>
+        <div class="timer-tekst">${mm}:${ss}</div>
+      </div>
+    </div>`;
+}
+
+</script>
+</body>
+</html>
