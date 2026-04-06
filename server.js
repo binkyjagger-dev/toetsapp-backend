@@ -624,6 +624,7 @@ app.post('/api/mol/sessie/:id/hergebruik', async (req, res) => {
     await supabase.from('mol_test_antwoorden').delete().eq('sessie_id', sid);
     await supabase.from('mol_groep_stemmen').delete().eq('sessie_id', sid);
     await supabase.from('mol_antwoorden').delete().eq('sessie_id', sid);
+    await supabase.from('mol_briefing_klaar').delete().eq('sessie_id', sid);
     await supabase.from('mol_leerlingen').delete().eq('sessie_id', sid);
     await supabase.from('mol_groepen').delete().eq('sessie_id', sid);
 
@@ -724,7 +725,16 @@ app.delete('/api/mol/sessie/:id', async (req, res) => {
 app.get('/api/mol/sessie/:id', async (req, res) => {
   try {
     const sid = req.params.id;
-    const [{ data: sessie }, { data: leerlingen }, { data: groepen }, { data: cases }, { data: antwoorden }, { data: groepStemmen }, { data: testAntwoorden }] = await Promise.all([
+    const [
+      { data: sessie },
+      { data: leerlingen },
+      { data: groepen },
+      { data: cases },
+      { data: antwoorden },
+      { data: groepStemmen },
+      { data: testAntwoorden },
+      { data: briefingKlaar },
+    ] = await Promise.all([
       supabase.from('mol_sessies').select('*').eq('id', sid).single(),
       supabase.from('mol_leerlingen').select('*').eq('sessie_id', sid),
       supabase.from('mol_groepen').select('*').eq('sessie_id', sid),
