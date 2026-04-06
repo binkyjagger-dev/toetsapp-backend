@@ -680,6 +680,7 @@ app.get('/api/mol/sessie/:id/resultaten', async (req, res) => {
       { data: antwoorden },
       { data: groepStemmen },
       { data: testAntwoorden },
+      { data: briefingKlaar },
     ] = await Promise.all([
       supabase.from('mol_sessies').select('*').eq('id', sid).single(),
       supabase.from('mol_leerlingen').select('*').eq('sessie_id', sid),
@@ -688,8 +689,9 @@ app.get('/api/mol/sessie/:id/resultaten', async (req, res) => {
       supabase.from('mol_antwoorden').select('*').eq('sessie_id', sid),
       supabase.from('mol_groep_stemmen').select('*').eq('sessie_id', sid),
       supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sid),
+      supabase.from('mol_briefing_klaar').select('*').eq('sessie_id', sid),
     ]);
-    res.json({ sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden });
+    res.json({ sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden, briefingKlaar: briefingKlaar || [] });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -730,9 +732,10 @@ app.get('/api/mol/sessie/:id', async (req, res) => {
       supabase.from('mol_antwoorden').select('*').eq('sessie_id', sid),
       supabase.from('mol_groep_stemmen').select('*').eq('sessie_id', sid),
       supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sid),
+      supabase.from('mol_briefing_klaar').select('*').eq('sessie_id', sid),
     ]);
     if (!sessie) return res.status(404).json({ error: 'Sessie niet gevonden' });
-    res.json({ sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden });
+    res.json({ sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden, briefingKlaar: briefingKlaar || [] });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -789,6 +792,34 @@ app.patch('/api/mol/sessie/:id/status', async (req, res) => {
   }
 });
 
+
+
+// ── POST /api/mol/briefing-klaar — leerling drukt op "Start" ────────────────
+app.post('/api/mol/briefing-klaar', async (req, res) => {
+  try {
+    const { sessie_id, leerling_id } = req.body;
+    // Sla op dat deze leerling klaar is
+    await supabase.from('mol_briefing_klaar').upsert([{
+      id:         `bk_${sessie_id}_${leerling_id}`,
+      sessie_id, leerling_id,
+      klaar_op:   Date.now(),
+    }]);
+
+    // Check of alle groepsleden van deze leerling klaar zijn
+    const { data: speler } = await supabase
+      .from('mol_leerlingen').select('groep_id').eq('id', leerling_id).single();
+    if (!speler) return res.json({ ok: true, groep_klaar: false });
+
+    const { data: groepleden } = await supabase
+      .from('mol_leerlingen').select('id').eq('sessie_id', sessie_id).eq('groep_id', speler.groep_id);
+    const { data: klareLeden } = await supabase
+      .from('mol_briefing_klaar').select('leerling_id').eq('sessie_id', sessie_id)
+      .in('leerling_id', groepleden.map(l => l.id));
+
+    const groep_klaar = klareLeden.length >= groepleden.length;
+    res.json({ ok: true, groep_klaar, klaar: klareLeden.length, totaal: groepleden.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // ── POST /api/mol/heartbeat — leerling stuurt periodiek ping ────────────────
 app.post('/api/mol/heartbeat', async (req, res) => {
