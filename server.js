@@ -654,7 +654,7 @@ app.post('/api/mol/sessie/:id/hergebruik', async (req, res) => {
     await supabase.from('mol_leerlingen').insert(nieuweLeerlingen);
 
     // Reset sessie naar setup
-    const updates = { status: 'setup', huidige_ronde: 0 };
+    const updates = { status: 'setup', huidige_ronde: 0, ronde_fase: null, fase_gestart_op: null };
     if (n_rondes)    updates.n_rondes    = n_rondes;
     if (groep_grootte) updates.groep_grootte = groep_grootte;
     await supabase.from('mol_sessies').update(updates).eq('id', sid);
