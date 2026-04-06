@@ -2339,16 +2339,20 @@ function renderSpelerBriefing(leerlingen, groepen, sessie) {
         Het groepshoofd dient namens de groep het antwoord in tijdens het spel. Stem op één groepslid.
       </p>
       <div id="gh-keuze-lijst">
-        ${mijnGroep.map(l => `
-          <div class="gh-kandidaat ${heeftAlGestemd && speler.groepshoofd_stem === l.id ? 'mijn-keuze' : ''}"
-            id="gh-${l.id}"
-            onclick="${heeftAlGestemd ? '' : `stemOpGroepshoofd('${l.id}')`}"
-            style="${heeftAlGestemd ? 'cursor:default;opacity:0.7;' : ''}">
-            <span style="font-size:1.1rem;">🎓</span>
-            <span style="font-weight:600;font-size:0.88rem;">${escH(l.naam)}</span>
-            ${l.id === speler.id ? '<span style="font-size:0.7rem;color:var(--muted);">(jij)</span>' : ''}
-            ${l.is_groepshoofd ? '<span class="gh-badge">👑 Groepshoofd</span>' : ''}
-          </div>`).join('')}
+        ${mijnGroep.map(l => {
+          const isZelf    = l.id === speler.id;
+          const isGekozen = heeftAlGestemd && speler.groepshoofd_stem === l.id;
+          const klikbaar  = !heeftAlGestemd && !isZelf;
+          return '<div class="gh-kandidaat' + (isGekozen ? ' mijn-keuze' : '') + '"'
+            + ' id="gh-' + l.id + '"'
+            + (klikbaar ? ' data-kandidaat="' + l.id + '"' : '')
+            + ' style="' + (!klikbaar ? 'cursor:default;opacity:0.7;' : '') + '">'
+            + '<span style="font-size:1.1rem;">🎓</span>'
+            + '<span style="font-weight:600;font-size:0.88rem;">' + escH(l.naam) + '</span>'
+            + (isZelf ? '<span style="font-size:0.7rem;color:var(--muted);"> (jij — kan niet op jezelf stemmen)</span>' : '')
+            + (l.is_groepshoofd ? '<span class="gh-badge">👑 Groepshoofd</span>' : '')
+            + '</div>';
+        }).join('')}
       </div>
       <div id="gh-wacht" style="font-size:0.75rem;color:var(--muted);margin-top:0.65rem;text-align:center;
         display:${heeftAlGestemd ? 'block' : 'none'};">
@@ -2377,6 +2381,15 @@ function renderSpelerBriefing(leerlingen, groepen, sessie) {
     <div class="wacht-grid" id="briefing-wacht-grid"></div>
   </div>`;
   sec.innerHTML = html;
+
+  // Event delegation voor groepshoofd-stemmen (vermijdt nested-backtick probleem)
+  const ghLijst = document.getElementById('gh-keuze-lijst');
+  if (ghLijst && !heeftAlGestemd) {
+    ghLijst.addEventListener('click', function(e) {
+      const el = e.target.closest('[data-kandidaat]');
+      if (el) stemOpGroepshoofd(el.getAttribute('data-kandidaat'));
+    });
+  }
 }
 
 let briefingGedrukt = false;
