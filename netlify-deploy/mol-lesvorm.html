@@ -2206,6 +2206,13 @@ async function pollSpelerStatus() {
   const { sessie, cases, antwoorden, groepStemmen, leerlingen, groepen,
           briefingKlaar, groepVotes, scores } = sessieState;
   if (!sessie) return; // null-safety
+
+  // Houd speler-object up-to-date met verse server-data (groepshoofd_stem, is_groepshoofd etc.)
+  if (speler && leerlingen) {
+    const vers = leerlingen.find(l => l.id === speler.id);
+    if (vers) speler = { ...speler, ...vers };
+  }
+
   const status = sessie.status;
 
   if (status === 'setup') {
