@@ -682,6 +682,7 @@ app.get('/api/mol/sessie/:id/resultaten', async (req, res) => {
       { data: groepStemmen },
       { data: testAntwoorden },
       { data: briefingKlaar },
+      { data: groepVotes },
     ] = await Promise.all([
       supabase.from('mol_sessies').select('*').eq('id', sid).single(),
       supabase.from('mol_leerlingen').select('*').eq('sessie_id', sid),
@@ -734,6 +735,7 @@ app.get('/api/mol/sessie/:id', async (req, res) => {
       { data: groepStemmen },
       { data: testAntwoorden },
       { data: briefingKlaar },
+      { data: groepVotes },
     ] = await Promise.all([
       supabase.from('mol_sessies').select('*').eq('id', sid).single(),
       supabase.from('mol_leerlingen').select('*').eq('sessie_id', sid),
@@ -743,9 +745,11 @@ app.get('/api/mol/sessie/:id', async (req, res) => {
       supabase.from('mol_groep_stemmen').select('*').eq('sessie_id', sid),
       supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sid),
       supabase.from('mol_briefing_klaar').select('*').eq('sessie_id', sid),
+      supabase.from('mol_groep_votes').select('*').eq('sessie_id', sid),
     ]);
     if (!sessie) return res.status(404).json({ error: 'Sessie niet gevonden' });
-    res.json({ sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden, briefingKlaar: briefingKlaar || [] });
+    res.json({ sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden,
+               briefingKlaar: briefingKlaar || [], groepVotes: groepVotes || [] });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -847,7 +851,6 @@ app.post('/api/mol/heartbeat', async (req, res) => {
 app.post('/api/mol/antwoord', async (req, res) => {
   try {
     const { sessie_id, ronde_nr, leerling_id, antwoord, argument, mc_optie_id } = req.body;
-    // Upsert — voorkom dubbele submissions
     const { error } = await supabase.from('mol_antwoorden').upsert([{
       id:           `antw_${sessie_id}_r${ronde_nr}_${leerling_id}`,
       sessie_id, ronde_nr, leerling_id, antwoord, argument,
@@ -855,7 +858,78 @@ app.post('/api/mol/antwoord', async (req, res) => {
       submitted_at: Date.now(),
     }]);
     if (error) return res.status(500).json({ error: error.message });
-    res.json({ ok: true });
+
+    // Check of alle leerlingen nu ingediend hebben → direct naar discussie
+    const { data: alleLeerlingen } = await supabase
+      .from('mol_leerlingen').select('id').eq('sessie_id', sessie_id);
+    const { data: alleAntwoorden } = await supabase
+      .from('mol_antwoorden').select('id').eq('sessie_id', sessie_id).eq('ronde_nr', ronde_nr);
+    const iederKlaar = alleLeerlingen && alleAntwoorden &&
+      alleAntwoorden.length >= alleLeerlingen.length;
+    if (iederKlaar) {
+      await supabase.from('mol_sessies')
+        .update({ ronde_fase: 'discussie', fase_gestart_op: Date.now() })
+        .eq('id', sessie_id);
+    }
+    res.json({ ok: true, ieder_klaar: iederKlaar });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/mol/groep-vote — leerling stemt op groepsoptie (unaniem) ───────
+app.post('/api/mol/groep-vote', async (req, res) => {
+  try {
+    const { sessie_id, ronde_nr, groep_id, leerling_id, gekozen_optie_id, gekozen_antwoord } = req.body;
+    // Sla stem op (upsert per leerling per ronde)
+    await supabase.from('mol_groep_votes').upsert([{
+      id:               `gv_${sessie_id}_r${ronde_nr}_${leerling_id}`,
+      sessie_id, ronde_nr, groep_id, leerling_id,
+      gekozen_optie_id: gekozen_optie_id || gekozen_antwoord,
+      submitted_at:     Date.now(),
+    }]);
+
+    // Check unanimiteit: alle groepsleden voor dezelfde optie?
+    const { data: groepleden } = await supabase
+      .from('mol_leerlingen').select('id').eq('sessie_id', sessie_id).eq('groep_id', groep_id);
+    const { data: groeVotes } = await supabase
+      .from('mol_groep_votes').select('*')
+      .eq('sessie_id', sessie_id).eq('ronde_nr', ronde_nr).eq('groep_id', groep_id);
+
+    const aantalLeden = groepleden?.length || 0;
+    const aantalVotes = groeVotes?.length || 0;
+    const uniek = groeVotes ? [...new Set(groeVotes.map(v => v.gekozen_optie_id))] : [];
+    const unaniem = aantalVotes >= aantalLeden && uniek.length === 1;
+
+    let punten = null;
+    if (unaniem) {
+      // Submit automatisch als groep-stem
+      const winnaar = uniek[0]; // de gekozen optie ID of antwoord
+      const { data: caseData } = await supabase.from('mol_cases').select('*')
+        .eq('sessie_id', sessie_id).eq('ronde_nr', ronde_nr).single();
+      // Bepaal punten op basis van MC of open
+      let isCorrect = false; let maxPunten = 10; let puntentelling = 0;
+      if (caseData?.vraagtype === 'mc' && caseData?.mc_opties) {
+        const gekozen = caseData.mc_opties.find(o => o.id === winnaar);
+        puntentelling = gekozen?.punten ?? 0;
+        maxPunten     = Math.max(...caseData.mc_opties.map(o => o.punten ?? 0));
+        isCorrect     = puntentelling === maxPunten;
+      } else {
+        isCorrect     = winnaar === 'correct';
+        puntentelling = isCorrect ? 10 : 0;
+      }
+      await supabase.from('mol_groep_stemmen').upsert([{
+        id:                  `stem_${sessie_id}_r${ronde_nr}_${groep_id}`,
+        sessie_id, ronde_nr, groep_id,
+        gekozen_leerling_id: leerling_id,
+        gekozen_argument:    winnaar,
+        is_correct:          isCorrect,
+        punten:              puntentelling,
+        max_punten:          maxPunten,
+        submitted_at:        Date.now(),
+      }]);
+    }
+    res.json({ ok: true, unaniem, stemmen: aantalVotes, totaal: aantalLeden, unieke_opties: uniek.length });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
