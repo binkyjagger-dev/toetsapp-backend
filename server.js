@@ -683,6 +683,7 @@ app.get('/api/mol/sessie/:id/resultaten', async (req, res) => {
       { data: testAntwoorden },
       { data: briefingKlaar },
       { data: groepVotes },
+      { data: scores },
     ] = await Promise.all([
       supabase.from('mol_sessies').select('*').eq('id', sid).single(),
       supabase.from('mol_leerlingen').select('*').eq('sessie_id', sid),
@@ -693,7 +694,9 @@ app.get('/api/mol/sessie/:id/resultaten', async (req, res) => {
       supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sid),
       supabase.from('mol_briefing_klaar').select('*').eq('sessie_id', sid),
     ]);
-    res.json({ sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden, briefingKlaar: briefingKlaar || [] });
+    const { data: individuelScores } = await supabase.from('mol_scores').select('*').eq('sessie_id', sid);
+    res.json({ sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden,
+               briefingKlaar: briefingKlaar || [], scores: individuelScores || [] });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -736,6 +739,7 @@ app.get('/api/mol/sessie/:id', async (req, res) => {
       { data: testAntwoorden },
       { data: briefingKlaar },
       { data: groepVotes },
+      { data: scores },
     ] = await Promise.all([
       supabase.from('mol_sessies').select('*').eq('id', sid).single(),
       supabase.from('mol_leerlingen').select('*').eq('sessie_id', sid),
@@ -746,10 +750,12 @@ app.get('/api/mol/sessie/:id', async (req, res) => {
       supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sid),
       supabase.from('mol_briefing_klaar').select('*').eq('sessie_id', sid),
       supabase.from('mol_groep_votes').select('*').eq('sessie_id', sid),
+      supabase.from('mol_scores').select('*').eq('sessie_id', sid),
     ]);
     if (!sessie) return res.status(404).json({ error: 'Sessie niet gevonden' });
     res.json({ sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden,
-               briefingKlaar: briefingKlaar || [], groepVotes: groepVotes || [] });
+               briefingKlaar: briefingKlaar || [], groepVotes: groepVotes || [],
+               scores: scores || [] });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -832,6 +838,89 @@ app.post('/api/mol/briefing-klaar', async (req, res) => {
 
     const groep_klaar = klareLeden.length >= groepleden.length;
     res.json({ ok: true, groep_klaar, klaar: klareLeden.length, totaal: groepleden.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// ── POST /api/mol/groepshoofd-stem — leerling stemt op groepshoofd ───────────
+app.post('/api/mol/groepshoofd-stem', async (req, res) => {
+  try {
+    const { sessie_id, leerling_id, kandidaat_id } = req.body;
+    await supabase.from('mol_leerlingen')
+      .update({ groepshoofd_stem: kandidaat_id })
+      .eq('id', leerling_id);
+
+    // Haal groep op van deze leerling
+    const { data: speler } = await supabase.from('mol_leerlingen')
+      .select('groep_id').eq('id', leerling_id).single();
+    const groep_id = speler?.groep_id;
+
+    // Check of alle groepsleden gestemd hebben
+    const { data: leden } = await supabase.from('mol_leerlingen')
+      .select('id, groepshoofd_stem').eq('sessie_id', sessie_id).eq('groep_id', groep_id);
+    const allemaalGestemd = leden && leden.every(l => l.groepshoofd_stem);
+
+    if (allemaalGestemd) {
+      // Bepaal winnaar: meerderheid, bij gelijkspel alfabetisch eerste
+      const tally = {};
+      leden.forEach(l => { tally[l.groepshoofd_stem] = (tally[l.groepshoofd_stem] || 0) + 1; });
+      const maxStemmen = Math.max(...Object.values(tally));
+      const kandidaten = Object.keys(tally).filter(k => tally[k] === maxStemmen);
+      // Haal namen op voor gelijkspel
+      const { data: kandidaatData } = await supabase.from('mol_leerlingen')
+        .select('id, naam').in('id', kandidaten);
+      kandidaatData.sort((a, b) => a.naam.localeCompare(b.naam));
+      const winnaar_id = kandidaatData[0].id;
+      // Zet groepshoofd
+      await supabase.from('mol_leerlingen')
+        .update({ is_groepshoofd: false }).eq('sessie_id', sessie_id).eq('groep_id', groep_id);
+      await supabase.from('mol_leerlingen')
+        .update({ is_groepshoofd: true }).eq('id', winnaar_id);
+    }
+    res.json({ ok: true, allemaal_gestemd: allemaalGestemd });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── POST /api/mol/groep-stem-hoofd — groepshoofd dient groepsantwoord in ─────
+app.post('/api/mol/groep-stem-hoofd', async (req, res) => {
+  try {
+    const { sessie_id, ronde_nr, groep_id, leerling_id, gekozen_optie_id } = req.body;
+    // Verificeer dat deze leerling groepshoofd is
+    const { data: speler } = await supabase.from('mol_leerlingen')
+      .select('is_groepshoofd').eq('id', leerling_id).single();
+    if (!speler?.is_groepshoofd) return res.status(403).json({ error: 'Alleen het groepshoofd kan het groepsantwoord indienen' });
+
+    const { data: caseData } = await supabase.from('mol_cases').select('*')
+      .eq('sessie_id', sessie_id).eq('ronde_nr', ronde_nr).single();
+
+    let isCorrect = false, punten = 0, maxPunten = 10;
+    if (caseData?.vraagtype === 'mc' && caseData?.mc_opties) {
+      const gekozen = caseData.mc_opties.find(o => o.id === gekozen_optie_id);
+      punten    = gekozen?.punten ?? 0;
+      maxPunten = Math.max(...caseData.mc_opties.map(o => o.punten ?? 0));
+      isCorrect = punten === maxPunten;
+    } else {
+      isCorrect = gekozen_optie_id === 'correct';
+      punten    = isCorrect ? 10 : 0;
+    }
+
+    const { error } = await supabase.from('mol_groep_stemmen').upsert([{
+      id:                  `stem_${sessie_id}_r${ronde_nr}_${groep_id}`,
+      sessie_id, ronde_nr, groep_id,
+      gekozen_leerling_id: leerling_id,
+      gekozen_argument:    gekozen_optie_id,
+      is_correct:          isCorrect,
+      punten, max_punten:  maxPunten,
+      submitted_at:        Date.now(),
+    }]);
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Zet ronde_fase op 'resultaat_5sec' zodat frontend 5-sec countdown toont
+    await supabase.from('mol_sessies')
+      .update({ ronde_fase: 'resultaat_5sec', fase_gestart_op: Date.now() })
+      .eq('id', sessie_id);
+
+    res.json({ ok: true, punten, is_correct: isCorrect });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1010,11 +1099,144 @@ app.post('/api/mol/test-antwoord', async (req, res) => {
       submitted_at:     Date.now(),
     }]);
     if (error) return res.status(500).json({ error: error.message });
-    res.json({ ok: true });
+
+    // Auto-reveal: check of alle leerlingen de test hebben ingediend
+    const { data: alleLeerlingen } = await supabase
+      .from('mol_leerlingen').select('id').eq('sessie_id', sessie_id);
+    const { data: alleTests } = await supabase
+      .from('mol_test_antwoorden').select('id').eq('sessie_id', sessie_id);
+    const iederKlaar = alleLeerlingen && alleTests &&
+      alleTests.length >= alleLeerlingen.length;
+
+    if (iederKlaar) {
+      // Bereken scores voor alle leerlingen
+      await berekenScoresIntern(sessie_id);
+      // Zet sessie op reveal
+      await supabase.from('mol_sessies')
+        .update({ status: 'reveal' }).eq('id', sessie_id);
+    }
+    res.json({ ok: true, auto_reveal: iederKlaar });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ── Score-berekening (intern) ─────────────────────────────────────────────────
+async function berekenScoresIntern(sessie_id) {
+  try {
+    const [
+      { data: leerlingen }, { data: antwoorden },
+      { data: groepStemmen }, { data: testAntwoorden }, { data: sessie },
+    ] = await Promise.all([
+      supabase.from('mol_leerlingen').select('*').eq('sessie_id', sessie_id),
+      supabase.from('mol_antwoorden').select('*').eq('sessie_id', sessie_id),
+      supabase.from('mol_groep_stemmen').select('*').eq('sessie_id', sessie_id),
+      supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sessie_id),
+      supabase.from('mol_sessies').select('*').eq('id', sessie_id).single(),
+    ]);
+
+    const mol = leerlingen?.find(l => l.is_mol);
+    const nRondes = sessie?.n_rondes || 3;
+    const scores = [];
+
+    for (const leerling of (leerlingen || [])) {
+      const isMol = leerling.is_mol;
+      const opbouw = {};
+      let totaal = 0;
+
+      if (!isMol) {
+        // ── Niet-Mol scoring ──────────────────────────────────
+        let indivPunten = 0;
+        for (let r = 1; r <= nRondes; r++) {
+          const ant = antwoorden?.find(a => a.leerling_id === leerling.id && a.ronde_nr === r);
+          if (ant?.antwoord === 'correct' || ant?.mc_optie_id) {
+            // Correct als antwoord === 'correct' of mc-optie de hoogste score heeft
+            const isCorrect = ant.antwoord === 'correct';
+            if (isCorrect) {
+              indivPunten += 15;
+              opbouw['ronde_' + r + '_individueel'] = 15;
+            } else {
+              opbouw['ronde_' + r + '_individueel'] = 0;
+            }
+          } else {
+            opbouw['ronde_' + r + '_individueel'] = 0;
+          }
+        }
+        totaal += indivPunten;
+
+        // Groepsantwoord punten
+        let groepPunten = 0;
+        for (let r = 1; r <= nRondes; r++) {
+          const stem = groepStemmen?.find(s => s.groep_id === leerling.groep_id && s.ronde_nr === r);
+          if (stem) {
+            const bonus = stem.is_correct ? 10 : -5;
+            groepPunten += bonus;
+            opbouw['ronde_' + r + '_groep'] = bonus;
+          }
+        }
+        totaal += groepPunten;
+
+        // Mol geraden
+        const test = testAntwoorden?.find(t => t.leerling_id === leerling.id);
+        const molGeraden = test && mol && test.mol_verdachte_id === mol.id;
+        if (molGeraden) {
+          totaal += 25;
+          opbouw['mol_geraden'] = 25;
+        } else {
+          opbouw['mol_geraden'] = 0;
+        }
+      } else {
+        // ── Mol scoring ───────────────────────────────────────
+        for (let r = 1; r <= nRondes; r++) {
+          const stem = groepStemmen?.find(s => s.groep_id === leerling.groep_id && s.ronde_nr === r);
+          if (stem && !stem.is_correct) {
+            totaal += 20;
+            opbouw['ronde_' + r + '_sabotage'] = 20;
+          } else {
+            opbouw['ronde_' + r + '_sabotage'] = 0;
+          }
+        }
+        // Niet ontmaskerd: niemand raadde de mol correct
+        const ontmaskerd = testAntwoorden?.some(t =>
+          t.leerling_id !== mol.id && t.mol_verdachte_id === mol.id
+        );
+        // Meerderheid check: meer dan helft raadde correct?
+        const aantalCorrect = testAntwoorden?.filter(t =>
+          t.leerling_id !== mol.id && t.mol_verdachte_id === mol.id
+        ).length || 0;
+        const aantalSpelers = leerlingen.filter(l => !l.is_mol).length;
+        const meerderheid = aantalCorrect > aantalSpelers / 2;
+        if (!meerderheid) {
+          totaal += 40;
+          opbouw['niet_ontmaskerd'] = 40;
+        } else {
+          opbouw['niet_ontmaskerd'] = 0;
+        }
+      }
+
+      // Clamp op 0
+      totaal = Math.max(0, totaal);
+      scores.push({
+        id:         `score_${sessie_id}_${leerling.id}`,
+        sessie_id,
+        leerling_id: leerling.id,
+        totaal,
+        opbouw,
+      });
+    }
+
+    // Sla scores op
+    for (const score of scores) {
+      await supabase.from('mol_scores').upsert([score]);
+    }
+    return scores;
+  } catch (e) {
+    console.error('berekenScoresIntern fout:', e.message);
+    return [];
+  }
+}
+
+
 
 
 // ── POST /api/mol/genereer-cases-preview — genereert zonder op te slaan ──────

@@ -667,6 +667,54 @@ select { cursor: pointer; }
   .vote-count { font-size: 0.72rem; color: var(--muted); margin-left: 0.2rem; }
   .vote-check { color: var(--green); font-size: 1rem; }
 
+
+  /* ── Groepshoofd verkiezing ─────────────────────────────── */
+  .gh-kandidaat {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem 1rem; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--bg3);
+    cursor: pointer; transition: all 0.15s; margin-bottom: 0.45rem;
+    color: var(--text);
+  }
+  .gh-kandidaat:hover { border-color: rgba(212,168,67,0.4); background: rgba(212,168,67,0.06); }
+  .gh-kandidaat.mijn-keuze { border-color: var(--gold); background: rgba(212,168,67,0.1); }
+  .gh-badge {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; padding: 0.18rem 0.5rem; border-radius: 99px;
+    background: rgba(212,168,67,0.15); color: var(--gold-l);
+    border: 1px solid rgba(212,168,67,0.3);
+  }
+
+  /* ── Score reveal ───────────────────────────────────────── */
+  .score-opbouw-rij {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.45rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.82rem;
+  }
+  .score-opbouw-rij:last-child { border-bottom: none; }
+  .score-opbouw-label { color: var(--text2); }
+  .score-opbouw-val {
+    font-family: 'DM Mono', monospace; font-weight: 700; font-size: 0.88rem;
+  }
+  .score-opbouw-val.pos { color: var(--green-l); }
+  .score-opbouw-val.neg { color: var(--red-l); }
+  .score-opbouw-val.nul { color: var(--muted); }
+  .score-totaal-balk {
+    margin: 1rem 0 0.5rem;
+  }
+  .score-totaal-label { display: flex; justify-content: space-between; margin-bottom: 0.35rem; }
+  .score-totaal-naam  { font-weight: 700; font-size: 0.9rem; color: #fff; }
+  .score-totaal-num   { font-family: 'DM Mono', monospace; font-size: 1.1rem; font-weight: 700; color: var(--gold-l); }
+  .score-track { height: 12px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; }
+  .score-fill  { height: 100%; border-radius: 99px; background: var(--gold-l); transition: width 0.8s ease; }
+
+  /* ── 5-sec countdown na groepskeuze ────────────────────── */
+  .countdown-groot {
+    font-family: 'DM Mono', monospace; font-size: 4rem; font-weight: 700;
+    color: var(--gold-l); text-align: center; line-height: 1;
+  }
+
 </style>
 </head>
 <body>
@@ -2155,7 +2203,8 @@ async function pollSpelerStatus() {
     sessieState = await apiFetch('/api/mol/sessie/' + sessieId);
   } catch(e) { return; }
 
-  const { sessie, cases, antwoorden, groepStemmen, leerlingen, groepen, briefingKlaar, groepVotes } = sessieState;
+  const { sessie, cases, antwoorden, groepStemmen, leerlingen, groepen,
+          briefingKlaar, groepVotes, scores } = sessieState;
   if (!sessie) return; // null-safety
   const status = sessie.status;
 
@@ -2206,7 +2255,7 @@ async function pollSpelerStatus() {
     const mijnGroepVotes = (groepVotes || []).filter(v => v.groep_id === speler.groep_id && v.ronde_nr === ronde);
     renderSpelerRonde(ronde, sessie.n_rondes, caseRonde, mijnAntwoord, alleIngediend,
       alleAntwoorden, groepStem, mijnGroep, leerlingen,
-      faseSrv, faseTijd, timerDiscSec, timerStemSec, mijnGroepVotes);
+      faseSrv, faseTijd, timerDiscSec, timerStemSec, mijnGroepVotes, scores || []);
     showScreen('screen-speler-ronde');
     return;
   }
@@ -2225,7 +2274,7 @@ async function pollSpelerStatus() {
 
   if (status === 'reveal' || status === 'afgelopen') {
     clearInterval(pollTimer);
-    renderSpelerReveal(sessieState);
+    renderSpelerReveal(sessieState, scores || []);
     showScreen('screen-reveal');
     return;
   }
@@ -2269,15 +2318,47 @@ function renderSpelerBriefing(leerlingen, groepen, sessie) {
       <div style="flex:1;font-weight:${l.id === speler.id ? '700' : '500'};font-size:0.85rem;">${escH(l.naam)} ${l.id === speler.id ? '(jij)' : ''}</div>
     </div>`).join('');
 
+  // Bepaal groepshoofd-status
+  const groepshoofd = mijnGroep.find(l => l.is_groepshoofd);
+  const heeftAlGestemd = !!speler.groepshoofd_stem;
+
   html += `<div id="briefing-start-wrap" style="margin-top:1.25rem;">
-    <button class="btn btn-gold btn-full" id="briefing-start-btn" onclick="drukOpStart()">
-      ✅ Ik heb de briefing gelezen — Start!
+    <button class="btn btn-gold btn-full" id="briefing-start-btn"
+      onclick="drukOpStart()" ${briefingGedrukt ? 'disabled' : ''}>
+      ${briefingGedrukt ? '<span class="spinner"></span> Verwerken...' : '✅ Ik heb de briefing gelezen — Start!'}
     </button>
-    <div id="briefing-wacht" style="display:none;text-align:center;margin-top:0.85rem;">
-      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:0.5rem;">
-        Wachten op groepsleden...
+  </div>
+  <div id="briefing-wacht" style="display:none;margin-top:1.25rem;">
+    <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:0.5rem;">
+      Wachten op groepsleden...
+    </div>
+    <div class="wacht-grid" id="briefing-wacht-grid"></div>
+  </div>
+  <div id="groepshoofd-sectie" style="display:none;margin-top:1.25rem;">
+    <div class="card">
+      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.25rem;color:#fff;">👑 Kies een groepshoofd</div>
+      <p style="font-size:0.75rem;color:var(--text2);margin-bottom:0.75rem;">
+        Het groepshoofd dient namens de groep het antwoord in. Stem op één groepslid.
+      </p>
+      <div id="gh-keuze-lijst">
+        ${mijnGroep.map(l => `
+          <div class="gh-kandidaat ${heeftAlGestemd && speler.groepshoofd_stem === l.id ? 'mijn-keuze' : ''}"
+            id="gh-${l.id}"
+            onclick="${heeftAlGestemd ? '' : `stemOpGroepshoofd('${l.id}')`}"
+            style="${heeftAlGestemd ? 'cursor:default;opacity:0.7;' : ''}">
+            <span style="font-size:1.1rem;">🎓</span>
+            <span style="font-weight:600;font-size:0.88rem;">${escH(l.naam)}</span>
+            ${l.id === speler.id ? '<span style="font-size:0.7rem;color:var(--muted);">(jij)</span>' : ''}
+            ${l.is_groepshoofd ? '<span class="gh-badge">👑 Groepshoofd</span>' : ''}
+          </div>`).join('')}
       </div>
-      <div class="wacht-grid" id="briefing-wacht-grid"></div>
+      <div id="gh-wacht" style="font-size:0.75rem;color:var(--muted);margin-top:0.65rem;text-align:center;display:none;">
+        Wachten tot iedereen gestemd heeft...
+        <div class="wacht-grid" id="gh-wacht-grid" style="margin-top:0.5rem;"></div>
+      </div>
+      ${groepshoofd ? `<div style="margin-top:0.65rem;padding:0.5rem 0.75rem;background:rgba(212,168,67,0.08);border-radius:8px;font-size:0.78rem;color:var(--gold-l);">
+        👑 Groepshoofd: <strong>${escH(groepshoofd.naam)}</strong>
+      </div>` : ''}
     </div>
   </div>`;
   sec.innerHTML = html;
@@ -2297,7 +2378,32 @@ async function drukOpStart() {
       method: 'POST',
       body: JSON.stringify({ sessie_id: sessieId, leerling_id: speler.id }),
     });
+    // Toon groepshoofd-stemming
+    const gh = document.getElementById('groepshoofd-sectie');
+    if (gh) gh.style.display = 'block';
   } catch(e) { console.error('briefing-klaar fout:', e.message); }
+}
+
+let groepshoofGedrukt = false;
+
+async function stemOpGroepshoofd(kandidaatId) {
+  if (groepshoofGedrukt) return;
+  groepshoofGedrukt = true;
+  // Visuele feedback
+  document.querySelectorAll('.gh-kandidaat').forEach(el => {
+    el.style.cursor = 'default'; el.style.opacity = '0.7';
+  });
+  const gekozene = document.getElementById('gh-' + kandidaatId);
+  if (gekozene) { gekozene.classList.add('mijn-keuze'); gekozene.style.opacity = '1'; }
+  document.getElementById('gh-wacht').style.display = 'block';
+
+  try {
+    await apiFetch('/api/mol/groepshoofd-stem', {
+      method: 'POST',
+      body: JSON.stringify({ sessie_id: sessieId, leerling_id: speler.id, kandidaat_id: kandidaatId }),
+    });
+    await pollSpelerStatus();
+  } catch(e) { toast('Stemmen mislukt: ' + e.message); }
 }
 
 function updateBriefingWachtGrid(mijnGroep, briefingKlaar) {
@@ -2310,12 +2416,40 @@ function updateBriefingWachtGrid(mijnGroep, briefingKlaar) {
       <div class="dot"></div>${escH(l.naam.split(' ')[0])}
     </div>`;
   }).join('');
+
+  // Update groepshoofd-wacht grid
+  const ghGrid = document.getElementById('gh-wacht-grid');
+  if (ghGrid) {
+    ghGrid.innerHTML = mijnGroep.map(l => {
+      const heeftGestemd = !!l.groepshoofd_stem;
+      return `<div class="wacht-chip ${heeftGestemd ? 'klaar' : ''}">
+        <div class="dot"></div>${escH(l.naam.split(' ')[0])}
+      </div>`;
+    }).join('');
+  }
+
+  // Toon groepshoofd badge als bekend
+  const groepshoofd = mijnGroep.find(l => l.is_groepshoofd);
+  if (groepshoofd) {
+    const ghSectie = document.getElementById('groepshoofd-sectie');
+    if (ghSectie && briefingGedrukt) ghSectie.style.display = 'block';
+    const bestaandBadge = document.getElementById('gh-winnaar-badge');
+    if (!bestaandBadge && groepshoofd) {
+      const ghWacht = document.getElementById('gh-wacht');
+      if (ghWacht) ghWacht.insertAdjacentHTML('afterend',
+        `<div id="gh-winnaar-badge" style="margin-top:0.65rem;padding:0.5rem 0.75rem;
+          background:rgba(212,168,67,0.08);border-radius:8px;font-size:0.78rem;color:var(--gold-l);">
+          👑 Groepshoofd: <strong>${escH(groepshoofd.naam)}</strong>
+        </div>`);
+    }
+  }
 }
 
 function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngediend,
   alleAntwoorden, groepStem, mijnGroep, alleLeerlingen,
-  faseSrv, faseTijd, timerDiscSec, timerStemSec, groepVotesRonde) {
+  faseSrv, faseTijd, timerDiscSec, timerStemSec, groepVotesRonde, scoresArr) {
   groepVotesRonde = groepVotesRonde || [];
+  scoresArr       = scoresArr       || [];
   faseSrv      = faseSrv  || 'invoer';
   faseTijd     = faseTijd || Date.now();
   timerDiscSec = timerDiscSec || 120;
@@ -2439,63 +2573,71 @@ function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngedie
       return { leerling: l, ant };
     });
 
-    // Bouw optie-lijst voor unaniem stemmen
+    // Groepshoofd bepalen
+    const isGroepshoofd = speler.is_groepshoofd === true;
+    const groepshoofdNaam = mijnGroep.find(l => l.is_groepshoofd)?.naam || '?';
+
     const isMc = caseData?.vraagtype === 'mc' && caseData?.mc_opties?.length > 0;
     const stemOpties = isMc
       ? caseData.mc_opties.map((o, i) => ({ id: o.id, label: ['A','B','C','D'][i], tekst: o.tekst }))
       : [{ id: 'correct', label: '✅', tekst: 'Het correcte antwoord' },
          { id: 'fout',    label: '❌', tekst: 'Het alternatieve antwoord' }];
 
-    // Tally: welke optie heeft hoeveel stemmen?
-    const tallyMap = {};
-    groepVotesRonde.forEach(v => {
-      tallyMap[v.gekozen_optie_id] = (tallyMap[v.gekozen_optie_id] || 0) + 1;
-    });
-    const mijnVote = groepVotesRonde.find(v => v.leerling_id === speler.id);
-    const alleVotes = groepVotesRonde.length;
-    const totaalLeden = mijnGroep.length;
-    const uniekeOpties = Object.keys(tallyMap).length;
-    const unaniem = alleVotes >= totaalLeden && uniekeOpties === 1;
-
     let html = `<div class="case-card">
-      <div class="case-ronde">Ronde ${rondeNr} — Groepsstemming</div>
+      <div class="case-ronde">Ronde ${rondeNr} — Groepskeuze</div>
       <div class="case-vraag">${escH(caseData.vraag)}</div>
     </div>
     <div class="card">
-      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.25rem;color:#fff;">🗳️ Kies het groepsantwoord</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+        <div style="font-weight:700;font-size:0.88rem;color:#fff;">
+          ${isGroepshoofd ? '👑 Jij bent het groepshoofd — kies het groepsantwoord' : '👀 Wachten op het groepshoofd'}
+        </div>
+        ${!isGroepshoofd ? `<span class="gh-badge">👑 ${escH(groepshoofdNaam)}</span>` : ''}
+      </div>
       <p style="font-size:0.75rem;color:var(--text2);margin-bottom:0.75rem;">
-        Iedereen stemt individueel. Als jullie het eens zijn → automatisch ingediend.
-        <strong style="color:var(--teal);">${alleVotes}/${totaalLeden} hebben gestemd.</strong>
+        ${isGroepshoofd
+          ? 'Bespreek met je groep. Klik dan op het gekozen antwoord om het in te dienen.'
+          : 'Bekijk de opties. Het groepshoofd dient het antwoord in na de discussie.'}
       </p>
-      <div id="vote-opties">`;
+      <div id="stem-opties-lijst">`;
 
     stemOpties.forEach(opt => {
-      const aantalVoorOptie = tallyMap[opt.id] || 0;
-      const isMijnKeuze = mijnVote?.gekozen_optie_id === opt.id;
-      const isUnaniem   = unaniem && tallyMap[opt.id] === totaalLeden;
-      let cls = 'vote-optie';
-      if (isMijnKeuze) cls += ' mijn-keuze';
-      if (isUnaniem)   cls += ' unanim';
-      const dots = Array(aantalVoorOptie).fill('<div class="vote-dot"></div>').join('');
-      html += `<div class="${cls}" onclick="stemGroepsOptie('${opt.id}', ${rondeNr})" id="vote-${opt.id}">
+      html += `<div class="vote-optie" id="stemopt-${opt.id}"
+        ${isGroepshoofd ? `onclick="groepshoofIndienen('${opt.id}', ${rondeNr})"` : ''}
+        style="${isGroepshoofd ? '' : 'cursor:default;'}">
         <span class="vote-label">${opt.label}</span>
         <span class="vote-tekst">${escH(opt.tekst)}</span>
-        <div class="vote-tally">
-          ${dots}
-          ${aantalVoorOptie > 0 ? `<span class="vote-count">${aantalVoorOptie}</span>` : ''}
-          ${isUnaniem ? '<span class="vote-check">✓</span>' : ''}
-        </div>
       </div>`;
     });
 
     html += `</div>
-      ${unaniem ? '<div style="text-align:center;font-size:0.82rem;color:var(--green);margin-top:0.75rem;font-weight:700;">✅ Iedereen akkoord — antwoord ingediend!</div>' : ''}
       <div id="stem-error" class="error-msg"></div>
     </div>`;
 
     html += buildTimerRing(timerStemSec, resterendStem, 'stem');
     html += `<div class="timer-label" style="text-align:center;margin-top:-0.25rem;">Stemtijd</div>`;
     content.innerHTML = html;
+
+  } else if (faseSrv === 'resultaat_5sec' && groepStem) {
+    // 5-sec countdown na groepskeuze
+    faseLabel.textContent = `Ronde ${rondeNr} — Groepskeuze ingediend`;
+    const verstreken5 = Math.floor((Date.now() - faseTijd) / 1000);
+    const resterend5  = Math.max(0, 5 - verstreken5);
+    const gekozenOptieId = groepStem.gekozen_argument;
+    const isMc2 = caseData?.vraagtype === 'mc' && caseData?.mc_opties?.length > 0;
+    const gekozenTekst = isMc2
+      ? caseData.mc_opties.find(o => o.id === gekozenOptieId)?.tekst || gekozenOptieId
+      : (gekozenOptieId === 'correct' ? 'Correct antwoord' : 'Alternatief antwoord');
+
+    content.innerHTML = `
+      <div class="card" style="text-align:center;padding:1.5rem;">
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--gold);margin-bottom:0.5rem;">
+          👑 Groepskeuze
+        </div>
+        <div style="font-size:1rem;font-weight:700;color:#fff;margin-bottom:1rem;">${escH(gekozenTekst)}</div>
+        <div class="countdown-groot">${resterend5}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem;">seconden zichtbaar voor iedereen</div>
+      </div>`;
 
   } else {
     // FASE D: Stem ingediend — resultaat tonen
@@ -2582,10 +2724,18 @@ async function submitAntwoord(rondeNr) {
   }
 }
 
-async function stemGroepsOptie(optieId, rondeNr) {
-  // Leerling stemt op een optie voor het groepsantwoord
+async function groepshoofIndienen(optieId, rondeNr) {
+  if (!speler.is_groepshoofd) return;
+  // Highlight de gekozen optie
+  document.querySelectorAll('.vote-optie').forEach(el => {
+    el.style.opacity = '0.5'; el.style.cursor = 'default';
+    el.onclick = null;
+  });
+  const gekozen = document.getElementById('stemopt-' + optieId);
+  if (gekozen) { gekozen.style.opacity = '1'; gekozen.classList.add('mijn-keuze'); }
+
   try {
-    const res = await apiFetch('/api/mol/groep-vote', {
+    await apiFetch('/api/mol/groep-stem-hoofd', {
       method: 'POST',
       body: JSON.stringify({
         sessie_id:        sessieId,
@@ -2593,13 +2743,12 @@ async function stemGroepsOptie(optieId, rondeNr) {
         groep_id:         speler.groep_id,
         leerling_id:      speler.id,
         gekozen_optie_id: optieId,
-        gekozen_antwoord: optieId,
       }),
     });
-    // Meteen re-poll voor live tally-update
     await pollSpelerStatus();
   } catch(e) {
-    toast('Stemmen mislukt: ' + e.message);
+    const err = document.getElementById('stem-error');
+    if (err) { err.textContent = e.message; err.style.display = 'block'; }
   }
 }
 
@@ -2691,7 +2840,8 @@ async function submitTest() {
   }
 }
 
-function renderSpelerReveal(state) {
+function renderSpelerReveal(state, scoresArr) {
+  scoresArr = scoresArr || [];
   const { sessie, leerlingen, cases, antwoorden, groepStemmen, testAntwoorden } = state;
   const mol        = leerlingen.find(l => l.is_mol);
   const isMol      = speler.is_mol;
@@ -2778,11 +2928,69 @@ function renderSpelerReveal(state) {
     </div>`;
   });
 
+  // Voeg score-opbouw toe
+  const mijnScore = scoresArr.find(s => s.leerling_id === speler.id);
+  const nRondesReveal = sessieState?.sessie?.n_rondes || 3;
+  const scoreHtml = bouwScoreOpbouw(mijnScore, speler.is_mol, nRondesReveal);
+  html += `<div class="card" style="margin-top:1rem;">
+    <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.18em;
+      color:var(--gold);margin-bottom:0.75rem;">⭐ Jouw score</div>
+    ${scoreHtml}
+  </div>`;
+
   document.getElementById('reveal-content').innerHTML = html;
   // Toon afsluitknop voor leerling
   const afsluiting = document.getElementById('reveal-afsluiting');
   if (afsluiting) afsluiting.style.display = 'block';
 }
+
+function bouwScoreOpbouw(score, isMol, nRondes) {
+  if (!score) return '<p style="color:var(--muted);font-size:0.8rem;">Scores worden berekend...</p>';
+  const opbouw = score.opbouw || {};
+  const rijen = [];
+
+  if (!isMol) {
+    for (let r = 1; r <= nRondes; r++) {
+      const ind  = opbouw['ronde_' + r + '_individueel'];
+      const groep = opbouw['ronde_' + r + '_groep'];
+      if (ind !== undefined) rijen.push({ label: `Ronde ${r} — individueel antwoord`, val: ind });
+      if (groep !== undefined) rijen.push({ label: `Ronde ${r} — groepsantwoord`, val: groep });
+    }
+    const molPt = opbouw['mol_geraden'];
+    if (molPt !== undefined) rijen.push({ label: 'Mol correct geraden', val: molPt });
+  } else {
+    for (let r = 1; r <= nRondes; r++) {
+      const sab = opbouw['ronde_' + r + '_sabotage'];
+      if (sab !== undefined) rijen.push({ label: `Ronde ${r} — sabotage geslaagd`, val: sab });
+    }
+    const ontm = opbouw['niet_ontmaskerd'];
+    if (ontm !== undefined) rijen.push({ label: 'Niet ontmaskerd', val: ontm });
+  }
+
+  const html = rijen.map(r => {
+    const cls = r.val > 0 ? 'pos' : r.val < 0 ? 'neg' : 'nul';
+    return `<div class="score-opbouw-rij">
+      <span class="score-opbouw-label">${escH(r.label)}</span>
+      <span class="score-opbouw-val ${cls}">${r.val > 0 ? '+' : ''}${r.val} pt</span>
+    </div>`;
+  }).join('');
+
+  const pct = Math.min(100, Math.round((score.totaal / 100) * 100));
+  const kleur = pct >= 70 ? 'var(--green-l)' : pct >= 40 ? 'var(--gold-l)' : 'var(--red-l)';
+
+  return `
+    <div class="score-totaal-balk">
+      <div class="score-totaal-label">
+        <span class="score-totaal-naam">Jouw totaalscore</span>
+        <span class="score-totaal-num" style="color:${kleur};">${score.totaal} pt</span>
+      </div>
+      <div class="score-track">
+        <div class="score-fill" style="width:${pct}%;background:${kleur};"></div>
+      </div>
+    </div>
+    <div style="margin-top:0.75rem;">${html}</div>`;
+}
+
 
 // ════════════════════════════════════════════════════════════
 // INIT
@@ -2808,7 +3016,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderResultaten(data) {
-  const { sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden } = data;
+  const { sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden, scores } = data;
   document.getElementById('resultaten-loading').style.display = 'none';
   const div = document.getElementById('resultaten-content');
   div.style.display = 'block';
@@ -3153,37 +3361,25 @@ async function checkAutoAdvance(state) {
     await advanceFase('stem'); // direct naar stem, geen discussiefase meer
     return;
   }
-  if (fase === 'stem') {
-    const timerVerlopen = (nu - gestarted) >= timerStem;
-    if (timerVerlopen || alleGestemd) {
+  if (fase === 'resultaat_5sec') {
+    // 5 seconden wachten dan door naar volgende ronde of test
+    if ((nu - gestarted) >= 5000) {
       lastAutoAdvance = debounceKey;
-      // Bij timer-einde: submit meerderheid per groep die nog niet gestemd heeft
-      if (timerVerlopen && !alleGestemd) {
-        for (const g of groepen) {
-          const alGestem = alleStemmen.find(s => s.groep_id === g.id && s.ronde_nr === r);
-          if (!alGestem) {
-            // Bepaal meerderheid uit groepVotes
-            const groepV = groepVotesRonde.filter(v => v.groep_id === g.id);
-            if (groepV.length > 0) {
-              const tally = {};
-              groepV.forEach(v => { tally[v.gekozen_optie_id] = (tally[v.gekozen_optie_id]||0)+1; });
-              const winnaar = Object.keys(tally).sort((a,b) => tally[b]-tally[a])[0];
-              // Trigger groep-vote als definitief om groep-stem aan te maken
-              await apiFetch('/api/mol/groep-vote', {
-                method: 'POST',
-                body: JSON.stringify({
-                  sessie_id: sessieId, ronde_nr: r, groep_id: g.id,
-                  leerling_id: groepV[0].leerling_id,
-                  gekozen_optie_id: winnaar, gekozen_antwoord: winnaar,
-                }),
-              }).catch(() => {});
-            }
-          }
-        }
+      const volgendeRonde = r < sessie.n_rondes;
+      if (volgendeRonde) {
+        await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
+          method: 'PATCH',
+          body: JSON.stringify({ docent_code: docentCode, status: `ronde_${r+1}`, huidige_ronde: r+1 }),
+        });
+        await advanceFase('invoer');
+      } else {
+        await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
+          method: 'PATCH',
+          body: JSON.stringify({ docent_code: docentCode, status: 'test', huidige_ronde: r }),
+        });
       }
-      await advanceFase('resultaat');
-      return;
     }
+    return;
   }
   if (fase === 'resultaat' && (nu - gestarted) >= 4000) {
     lastAutoAdvance = debounceKey;
