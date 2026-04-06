@@ -2189,6 +2189,7 @@ function initSpelerFlow() {
   testVerdachteId        = null;
   testRondeNr            = null;
   briefingGedrukt        = false;
+  briefingGerenderd      = false;
   document.getElementById('speler-naam-tag').textContent = speler.naam;
   if (speler.is_mol) {
     document.getElementById('speler-topbar-right').innerHTML +=
@@ -2287,6 +2288,8 @@ async function pollSpelerStatus() {
   }
 }
 
+let briefingGerenderd = false; // voorkomt volledig herrenderen na eerste keer
+
 function renderSpelerBriefing(leerlingen, groepen, sessie) {
   const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
   const groepNaam = mijnGroep.length > 0 ? mijnGroep[0].groep_naam : 'Jouw groep';
@@ -2295,107 +2298,123 @@ function renderSpelerBriefing(leerlingen, groepen, sessie) {
   document.querySelector('#screen-speler-wacht .page-title').textContent = 'Jij bent in ' + groepNaam;
   document.querySelector('#screen-speler-wacht .page-sub').textContent = 'Jouw groepsleden:';
 
-  let html = `<div class="card highlight-${speler.is_mol ? 'red' : 'green'}" style="margin-bottom:1rem;">`;
-  if (speler.is_mol) {
-    html += `<div class="mol-secret">
-      <div class="mol-secret-title">🕵️ Jij bent de Mol</div>
-      <p style="font-size:0.83rem;color:var(--text2);line-height:1.6;margin-bottom:0.75rem;">
-        Jouw missie: laat de groep zoveel mogelijk punten verspillen. Breng per ronde een plausibel fout argument in en verdedig het in de discussie — zonder te opvallen.
-      </p>
-      <div class="mol-fout-arg">
-        <div class="mol-fout-label">Jouw instructie per ronde</div>
-        <div class="mol-fout-text">Je ziet per ronde een fout argument dat jij moet verdedigen. Jouw individuele antwoord moet dit argument bevatten.</div>
-      </div>
-    </div>`;
-  } else {
-    html += `<div style="padding:0.5rem 0;">
-      <div style="font-size:1.3rem;margin-bottom:0.5rem;">🎓</div>
-      <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.3rem;color:#fff;">Jij bent een gewone deelnemer</div>
-      <div style="font-size:0.82rem;color:var(--text2);line-height:1.6;">Werk samen om punten te verdienen. Pas op — <strong style="color:var(--red-l);">er is een Mol in jouw groep</strong>. Ontmasker hem of haar in de moltest.</div>
-    </div>`;
-  }
-  html += `</div>`;
+  // ── Eerste keer: volledige render ────────────────────────────────────────────
+  if (!briefingGerenderd) {
+    briefingGerenderd = true;
 
-  html += `<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text2);margin-bottom:0.5rem;">Jouw groep: ${escH(groepNaam)}</div>`;
-  html += mijnGroep.map(l => `
-    <div class="leerling-rij" style="margin-bottom:0.4rem;">
-      <div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;">
-        ${l.id === speler.id ? '👤' : '🎓'}
-      </div>
-      <div style="flex:1;font-weight:${l.id === speler.id ? '700' : '500'};font-size:0.85rem;">${escH(l.naam)} ${l.id === speler.id ? '(jij)' : ''}</div>
-    </div>`).join('');
+    let html = '<div class="card highlight-' + (speler.is_mol ? 'red' : 'green') + '" style="margin-bottom:1rem;">';
+    if (speler.is_mol) {
+      html += '<div class="mol-secret"><div class="mol-secret-title">🕵️ Jij bent de Mol</div>'
+        + '<p style="font-size:0.83rem;color:var(--text2);line-height:1.6;margin-bottom:0.75rem;">'
+        + 'Jouw missie: laat de groep zoveel mogelijk punten verspillen. Breng per ronde een plausibel fout argument in en verdedig het in de discussie — zonder te opvallen.'
+        + '</p><div class="mol-fout-arg"><div class="mol-fout-label">Jouw instructie per ronde</div>'
+        + '<div class="mol-fout-text">Je ziet per ronde een fout argument dat jij moet verdedigen. Jouw individuele antwoord moet dit argument bevatten.</div></div></div>';
+    } else {
+      html += '<div style="padding:0.5rem 0;"><div style="font-size:1.3rem;margin-bottom:0.5rem;">🎓</div>'
+        + '<div style="font-weight:700;font-size:0.9rem;margin-bottom:0.3rem;color:#fff;">Jij bent een gewone deelnemer</div>'
+        + '<div style="font-size:0.82rem;color:var(--text2);line-height:1.6;">Werk samen om punten te verdienen. Pas op — '
+        + '<strong style="color:var(--red-l);">er is een Mol in jouw groep</strong>. Ontmasker hem of haar in de moltest.</div></div>';
+    }
+    html += '</div>';
+    html += '<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text2);margin-bottom:0.5rem;">Jouw groep: ' + escH(groepNaam) + '</div>';
+    html += mijnGroep.map(l =>
+      '<div class="leerling-rij" style="margin-bottom:0.4rem;">'
+      + '<div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;">'
+      + (l.id === speler.id ? '👤' : '🎓') + '</div>'
+      + '<div style="flex:1;font-weight:' + (l.id === speler.id ? '700' : '500') + ';font-size:0.85rem;">'
+      + escH(l.naam) + (l.id === speler.id ? ' (jij)' : '') + '</div></div>'
+    ).join('');
 
-  // Bepaal groepshoofd-status
-  const groepshoofd = mijnGroep.find(l => l.is_groepshoofd);
-  const heeftAlGestemd = !!speler.groepshoofd_stem;
-
-  // Start-knop: alleen actief als gestemd én groepshoofd bekend
-  const startKlaarVoorStart = heeftAlGestemd && !!groepshoofd;
-  const startBtnDisabled = briefingGedrukt || !startKlaarVoorStart;
-  const startBtnTekst = briefingGedrukt
-    ? '<span class="spinner"></span> Wachten op groep...'
-    : startKlaarVoorStart
-      ? '✅ Briefing gelezen — Start!'
-      : '⏳ Stem eerst op een groepshoofd';
-
-  html += `
-  <div id="groepshoofd-sectie" style="margin-top:1.25rem;">
-    <div class="card">
-      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.25rem;color:#fff;">👑 Stap 1 — Kies een groepshoofd</div>
-      <p style="font-size:0.75rem;color:var(--text2);margin-bottom:0.75rem;">
-        Het groepshoofd dient namens de groep het antwoord in tijdens het spel. Stem op één groepslid.
-      </p>
-      <div id="gh-keuze-lijst">
-        ${mijnGroep.map(l => {
-          const isZelf    = l.id === speler.id;
-          const isGekozen = heeftAlGestemd && speler.groepshoofd_stem === l.id;
-          const klikbaar  = !heeftAlGestemd && !isZelf;
-          return '<div class="gh-kandidaat' + (isGekozen ? ' mijn-keuze' : '') + '"'
-            + ' id="gh-' + l.id + '"'
-            + (klikbaar ? ' data-kandidaat="' + l.id + '"' : '')
-            + ' style="' + (!klikbaar ? 'cursor:default;opacity:0.7;' : '') + '">'
-            + '<span style="font-size:1.1rem;">🎓</span>'
-            + '<span style="font-weight:600;font-size:0.88rem;">' + escH(l.naam) + '</span>'
-            + (isZelf ? '<span style="font-size:0.7rem;color:var(--muted);"> (jij — kan niet op jezelf stemmen)</span>' : '')
-            + (l.is_groepshoofd ? '<span class="gh-badge">👑 Groepshoofd</span>' : '')
-            + '</div>';
-        }).join('')}
-      </div>
-      <div id="gh-wacht" style="font-size:0.75rem;color:var(--muted);margin-top:0.65rem;text-align:center;
-        display:${heeftAlGestemd ? 'block' : 'none'};">
-        Wachten tot iedereen gestemd heeft...
-        <div class="wacht-grid" id="gh-wacht-grid" style="margin-top:0.5rem;"></div>
-      </div>
-      ${groepshoofd ? `<div style="margin-top:0.65rem;padding:0.5rem 0.75rem;background:rgba(212,168,67,0.08);
-        border-radius:8px;font-size:0.78rem;color:var(--gold-l);">
-        👑 Groepshoofd: <strong>${escH(groepshoofd.naam)}</strong>
-      </div>` : ''}
-    </div>
-  </div>
-  <div id="briefing-start-wrap" style="margin-top:1rem;">
-    <button class="btn btn-gold btn-full" id="briefing-start-btn"
-      onclick="drukOpStart()" ${startBtnDisabled ? 'disabled' : ''}
-      style="${startKlaarVoorStart && !briefingGedrukt ? '' : 'opacity:0.5;'}">
-      ${startBtnTekst}
-    </button>
-    <div style="font-size:0.68rem;color:var(--muted);text-align:center;margin-top:0.4rem;">
-      Stap 2 — Bevestig dat je de briefing hebt gelezen
-    </div>
-  </div>
-  <div id="briefing-wacht" style="display:none;margin-top:1rem;">
-    <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;
-      color:var(--muted);margin-bottom:0.5rem;">Wachten op groepsleden...</div>
-    <div class="wacht-grid" id="briefing-wacht-grid"></div>
-  </div>`;
-  sec.innerHTML = html;
-
-  // Event delegation voor groepshoofd-stemmen (vermijdt nested-backtick probleem)
-  const ghLijst = document.getElementById('gh-keuze-lijst');
-  if (ghLijst && !heeftAlGestemd) {
-    ghLijst.addEventListener('click', function(e) {
-      const el = e.target.closest('[data-kandidaat]');
-      if (el) stemOpGroepshoofd(el.getAttribute('data-kandidaat'));
+    // Groepshoofd-sectie
+    html += '<div id="groepshoofd-sectie" style="margin-top:1.25rem;"><div class="card">'
+      + '<div style="font-weight:700;font-size:0.88rem;margin-bottom:0.25rem;color:#fff;">👑 Stap 1 — Kies een groepshoofd</div>'
+      + '<p style="font-size:0.75rem;color:var(--text2);margin-bottom:0.75rem;">'
+      + 'Het groepshoofd dient namens de groep het antwoord in. Je kunt niet op jezelf stemmen.</p>'
+      + '<div id="gh-keuze-lijst">';
+    mijnGroep.forEach(l => {
+      const isZelf = l.id === speler.id;
+      html += '<div class="gh-kandidaat" id="gh-' + l.id + '"'
+        + (isZelf ? ' style="cursor:default;opacity:0.5;"' : ' data-kandidaat="' + l.id + '" style="cursor:pointer;"') + '>'
+        + '<span style="font-size:1.1rem;">🎓</span>'
+        + '<span style="font-weight:600;font-size:0.88rem;">' + escH(l.naam) + '</span>'
+        + (isZelf ? '<span style="font-size:0.68rem;color:var(--muted);margin-left:0.3rem;">(jij)</span>' : '')
+        + '</div>';
     });
+    html += '</div>'
+      + '<div id="gh-status" style="margin-top:0.65rem;font-size:0.78rem;color:var(--muted);"></div>'
+      + '</div></div>';
+
+    // Start-knop
+    html += '<div id="briefing-start-wrap" style="margin-top:1rem;">'
+      + '<button class="btn btn-gold btn-full" id="briefing-start-btn" disabled style="opacity:0.5;" onclick="drukOpStart()">'
+      + '⏳ Stem eerst op een groepshoofd</button>'
+      + '<div style="font-size:0.68rem;color:var(--muted);text-align:center;margin-top:0.4rem;">Stap 2 — Bevestig dat je de briefing hebt gelezen</div>'
+      + '</div>'
+      + '<div id="briefing-wacht" style="display:none;margin-top:1rem;">'
+      + '<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:0.5rem;">Wachten op groepsleden...</div>'
+      + '<div class="wacht-grid" id="briefing-wacht-grid"></div></div>';
+
+    sec.innerHTML = html;
+
+    // Event listener — één keer, stabiel
+    const ghLijst = document.getElementById('gh-keuze-lijst');
+    if (ghLijst) {
+      ghLijst.addEventListener('click', function(e) {
+        const el = e.target.closest('[data-kandidaat]');
+        if (el && !el.classList.contains('mijn-keuze')) {
+          stemOpGroepshoofd(el.getAttribute('data-kandidaat'));
+        }
+      });
+    }
+  }
+
+  // ── Altijd: update dynamische delen zonder innerHTML te vervangen ──────────
+  updateBriefingDynamisch(mijnGroep, leerlingen);
+}
+
+function updateBriefingDynamisch(mijnGroep, alleLeerlingen) {
+  const groepshoofd    = mijnGroep.find(l => l.is_groepshoofd);
+  const heeftGestemd   = !!speler.groepshoofd_stem;
+  const ghStatus       = document.getElementById('gh-status');
+  const startBtn       = document.getElementById('briefing-start-btn');
+
+  // Update kandidaat-highlights
+  mijnGroep.forEach(l => {
+    const el = document.getElementById('gh-' + l.id);
+    if (!el) return;
+    const isGekozen = heeftGestemd && speler.groepshoofd_stem === l.id;
+    const isGH      = l.is_groepshoofd;
+    el.classList.toggle('mijn-keuze', isGekozen);
+    // Verwijder oude badge, voeg nieuwe toe indien groepshoofd
+    const bestaandBadge = el.querySelector('.gh-badge');
+    if (bestaandBadge) bestaandBadge.remove();
+    if (isGH) {
+      const badge = document.createElement('span');
+      badge.className = 'gh-badge';
+      badge.textContent = '👑 Groepshoofd';
+      el.appendChild(badge);
+    }
+  });
+
+  // Update status tekst
+  if (ghStatus) {
+    if (groepshoofd) {
+      ghStatus.style.color = 'var(--gold-l)';
+      ghStatus.innerHTML = '👑 Groepshoofd: <strong>' + escH(groepshoofd.naam) + '</strong>';
+    } else if (heeftGestemd) {
+      ghStatus.style.color = 'var(--muted)';
+      ghStatus.textContent = 'Jouw stem is ingediend. Wachten tot iedereen gestemd heeft...';
+    }
+  }
+
+  // Update start-knop
+  if (startBtn && !briefingGedrukt) {
+    const kanStarten = heeftGestemd && !!groepshoofd;
+    startBtn.disabled = !kanStarten;
+    startBtn.style.opacity = kanStarten ? '1' : '0.5';
+    startBtn.innerHTML = kanStarten
+      ? '✅ Briefing gelezen — Start!'
+      : (heeftGestemd ? '⏳ Wachten op andere groepsleden...' : '⏳ Stem eerst op een groepshoofd');
   }
 }
 
@@ -2422,28 +2441,33 @@ let groepshoofGedrukt = false;
 async function stemOpGroepshoofd(kandidaatId) {
   if (groepshoofGedrukt) return;
   groepshoofGedrukt = true;
-  // Visuele feedback
-  document.querySelectorAll('.gh-kandidaat').forEach(el => {
-    el.style.cursor = 'default'; el.style.opacity = '0.7';
+  // Directe visuele feedback — markeer gekozen kandidaat meteen
+  document.querySelectorAll('.gh-kandidaat[data-kandidaat]').forEach(el => {
+    el.style.opacity = '0.5';
   });
   const gekozene = document.getElementById('gh-' + kandidaatId);
   if (gekozene) { gekozene.classList.add('mijn-keuze'); gekozene.style.opacity = '1'; }
-  document.getElementById('gh-wacht').style.display = 'block';
+
+  // Update start-knop naar "wachten" toestand
+  const startBtn = document.getElementById('briefing-start-btn');
+  if (startBtn) { startBtn.disabled = true; startBtn.style.opacity = '0.5'; startBtn.innerHTML = '⏳ Wachten op andere groepsleden...'; }
 
   try {
-    const res = await apiFetch('/api/mol/groepshoofd-stem', {
+    await apiFetch('/api/mol/groepshoofd-stem', {
       method: 'POST',
       body: JSON.stringify({ sessie_id: sessieId, leerling_id: speler.id, kandidaat_id: kandidaatId }),
     });
-    // Toon gh-wacht direct
-    const ghWacht = document.getElementById('gh-wacht');
-    if (ghWacht) ghWacht.style.display = 'block';
-    // Poll voor update (groepshoofd badge + start-knop activeren)
+    // Poll haalt verse data op en update de start-knop via updateBriefingDynamisch
     await pollSpelerStatus();
-  } catch(e) { toast('Stemmen mislukt: ' + e.message); }
+  } catch(e) {
+    groepshoofGedrukt = false; // reset zodat opnieuw geprobeerd kan worden
+    toast('Stemmen mislukt: ' + e.message);
+  }
 }
 
 function updateBriefingWachtGrid(mijnGroep, briefingKlaar) {
+  // Update dynamische briefing-delen (groepshoofd, start-knop)
+  updateBriefingDynamisch(mijnGroep, null);
   const grid = document.getElementById('briefing-wacht-grid');
   if (!grid) return;
   const klaarIds = new Set((briefingKlaar || []).map(b => b.leerling_id));
