@@ -2322,23 +2322,21 @@ function renderSpelerBriefing(leerlingen, groepen, sessie) {
   const groepshoofd = mijnGroep.find(l => l.is_groepshoofd);
   const heeftAlGestemd = !!speler.groepshoofd_stem;
 
-  html += `<div id="briefing-start-wrap" style="margin-top:1.25rem;">
-    <button class="btn btn-gold btn-full" id="briefing-start-btn"
-      onclick="drukOpStart()" ${briefingGedrukt ? 'disabled' : ''}>
-      ${briefingGedrukt ? '<span class="spinner"></span> Verwerken...' : '✅ Ik heb de briefing gelezen — Start!'}
-    </button>
-  </div>
-  <div id="briefing-wacht" style="display:none;margin-top:1.25rem;">
-    <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:0.5rem;">
-      Wachten op groepsleden...
-    </div>
-    <div class="wacht-grid" id="briefing-wacht-grid"></div>
-  </div>
-  <div id="groepshoofd-sectie" style="display:none;margin-top:1.25rem;">
+  // Start-knop: alleen actief als gestemd én groepshoofd bekend
+  const startKlaarVoorStart = heeftAlGestemd && !!groepshoofd;
+  const startBtnDisabled = briefingGedrukt || !startKlaarVoorStart;
+  const startBtnTekst = briefingGedrukt
+    ? '<span class="spinner"></span> Wachten op groep...'
+    : startKlaarVoorStart
+      ? '✅ Briefing gelezen — Start!'
+      : '⏳ Stem eerst op een groepshoofd';
+
+  html += `
+  <div id="groepshoofd-sectie" style="margin-top:1.25rem;">
     <div class="card">
-      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.25rem;color:#fff;">👑 Kies een groepshoofd</div>
+      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.25rem;color:#fff;">👑 Stap 1 — Kies een groepshoofd</div>
       <p style="font-size:0.75rem;color:var(--text2);margin-bottom:0.75rem;">
-        Het groepshoofd dient namens de groep het antwoord in. Stem op één groepslid.
+        Het groepshoofd dient namens de groep het antwoord in tijdens het spel. Stem op één groepslid.
       </p>
       <div id="gh-keuze-lijst">
         ${mijnGroep.map(l => `
@@ -2352,14 +2350,31 @@ function renderSpelerBriefing(leerlingen, groepen, sessie) {
             ${l.is_groepshoofd ? '<span class="gh-badge">👑 Groepshoofd</span>' : ''}
           </div>`).join('')}
       </div>
-      <div id="gh-wacht" style="font-size:0.75rem;color:var(--muted);margin-top:0.65rem;text-align:center;display:none;">
+      <div id="gh-wacht" style="font-size:0.75rem;color:var(--muted);margin-top:0.65rem;text-align:center;
+        display:${heeftAlGestemd ? 'block' : 'none'};">
         Wachten tot iedereen gestemd heeft...
         <div class="wacht-grid" id="gh-wacht-grid" style="margin-top:0.5rem;"></div>
       </div>
-      ${groepshoofd ? `<div style="margin-top:0.65rem;padding:0.5rem 0.75rem;background:rgba(212,168,67,0.08);border-radius:8px;font-size:0.78rem;color:var(--gold-l);">
+      ${groepshoofd ? `<div style="margin-top:0.65rem;padding:0.5rem 0.75rem;background:rgba(212,168,67,0.08);
+        border-radius:8px;font-size:0.78rem;color:var(--gold-l);">
         👑 Groepshoofd: <strong>${escH(groepshoofd.naam)}</strong>
       </div>` : ''}
     </div>
+  </div>
+  <div id="briefing-start-wrap" style="margin-top:1rem;">
+    <button class="btn btn-gold btn-full" id="briefing-start-btn"
+      onclick="drukOpStart()" ${startBtnDisabled ? 'disabled' : ''}
+      style="${startKlaarVoorStart && !briefingGedrukt ? '' : 'opacity:0.5;'}">
+      ${startBtnTekst}
+    </button>
+    <div style="font-size:0.68rem;color:var(--muted);text-align:center;margin-top:0.4rem;">
+      Stap 2 — Bevestig dat je de briefing hebt gelezen
+    </div>
+  </div>
+  <div id="briefing-wacht" style="display:none;margin-top:1rem;">
+    <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;
+      color:var(--muted);margin-bottom:0.5rem;">Wachten op groepsleden...</div>
+    <div class="wacht-grid" id="briefing-wacht-grid"></div>
   </div>`;
   sec.innerHTML = html;
 }
@@ -2378,9 +2393,7 @@ async function drukOpStart() {
       method: 'POST',
       body: JSON.stringify({ sessie_id: sessieId, leerling_id: speler.id }),
     });
-    // Toon groepshoofd-stemming
-    const gh = document.getElementById('groepshoofd-sectie');
-    if (gh) gh.style.display = 'block';
+    // groepshoofd-sectie is al zichtbaar vanaf het begin
   } catch(e) { console.error('briefing-klaar fout:', e.message); }
 }
 
@@ -2398,10 +2411,14 @@ async function stemOpGroepshoofd(kandidaatId) {
   document.getElementById('gh-wacht').style.display = 'block';
 
   try {
-    await apiFetch('/api/mol/groepshoofd-stem', {
+    const res = await apiFetch('/api/mol/groepshoofd-stem', {
       method: 'POST',
       body: JSON.stringify({ sessie_id: sessieId, leerling_id: speler.id, kandidaat_id: kandidaatId }),
     });
+    // Toon gh-wacht direct
+    const ghWacht = document.getElementById('gh-wacht');
+    if (ghWacht) ghWacht.style.display = 'block';
+    // Poll voor update (groepshoofd badge + start-knop activeren)
     await pollSpelerStatus();
   } catch(e) { toast('Stemmen mislukt: ' + e.message); }
 }
