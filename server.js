@@ -41,84 +41,27 @@ app.get('/', (req, res) => res.json({ status: 'ok', app: 'Socratische Toetsapp' 
 // ════════════════════════════════════════════════════════════
 // AUTH — registreren + inloggen
 // ════════════════════════════════════════════════════════════
-// Hulpfunctie: stuur verificatie-email via Resend API
-async function stuurVerificatieEmail(email, naam, code) {
-  const RESEND_KEY = process.env.RESEND_API_KEY;
-  if (!RESEND_KEY) {
-    console.log(`[DEV] Verificatiecode voor ${email}: ${code}`);
-    return; // Geen email in dev-modus
-  }
-  await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + RESEND_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: 'noreply@stanislascollege.nl',
-      to: email,
-      subject: 'Verificatiecode Toetsapp',
-      html: `<p>Hallo ${naam},</p><p>Jouw verificatiecode is:</p>
-             <h2 style="letter-spacing:0.3em;font-size:2rem;">${code}</h2>
-             <p>De code is 15 minuten geldig.</p>`,
-    }),
-  });
-}
+
 
 app.post('/api/auth/registreer', async (req, res) => {
   try {
     const { naam, email, wachtwoord } = req.body;
     if (!naam || !email || !wachtwoord) return res.status(400).json({ error: 'Vul alle velden in' });
     if (wachtwoord.length < 6) return res.status(400).json({ error: 'Wachtwoord minimaal 6 tekens' });
-    const { data: bestaand } = await supabase.from('leraren').select('id, email_verified').eq('email', email.toLowerCase()).maybeSingle();
-    if (bestaand?.email_verified) return res.status(409).json({ error: 'E-mailadres al in gebruik' });
-
+    const { data: bestaand } = await supabase.from('leraren').select('id').eq('email', email.toLowerCase()).maybeSingle();
+    if (bestaand) return res.status(409).json({ error: 'E-mailadres al in gebruik' });
     const hash = await bcrypt.hash(wachtwoord, 10);
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    const codeExpiry = Date.now() + 15 * 60 * 1000; // 15 min
-
-    if (bestaand) {
-      // Bestaand niet-geverifieerd account: update
-      await supabase.from('leraren').update({
-        naam, wachtwoord: hash, verification_token: code, token_expiry: codeExpiry,
-      }).eq('id', bestaand.id);
-      await stuurVerificatieEmail(email.toLowerCase(), naam, code);
-      return res.json({ ok: true, needs_verification: true, email: email.toLowerCase() });
-    }
-
     const { data, error } = await supabase.from('leraren').insert([{
-      naam, email: email.toLowerCase(), wachtwoord: hash,
-      aangemaakt_op: Date.now(), email_verified: false,
-      verification_token: code, token_expiry: codeExpiry,
+      naam, email: email.toLowerCase(),
+      wachtwoord: hash, aangemaakt_op: Date.now(),
+      email_verified: true,
     }]).select('id, naam, email').single();
     if (error) return res.status(500).json({ error: error.message });
-    await stuurVerificatieEmail(email.toLowerCase(), naam, code);
-    res.json({ ok: true, needs_verification: true, email: email.toLowerCase() });
+    const token = jwt.sign({ id: data.id, naam: data.naam, email: data.email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ ok: true, token, leraar: { id: data.id, naam: data.naam, email: data.email } });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/auth/verifieer', async (req, res) => {
-  try {
-    const { email, code } = req.body;
-    const { data: leraar } = await supabase.from('leraren').select('*').eq('email', email.toLowerCase()).maybeSingle();
-    if (!leraar) return res.status(404).json({ error: 'Account niet gevonden' });
-    if (leraar.email_verified) return res.status(400).json({ error: 'Account al geverifieerd' });
-    if (leraar.verification_token !== String(code)) return res.status(400).json({ error: 'Onjuiste code' });
-    if (Date.now() > leraar.token_expiry) return res.status(400).json({ error: 'Code verlopen — vraag een nieuwe aan' });
-    await supabase.from('leraren').update({ email_verified: true, verification_token: null, token_expiry: null }).eq('id', leraar.id);
-    const token = jwt.sign({ id: leraar.id, naam: leraar.naam, email: leraar.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ ok: true, token, leraar: { id: leraar.id, naam: leraar.naam, email: leraar.email } });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/auth/herversuur', async (req, res) => {
-  try {
-    const { email } = req.body;
-    const { data: leraar } = await supabase.from('leraren').select('*').eq('email', email.toLowerCase()).maybeSingle();
-    if (!leraar || leraar.email_verified) return res.json({ ok: true }); // stil falen
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    await supabase.from('leraren').update({ verification_token: code, token_expiry: Date.now() + 15*60*1000 }).eq('id', leraar.id);
-    await stuurVerificatieEmail(email.toLowerCase(), leraar.naam, code);
-    res.json({ ok: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
 
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -128,13 +71,6 @@ app.post('/api/auth/login', async (req, res) => {
     if (!leraar) return res.status(401).json({ error: 'E-mail of wachtwoord onjuist' });
     const ok = await bcrypt.compare(wachtwoord, leraar.wachtwoord);
     if (!ok) return res.status(401).json({ error: 'E-mail of wachtwoord onjuist' });
-    if (!leraar.email_verified) {
-      // Stuur nieuwe code
-      const code = String(Math.floor(100000 + Math.random() * 900000));
-      await supabase.from('leraren').update({ verification_token: code, token_expiry: Date.now() + 15*60*1000 }).eq('id', leraar.id);
-      await stuurVerificatieEmail(leraar.email, leraar.naam, code);
-      return res.status(403).json({ error: 'email_niet_geverifieerd', email: leraar.email });
-    }
     const token = jwt.sign({ id: leraar.id, naam: leraar.naam, email: leraar.email }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ ok: true, token, leraar: { id: leraar.id, naam: leraar.naam, email: leraar.email } });
   } catch(e) { res.status(500).json({ error: e.message }); }

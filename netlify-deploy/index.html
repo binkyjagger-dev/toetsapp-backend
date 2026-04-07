@@ -132,7 +132,7 @@
     display: block; font-size: 0.75rem; letter-spacing: 0.12em;
     text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem;
   }
-  input[type="text"], input[type="password"], textarea, select {
+  input[type="text"], input[type="email"], input[type="password"], textarea, select {
     width: 100%; background: #ffffff; border: 1.5px solid var(--border);
     border-radius: 8px; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 0.95rem; padding: 0.7rem 1rem; outline: none;
@@ -617,40 +617,7 @@
 
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-// ── E-mailverificatie ─────────────────────────────────────────
-let pendingVerifEmail = '';
-
-async function verifieer() {
-  const code = document.getElementById('verify-code').value.trim();
-  const err  = document.getElementById('verify-error');
-  const btn  = document.getElementById('verify-btn');
-  if (code.length !== 6) { err.textContent = 'Voer de 6-cijferige code in.'; err.style.display='block'; return; }
-  err.style.display = 'none';
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Verifiëren...';
-  try {
-    const data = await apiFetch('/api/auth/verifieer', {
-      method: 'POST',
-      body: JSON.stringify({ email: pendingVerifEmail, code }),
-    });
-    leraarToken = data.token; leraarProfiel = data.leraar;
-    localStorage.setItem('leraar_token', leraarToken);
-    document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
-    loadTeacherDashboard(); showScreen('screen-teacher');
-  } catch(e) {
-    err.textContent = e.message || 'Code onjuist.'; err.style.display='block';
-    btn.disabled = false; btn.innerHTML = 'Bevestigen →';
-  }
-}
-
-async function herversuur() {
-  if (!pendingVerifEmail) return;
-  try {
-    await apiFetch('/api/auth/herversuur', { method: 'POST', body: JSON.stringify({ email: pendingVerifEmail }) });
-    document.getElementById('verify-error').style.display = 'none';
-    document.getElementById('verify-desc').innerHTML = 'Nieuwe code verstuurd naar <strong>' + pendingVerifEmail + '</strong>.';
-  } catch(e) {}
-}
-
+// (verificatie verwijderd)
 </script>
 </head>
 <body>
@@ -765,42 +732,6 @@ async function herversuur() {
   </div>
 </div>
 
-
-<!-- ═══════════════════════════════════════════════ -->
-<!--  SCREEN: E-MAILVERIFICATIE                      -->
-<!-- ═══════════════════════════════════════════════ -->
-<div id="screen-verify" class="screen" style="align-items:center;justify-content:center;padding:2rem;background:linear-gradient(160deg,#eef2fa 0%,#f5f7fb 65%);">
-  <div class="landing-inner">
-    <div style="text-align:center;margin-bottom:1.5rem;">
-      <div style="font-size:3rem;">📧</div>
-    </div>
-    <div class="landing-eyebrow">Verificatie</div>
-    <h1 class="landing-title" style="font-size:1.6rem;">Controleer je e-mail</h1>
-    <p class="landing-desc" style="margin-bottom:0.5rem;" id="verify-desc">
-      We hebben een 6-cijferige code gestuurd naar <strong id="verify-email-toon"></strong>.
-    </p>
-    <p style="font-size:0.78rem;color:#666;margin-bottom:1.5rem;">
-      Geen e-mail ontvangen? Controleer je spam of
-      <button class="btn btn-ghost btn-sm" style="font-size:0.78rem;" onclick="herversuur()">stuur opnieuw</button>
-    </p>
-    <div class="form-section">
-      <label>Verificatiecode</label>
-      <input type="text" id="verify-code" placeholder="123456" maxlength="6"
-        style="font-family:monospace;font-size:1.5rem;letter-spacing:0.3em;text-align:center;"
-        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-        onkeydown="if(event.key==='Enter') verifieer()" />
-    </div>
-    <div id="verify-error" class="error-msg" style="display:none;"></div>
-    <button class="btn btn-full" id="verify-btn" onclick="verifieer()"
-      style="background:var(--accent);color:#fff;font-weight:700;margin-bottom:0.75rem;">
-      Bevestigen →
-    </button>
-    <div style="text-align:center;font-size:0.82rem;color:var(--muted);">
-      <button class="btn btn-ghost btn-sm" style="font-size:0.82rem;"
-        onclick="showScreen('screen-landing');selectRole('teacher')">← Terug naar inloggen</button>
-    </div>
-  </div>
-</div>
 
 <!-- ═══════════════════════════════════════════════ -->
 <!--  SCREEN: STUDENT - CHOOSE LESSON                -->
@@ -1570,16 +1501,6 @@ async function loginTeacher() {
     loadTeacherDashboard();
     showScreen('screen-teacher');
   } catch(e) {
-    // Speciaal geval: e-mail niet geverifieerd
-    try {
-      const parsed = JSON.parse(e.message);
-      if (parsed.error === 'email_niet_geverifieerd') {
-        pendingVerifEmail = parsed.email;
-        document.getElementById('verify-email-toon').textContent = parsed.email;
-        showScreen('screen-verify');
-        return;
-      }
-    } catch(_) {}
     err.textContent = e.message || 'Inloggen mislukt.';
     err.style.display = 'block';
   } finally {
@@ -1603,16 +1524,10 @@ async function registreer() {
       method: 'POST',
       body: JSON.stringify({ naam, email, wachtwoord: ww }),
     });
-    if (data.needs_verification) {
-      pendingVerifEmail = data.email;
-      document.getElementById('verify-email-toon').textContent = data.email;
-      showScreen('screen-verify');
-    } else {
-      leraarToken = data.token; leraarProfiel = data.leraar;
-      localStorage.setItem('leraar_token', leraarToken);
-      document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
-      loadTeacherDashboard(); showScreen('screen-teacher');
-    }
+    leraarToken = data.token; leraarProfiel = data.leraar;
+    localStorage.setItem('leraar_token', leraarToken);
+    document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
+    loadTeacherDashboard(); showScreen('screen-teacher');
   } catch(e) {
     err.textContent = e.message || 'Registratie mislukt.';
     err.style.display = 'block';
