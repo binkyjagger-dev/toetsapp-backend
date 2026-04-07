@@ -740,6 +740,21 @@ select { cursor: pointer; }
     background: var(--blue); border-color: var(--blue); color: #fff;
   }
 
+
+  /* ── Responsiveness ────────────────────────────────────── */
+  @media (max-width: 480px) {
+    .topbar { padding: 0 0.75rem; gap: 0.4rem; flex-wrap: wrap; min-height: 3.5rem; }
+    .topbar-right { gap: 0.4rem; flex-wrap: wrap; }
+    .topbar-right .btn-sm { font-size: 0.65rem; padding: 0.25rem 0.5rem; }
+    .content, .content.wide { padding: 1rem 0.85rem; }
+    .login-kaarten-grid { grid-template-columns: 1fr; }
+    .briefjes-grid { grid-template-columns: 1fr; }
+    .proj-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .vote-optie { font-size: 0.8rem; padding: 0.65rem 0.75rem; }
+    .countdown-groot { font-size: 3rem; }
+    .timer-tekst { font-size: 1.6rem; }
+  }
+
 </style>
 </head>
 <body>
@@ -939,30 +954,23 @@ select { cursor: pointer; }
       </div>
     </div>
     <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--teal);margin:0.75rem 0 0.5rem;display:flex;align-items:center;gap:0.5rem;">
-      ⏱ Timers (automatische voortgang)
+      ⏱ Timer groepsstemming
       <span style="flex:1;height:1px;background:var(--border);"></span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
       <div class="form-section">
-        <label>Discussietijd per ronde</label>
-        <select id="setup-timer-discussie">
-          <option value="60">1 minuut</option>
-          <option value="120" selected>2 minuten</option>
-          <option value="180">3 minuten</option>
-          <option value="300">5 minuten</option>
-        </select>
-      </div>
-      <div class="form-section">
-        <label>Stemtijd per ronde</label>
+        <label>Max. stemtijd per ronde</label>
         <select id="setup-timer-stem">
           <option value="30">30 seconden</option>
           <option value="60" selected>1 minuut</option>
           <option value="120">2 minuten</option>
+          <option value="300">5 minuten</option>
         </select>
       </div>
     </div>
     <div style="font-size:0.72rem;color:var(--muted);margin-top:-0.4rem;margin-bottom:0.75rem;">
-      Rondes lopen automatisch door. Na de laatste ronde start de moltest.
+      Als de stemtimer afloopt terwijl het groepshoofd nog niet heeft gestemd, dient de meerderheid automatisch in.
+      Rondes lopen automatisch door na de stemming.
     </div>
     <div id="setup-error" class="error-msg"></div>
     <button class="btn btn-gold btn-full" style="margin-top:0.5rem;" onclick="goToLeerlingenSetup()">Volgende: leerlingen invoeren →</button>
@@ -1372,9 +1380,13 @@ function toast(msg, duur = 2800) {
 }
 
 async function apiFetch(path, opts = {}) {
+  const baseHeaders = { 'Content-Type': 'application/json' };
+  if (docentToken && docentToken !== 'leraar123') {
+    baseHeaders['Authorization'] = 'Bearer ' + docentToken;
+  }
   const res = await fetch(API + path, {
-    headers: { 'Content-Type': 'application/json' },
     ...opts,
+    headers: { ...baseHeaders, ...(opts.headers || {}) },
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Onbekende fout');
@@ -1399,8 +1411,8 @@ function goToLeerlingenSetup() {
   setupData.lesContent = content;
   setupData.nRondes       = parseInt(document.getElementById('setup-n-rondes').value);
   setupData.groepGrootte  = parseInt(document.getElementById('setup-groep-grootte').value);
-  setupData.timerDiscussie = parseInt(document.getElementById('setup-timer-discussie').value) || 120;
-  setupData.timerStem      = parseInt(document.getElementById('setup-timer-stem').value)      || 60;
+  setupData.timerDiscussie = 0; // discussiefase niet meer gebruikt
+  setupData.timerStem      = parseInt(document.getElementById('setup-timer-stem').value) || 60;
   showScreen('screen-docent-leerlingen');
 }
 
