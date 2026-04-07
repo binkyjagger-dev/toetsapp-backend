@@ -4,32 +4,47 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Socratische Toetsapp — Economie</title>
-<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f4f7f5;
-    --bg2: #ffffff;
-    --surface: #ffffff;
-    --surface2: #eef4f0;
-    --border: #cde0d4;
-    --border2: #b0ccbc;
-    --accent: #007a7a;
-    --accent-dim: #005f5f;
-    --accent-glow: rgba(0,122,122,0.10);
-    --student: #007a7a;
-    --student-dim: #005f5f;
-    --student-glow: rgba(0,122,122,0.08);
-    --teacher: #2e6b3e;
-    --teacher-dim: #1e4f2c;
-    --teacher-glow: rgba(46,107,62,0.10);
-    --green: #2e8b4a;
-    --orange: #d4820a;
-    --red: #c0392b;
-    --purple: #5a4a8a;
-    --text: #1a2e24;
-    --text2: #2d4a38;
-    --muted: #5a7a65;
-    --muted2: #7a9a85;
+    /* ── Stanislas design tokens ── */
+    --navy:        #1B3A6B;
+    --navy-dim:    #142d55;
+    --navy-light:  #2A5298;
+    --navy-glow:   rgba(27,58,107,0.10);
+    --gold:        #C8A951;
+    --gold-dim:    #a88830;
+    --gold-light:  #f0c764;
+    --gold-glow:   rgba(200,169,81,0.12);
+    /* achtergronden */
+    --bg:          #f5f7fb;
+    --bg2:         #ffffff;
+    --surface:     #ffffff;
+    --surface2:    #eef2fa;
+    /* randen */
+    --border:      #dde4f0;
+    --border2:     #c0cce0;
+    /* tekst */
+    --text:        #0e1e3a;
+    --text2:       #2d4060;
+    --muted:       #6a7a96;
+    --muted2:      #9aaac0;
+    /* semantisch (behoud voor compatibiliteit) */
+    --accent:      #1B3A6B;
+    --accent-dim:  #142d55;
+    --accent-glow: rgba(27,58,107,0.10);
+    --student:     #1B3A6B;
+    --student-dim: #142d55;
+    --student-glow:rgba(27,58,107,0.08);
+    --teacher:     #C8A951;
+    --teacher-dim: #a88830;
+    --teacher-glow:rgba(200,169,81,0.10);
+    --green:       #2a8a5a;
+    --orange:      #d4820a;
+    --red:         #c0392b;
+    --purple:      #5a4a8a;
+    --teal:        #0d9488;
+    --blue:        #2563eb;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,7 +52,7 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Source Serif 4', Georgia, serif;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
     min-height: 100vh;
     line-height: 1.65;
   }
@@ -50,18 +65,27 @@
   /* ─── TOPBAR ─── */
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0.75rem 2rem;
-    border-bottom: 2px solid var(--accent);
-    background: var(--accent);
+    padding: 0 2rem; height: 52px;
+    background: var(--navy);
     flex-shrink: 0;
     position: sticky; top: 0; z-index: 10;
+    border-bottom: 2px solid rgba(200,169,81,0.3);
   }
   .topbar-brand {
-    font-family: 'Raleway', sans-serif;
-    font-size: 1.1rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.95rem;
     font-weight: 700;
     color: white;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .topbar-brand::before {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--gold);
+    flex-shrink: 0;
   }
   .topbar-right { display: flex; align-items: center; gap: 1rem; }
   .topbar-info { font-size: 0.82rem; color: rgba(255,255,255,0.8); }
@@ -70,21 +94,21 @@
   /* ─── LANDING ─── */
   #screen-landing {
     align-items: center; justify-content: center; padding: 2rem;
-    background: linear-gradient(160deg, #e8f4ef 0%, #f4f7f5 60%);
+    background: linear-gradient(160deg, #eef2fa 0%, #f5f7fb 65%);
   }
   .landing-inner { max-width: 460px; width: 100%; }
   .landing-eyebrow {
     font-size: 0.72rem; letter-spacing: 0.25em; text-transform: uppercase;
-    color: var(--accent); margin-bottom: 1rem; opacity: 0.8;
+    color: var(--navy); margin-bottom: 1rem; opacity: 0.65;
   }
   .landing-title {
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 2.8rem; line-height: 1.1;
     font-weight: 800;
     color: var(--text); margin-bottom: 0.5rem;
     letter-spacing: -0.02em;
   }
-  .landing-title em { color: var(--accent); font-style: normal; font-weight: 800; }
+  .landing-title em { color: var(--navy); font-style: normal; font-weight: 800; }
   .landing-desc { color: var(--muted); margin-bottom: 2.5rem; font-size: 0.95rem; }
 
   .role-selector {
@@ -97,8 +121,8 @@
     box-shadow: 0 2px 8px rgba(0,90,60,0.08);
   }
   .role-card:hover { border-color: var(--border2); }
-  .role-card.active-student { border-color: var(--student); background: var(--student-glow); }
-  .role-card.active-teacher { border-color: var(--teacher); background: var(--teacher-glow); }
+  .role-card.active-student { border-color: var(--navy); background: var(--navy-glow); }
+  .role-card.active-teacher { border-color: var(--gold); background: var(--gold-glow); }
   .role-icon { font-size: 1.8rem; margin-bottom: 0.4rem; }
   .role-name { font-weight: 600; font-size: 0.95rem; }
   .role-desc { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
@@ -110,12 +134,12 @@
   }
   input[type="text"], input[type="password"], textarea, select {
     width: 100%; background: #ffffff; border: 1.5px solid var(--border);
-    border-radius: 8px; color: var(--text); font-family: 'Source Serif 4', serif;
+    border-radius: 8px; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 0.95rem; padding: 0.7rem 1rem; outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
   input:focus, textarea:focus, select:focus {
-    border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow);
+    border-color: var(--navy); box-shadow: 0 0 0 3px var(--navy-glow);
   }
   select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8270' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; padding-right: 2.5rem; }
   select option { background: var(--surface2); }
@@ -123,22 +147,26 @@
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-    padding: 0.75rem 1.75rem; border: none; border-radius: 8px; cursor: pointer;
-    font-family: 'Lora', serif; font-size: 0.95rem; font-weight: 600;
-    transition: all 0.2s; text-decoration: none; line-height: 1;
+    padding: 0.65rem 1.5rem; border: none; border-radius: 8px; cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.88rem; font-weight: 600;
+    transition: all 0.18s; text-decoration: none; line-height: 1;
   }
   .btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .btn-full { width: 100%; }
   .btn-accent { background: var(--accent); color: white; }
   .btn-accent:hover:not(:disabled) { background: var(--accent-dim); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,122,122,0.25); }
-  .btn-student { background: var(--accent); color: white; }
-  .btn-student:hover:not(:disabled) { background: var(--accent-dim); transform: translateY(-1px); }
-  .btn-teacher { background: var(--teacher); color: white; }
-  .btn-teacher:hover:not(:disabled) { background: var(--teacher-dim); transform: translateY(-1px); }
-  .btn-ghost { background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.4); color: white; }
-  .btn-ghost:hover { background: rgba(255,255,255,0.25); border-color: white; color: white; }
-  .btn-page-ghost { background: transparent; border: 1.5px solid var(--border); color: var(--text2); border-radius: 8px; padding: 0.4rem 0.9rem; font-size: 0.85rem; cursor: pointer; font-family: 'Source Serif 4', serif; transition: all 0.2s; }
-  .btn-page-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-student { background: var(--navy); color: white; }
+  .btn-student:hover:not(:disabled) { background: var(--navy-dim); transform: translateY(-1px); box-shadow: 0 3px 12px rgba(27,58,107,0.25); }
+  .btn-teacher { background: var(--gold); color: #1B3A6B; }
+  .btn-teacher:hover:not(:disabled) { background: var(--gold-dim); transform: translateY(-1px); box-shadow: 0 3px 12px rgba(200,169,81,0.3); }
+  .btn-primary { background: var(--navy); color: white; }
+  .btn-primary:hover:not(:disabled) { background: var(--navy-dim); transform: translateY(-1px); box-shadow: 0 3px 12px rgba(27,58,107,0.25); }
+  .btn-ghost { background: transparent; border: 1.5px solid rgba(255,255,255,0.35); color: rgba(255,255,255,0.85); }
+  .btn-ghost:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.6); color: white; }
+  .btn-ghost-navy { background: transparent; border: 1.5px solid var(--border); color: var(--text2); }
+  .btn-ghost-navy:hover { border-color: var(--navy); color: var(--navy); }
+  .btn-page-ghost { background: transparent; border: 1.5px solid var(--border); color: var(--text2); border-radius: 8px; padding: 0.4rem 0.9rem; font-size: 0.85rem; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.18s; }
+  .btn-page-ghost:hover { border-color: var(--navy); color: var(--navy); }
   .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.82rem; }
   .btn-danger { background: var(--red); color: white; }
 
@@ -151,13 +179,13 @@
 
   /* ─── PAGE HEADER ─── */
   .page-header { margin-bottom: 2rem; }
-  .page-eyebrow { font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
-  .page-title { font-family: 'Raleway', sans-serif; font-weight: 800; font-size: 1.9rem; color: var(--text); line-height: 1.2; letter-spacing: -0.01em; }
+  .page-eyebrow { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--navy); opacity: 0.55; margin-bottom: 0.4rem; }
+  .page-title { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 1.75rem; color: var(--navy); line-height: 1.2; letter-spacing: -0.02em; }
   .page-sub { color: var(--muted); margin-top: 0.4rem; font-size: 0.9rem; font-style: italic; }
 
   /* ─── PROGRESS BAR ─── */
   .progress-bar-wrap { background: var(--surface); border-radius: 100px; height: 4px; margin-bottom: 2rem; overflow: hidden; }
-  .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 100px; transition: width 0.5s ease; }
+  .progress-bar-fill { height: 100%; background: var(--gold); border-radius: 100px; transition: width 0.5s ease; }
 
   /* ─── LESSON SELECT ─── */
   .lesson-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
@@ -166,15 +194,15 @@
     border-radius: 10px; cursor: pointer; transition: all 0.18s;
     display: flex; align-items: center; justify-content: space-between;
   }
-  .lesson-item:hover { border-color: var(--accent); background: #e8f4ef; }
-  .lesson-item.selected { border-color: var(--accent); background: #e8f4ef; }
+  .lesson-item:hover { border-color: var(--navy); background: var(--navy-glow); }
+  .lesson-item.selected { border-color: var(--navy); background: var(--navy-glow); }
   .lesson-item-name { font-weight: 600; }
   .lesson-item-desc { font-size: 0.82rem; color: var(--muted); margin-top: 0.15rem; }
   .lesson-arrow { color: var(--muted); font-size: 1.1rem; }
 
   /* ─── EXPLAIN SCREEN ─── */
   .explain-card {
-    background: #e8f4ef; border: 1.5px solid var(--border);
+    background: var(--surface2); border: 1.5px solid var(--border);
     border-radius: 12px; padding: 1.75rem; margin-bottom: 1.5rem;
   }
   .explain-card h3 { font-family: 'DM Serif Display', serif; font-size: 1.2rem; margin-bottom: 0.5rem; }
@@ -236,8 +264,8 @@
     border-radius: 10px; padding: 1.25rem; cursor: pointer;
     transition: all 0.18s;
   }
-  .lesson-card:hover { border-color: var(--teacher); box-shadow: 0 2px 12px rgba(176,106,74,0.1); }
-  .lesson-card.selected-lesson { border-color: var(--teacher); background: var(--teacher-glow); }
+  .lesson-card:hover { border-color: var(--navy); box-shadow: 0 2px 12px rgba(27,58,107,0.1); }
+  .lesson-card.selected-lesson { border-color: var(--gold); background: var(--gold-glow); }
   .lesson-card-name { font-weight: 700; margin-bottom: 0.3rem; }
   .lesson-card-desc { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.75rem; font-style: italic; }
   .lesson-card-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
@@ -305,7 +333,7 @@
     background: transparent; color: var(--muted); cursor: pointer; font-family: 'Lora', serif;
     font-size: 0.85rem; transition: all 0.15s;
   }
-  .tab-btn.active { border-color: var(--teacher); color: var(--teacher); background: var(--teacher-glow); }
+  .tab-btn.active { border-color: var(--gold); color: var(--navy); background: var(--gold-glow); font-weight: 600; }
 
   .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
   .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
@@ -700,7 +728,7 @@ async function herversuur() {
 <!-- ═══════════════════════════════════════════════ -->
 <!--  SCREEN: REGISTREREN                            -->
 <!-- ═══════════════════════════════════════════════ -->
-<div id="screen-register" class="screen" style="align-items:center;justify-content:center;padding:2rem;background:linear-gradient(160deg,#e8f4ef 0%,#f4f7f5 60%);">
+<div id="screen-register" class="screen" style="align-items:center;justify-content:center;padding:2rem;background:linear-gradient(160deg,#eef2fa 0%,#f5f7fb 65%);">
   <div class="landing-inner">
     <div style="text-align:center;margin-bottom:1.5rem;">
       <img src="https://www.stanislascollegewestplantsoen.nl/lcms2/RESIZE/w250/bestanden/Stanislas_SCW_lichtgroen_witrgb@2x.png"
@@ -741,7 +769,7 @@ async function herversuur() {
 <!-- ═══════════════════════════════════════════════ -->
 <!--  SCREEN: E-MAILVERIFICATIE                      -->
 <!-- ═══════════════════════════════════════════════ -->
-<div id="screen-verify" class="screen" style="align-items:center;justify-content:center;padding:2rem;background:linear-gradient(160deg,#e8f4ef 0%,#f4f7f5 60%);">
+<div id="screen-verify" class="screen" style="align-items:center;justify-content:center;padding:2rem;background:linear-gradient(160deg,#eef2fa 0%,#f5f7fb 65%);">
   <div class="landing-inner">
     <div style="text-align:center;margin-bottom:1.5rem;">
       <div style="font-size:3rem;">📧</div>
@@ -1052,7 +1080,7 @@ async function herversuur() {
   <div class="topbar">
     <div class="topbar-brand" style="display:flex;align-items:center;gap:0.6rem;">
       <img src="https://www.stanislascollegewestplantsoen.nl/lcms2/RESIZE/w250/bestanden/Stanislas_SCW_lichtgroen_witrgb@2x.png" alt="Stanislas" style="height:28px;object-fit:contain;" onerror="this.style.display='none'">
-      Socratische Toetsapp — <span id="topbar-leraar-naam" style="color:var(--accent);"></span>
+      Socratische Toetsapp — <span id="topbar-leraar-naam" style="color:var(--gold-light);font-weight:600;"></span>
     </div>
     <div class="topbar-right">
       <button class="btn btn-ghost btn-sm" onclick="openCreateLesson()">+ Nieuwe les</button>

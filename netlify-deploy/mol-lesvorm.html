@@ -7,6 +7,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
+  /* ── Stanislas tokens ── */
+  --navy:       #1B3A6B;
+  --navy-light: #2A5298;
+  --navy-glow:  rgba(27,58,107,0.12);
+  --gold-dim:   #a88830;
   --bg:      #0c0f14;
   --bg2:     #131820;
   --bg3:     #1a2030;
@@ -32,7 +37,7 @@ html, body { height: 100%; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   line-height: 1.5;
   min-height: 100vh;
 }
@@ -43,13 +48,22 @@ body {
 
 /* ── TOPBAR ── */
 .topbar {
-  background: rgba(12,15,20,0.95); backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
+  background: var(--navy);
+  border-bottom: 1px solid rgba(200,169,81,0.25);
   padding: 0 1.5rem; height: 52px;
   display: flex; align-items: center; justify-content: space-between;
   position: sticky; top: 0; z-index: 100; flex-shrink: 0;
 }
-.topbar-brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-family: 'Syne', sans-serif; font-size: 0.9rem; }
+.topbar-brand {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-weight: 700; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.88rem;
+  color: #fff;
+}
+.topbar-brand::before {
+  content: ''; display: inline-block;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--gold); flex-shrink: 0;
+}
 .topbar-right { display: flex; align-items: center; gap: 0.75rem; }
 .topbar-tag { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; padding: 0.18rem 0.55rem; border-radius: 99px; }
 .tag-docent { background: rgba(46,107,62,0.2); color: #6ef0a0; border: 1px solid rgba(46,107,62,0.35); }
@@ -71,7 +85,7 @@ body {
 input, textarea, select {
   width: 100%; padding: 0.65rem 0.85rem;
   background: var(--bg3); border: 1.5px solid var(--border);
-  border-radius: 8px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+  border-radius: 8px; color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.9rem;
   outline: none; transition: border-color 0.15s;
 }
 input:focus, textarea:focus, select:focus { border-color: rgba(212,168,67,0.5); }
@@ -83,11 +97,11 @@ select { cursor: pointer; }
   display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
   padding: 0.65rem 1.3rem; border-radius: 9px; font-weight: 600;
   font-size: 0.87rem; cursor: pointer; border: none; transition: all 0.15s;
-  font-family: 'Outfit', sans-serif; white-space: nowrap;
+  font-family: 'Plus Jakarta Sans', sans-serif; white-space: nowrap;
 }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-gold    { background: var(--gold); color: #0c0f14; }
-.btn-gold:hover:not(:disabled) { background: var(--gold-l); }
+.btn-gold    { background: var(--gold); color: #1B3A6B; font-weight: 700; }
+.btn-gold:hover:not(:disabled) { background: var(--gold-dim); }
 .btn-green   { background: #1a6640; color: #a0f0c0; border: 1.5px solid rgba(62,201,138,0.4); }
 .btn-green:hover:not(:disabled) { background: #246050; }
 .btn-red     { background: rgba(232,92,92,0.15); color: var(--red-l); border: 1.5px solid rgba(232,92,92,0.3); }
@@ -257,7 +271,7 @@ select { cursor: pointer; }
     padding: 0.35rem 0.85rem; border-radius: 7px; font-size: 0.78rem;
     font-weight: 700; cursor: pointer; border: 1.5px solid var(--border);
     background: var(--bg3); color: var(--muted); transition: all 0.15s;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
   .type-btn.active-open   { border-color: rgba(62,196,196,0.5); background: rgba(62,196,196,0.08); color: var(--teal); }
   .type-btn.active-mc     { border-color: rgba(155,127,232,0.5); background: rgba(155,127,232,0.08); color: var(--purple); }
@@ -280,7 +294,7 @@ select { cursor: pointer; }
   .mc-correctness-btn.correct { border-color: var(--green); background: rgba(62,201,138,0.2); color: var(--green); }
   .mc-optie-input {
     flex: 1; background: transparent; border: none; outline: none;
-    color: var(--text); font-size: 0.83rem; font-family: 'Outfit', sans-serif;
+    color: var(--text); font-size: 0.83rem; font-family: 'Plus Jakarta Sans', sans-serif;
     padding: 0; resize: none; overflow: hidden;
     min-height: 1.3em; line-height: 1.5;
     /* Verberg de textarea-rand die browsers soms toevoegen */
@@ -303,7 +317,7 @@ select { cursor: pointer; }
     font-size: 0.74rem; font-weight: 600; color: var(--text2);
     background: rgba(255,255,255,0.04); border: 1px dashed var(--border);
     border-radius: 7px; padding: 0.38rem 0.75rem; cursor: pointer;
-    width: 100%; margin-top: 0.35rem; font-family: 'Outfit', sans-serif;
+    width: 100%; margin-top: 0.35rem; font-family: 'Plus Jakarta Sans', sans-serif;
     transition: all 0.15s;
   }
   .mc-voeg-toe-btn:hover { border-color: var(--border2); color: var(--text); }
@@ -410,11 +424,11 @@ select { cursor: pointer; }
   /* ── Sessie-lijst ──────────────────────────────────────── */
   .sessie-rij {
     display: flex; align-items: center; gap: 0.85rem;
-    padding: 0.85rem 1rem; background: var(--bg3);
+    padding: 0.85rem 1rem; background: var(--bg2);
     border: 1px solid var(--border); border-radius: 10px;
     margin-bottom: 0.5rem; transition: border-color 0.15s;
   }
-  .sessie-rij:hover { border-color: rgba(212,168,67,0.3); }
+  .sessie-rij:hover { border-color: rgba(200,169,81,0.35); background: rgba(200,169,81,0.04); }
   .sessie-info { flex: 1; min-width: 0; }
   .sessie-les-naam {
     font-weight: 700; font-size: 0.88rem; color: #fff;
@@ -439,7 +453,7 @@ select { cursor: pointer; }
     background: none; border: 1px solid rgba(232,92,92,0.25);
     border-radius: 6px; color: var(--muted); cursor: pointer;
     font-size: 0.75rem; padding: 0.28rem 0.55rem;
-    transition: all 0.15s; font-family: 'Outfit', sans-serif;
+    transition: all 0.15s; font-family: 'Plus Jakarta Sans', sans-serif;
   }
   .sessie-verwijder-btn:hover { border-color: var(--red); color: var(--red-l); background: rgba(232,92,92,0.08); }
 
@@ -489,7 +503,7 @@ select { cursor: pointer; }
   .breadcrumb-sep { opacity: 0.4; }
   .breadcrumb-link {
     color: var(--text2); cursor: pointer; background: none; border: none;
-    font-family: 'Outfit', sans-serif; font-size: 0.72rem;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.72rem;
     padding: 0; text-decoration: none; transition: color 0.15s;
   }
   .breadcrumb-link:hover { color: var(--gold-l); }
@@ -537,7 +551,7 @@ select { cursor: pointer; }
   /* ── Print briefjes layout ──────────────────────────────── */
   #print-briefjes {
     display: none; background: #fff; color: #111;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
   .briefjes-grid {
     display: grid;
@@ -563,7 +577,7 @@ select { cursor: pointer; }
 
   /* ── Projectie scherm ───────────────────────────────────── */
   #screen-projectie {
-    background: #0a0d12; color: #fff;
+    background: #0c0f16; color: #fff;
   }
   .proj-header {
     text-align: center; padding: 1.5rem 1rem 1rem;
@@ -571,7 +585,7 @@ select { cursor: pointer; }
   }
   .proj-sessie-code {
     font-family: 'DM Mono', monospace; font-size: 3.5rem; font-weight: 500;
-    letter-spacing: 0.4em; color: #f0c764; line-height: 1;
+    letter-spacing: 0.4em; color: var(--gold); line-height: 1;
     margin-bottom: 0.3rem;
   }
   .proj-url {
