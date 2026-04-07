@@ -103,6 +103,7 @@ app.post('/api/leerlingen/import', verifyToken, async (req, res) => {
       klas:          l.klas         || null,
       studie:        l.studie       || null,
       leerjaar:      l.leerjaar     || null,
+      leerniveau:    l.leerniveau   || null,
       email:         l.email        || null,
       telefoon:      l.telefoon     || null,
     }));
@@ -115,13 +116,15 @@ app.post('/api/leerlingen/import', verifyToken, async (req, res) => {
 app.get('/api/leerlingen', verifyToken, async (req, res) => {
   try {
     const { lesperiode, klas, leerjaar, studie } = req.query;
+    // leerniveau wordt via req.query.leerniveau uitgelezen
     let q = supabase.from('leerlingen_import').select('*')
       .eq('leraar_id', req.leraar.id)
       .order('achternaam');
-    if (lesperiode) q = q.eq('lesperiode', lesperiode);
-    if (klas)       q = q.eq('klas', klas);
-    if (leerjaar)   q = q.eq('leerjaar', leerjaar);
-    if (studie)     q = q.eq('studie', studie);
+    if (lesperiode)   q = q.eq('lesperiode', lesperiode);
+    if (klas)         q = q.eq('klas', klas);
+    if (leerjaar)     q = q.eq('leerjaar', leerjaar);
+    if (studie)       q = q.eq('studie', studie);
+    if (req.query.leerniveau) q = q.eq('leerniveau', req.query.leerniveau);
     const { data, error } = await q;
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
@@ -143,8 +146,10 @@ app.get('/api/leerlingen/klassen', verifyToken, async (req, res) => {
     let q = supabase.from('leerlingen_import').select('klas, leerjaar, studie').eq('leraar_id', req.leraar.id);
     if (lesperiode) q = q.eq('lesperiode', lesperiode);
     const { data } = await q;
-    const klassen = [...new Set((data||[]).map(r => r.klas).filter(Boolean))].sort();
-    res.json(klassen);
+    const klassen    = [...new Set((data||[]).map(r => r.klas).filter(Boolean))].sort();
+    const leerjaren  = [...new Set((data||[]).map(r => r.leerjaar).filter(Boolean))].sort();
+    const niveaus    = [...new Set((data||[]).map(r => r.leerniveau).filter(Boolean))].sort();
+    res.json({ klassen, leerjaren, niveaus });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 

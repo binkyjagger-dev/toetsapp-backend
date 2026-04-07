@@ -821,6 +821,11 @@ select { cursor: pointer; }
 
     <div class="form-section">
       <label>Nieuwe leerlingennamen (één per regel)</label>
+      <div style="margin-bottom:0.5rem;">
+        <button class="btn btn-ghost btn-sm" onclick="openLeerlingenPicker('hergebruik-leerlingen')" type="button">
+          👥 Kies uit klas
+        </button>
+      </div>
       <textarea id="hergebruik-leerlingen" rows="8" placeholder="Emma de Vries&#10;Daan Jansen&#10;..."></textarea>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
@@ -1019,7 +1024,7 @@ select { cursor: pointer; }
     <div class="form-section">
       <label>Leerlingennamen (één per regel)</label>
       <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="openLeerlingenPicker()" type="button">
+        <button class="btn btn-ghost btn-sm" onclick="openLeerlingenPicker('leerlingen-input')" type="button">
           👥 Kies uit klas
         </button>
       </div>
@@ -1027,19 +1032,40 @@ select { cursor: pointer; }
     </div>
 
     <!-- Leerlingen-picker modal -->
-    <div id="ll-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;display:flex;align-items:flex-end;justify-content:center;">
+    <div id="ll-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:flex-end;justify-content:center;">
       <div style="background:var(--bg2);border-radius:16px 16px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;padding:1.25rem;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
           <div style="font-weight:700;font-size:1rem;color:#fff;">👥 Kies leerlingen</div>
           <button onclick="sluitLeerlingenPicker()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;">✕</button>
         </div>
-        <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
-          <select id="picker-klas" onchange="laadPickerLeerlingen()" style="flex:1;min-width:120px;">
-            <option value="">— Alle klassen —</option>
-          </select>
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
           <select id="picker-periode" onchange="laadPickerLeerlingen()" style="min-width:130px;">
             <option value="">— Alle periodes —</option>
           </select>
+          <select id="picker-niveau" onchange="laadPickerLeerlingen()" style="min-width:120px;">
+            <option value="">— Alle niveaus —</option>
+            <option value="Atheneum">Atheneum</option>
+            <option value="Gymnasium">Gymnasium</option>
+            <option value="HAVO">HAVO</option>
+          </select>
+          <select id="picker-leerjaar" onchange="laadPickerLeerlingen()" style="min-width:90px;">
+            <option value="">— Alle jaren —</option>
+            <option value="1">Jaar 1</option>
+            <option value="2">Jaar 2</option>
+            <option value="3">Jaar 3</option>
+            <option value="4">Jaar 4</option>
+            <option value="5">Jaar 5</option>
+            <option value="6">Jaar 6</option>
+          </select>
+          <select id="picker-klas" onchange="laadPickerLeerlingen()" style="min-width:110px;">
+            <option value="">— Alle klassen —</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+          <button onclick="selecteerAllePickerLeerlingen()" class="btn btn-ghost btn-sm"
+            style="font-size:0.72rem;">Alles selecteren</button>
+          <button onclick="deselecteerAllePickerLeerlingen()" class="btn btn-ghost btn-sm"
+            style="font-size:0.72rem;">Alles deselecteren</button>
         </div>
         <div id="picker-lijst" style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:0.3rem;"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.85rem;flex-wrap:wrap;gap:0.5rem;">
@@ -3578,15 +3604,18 @@ function buildTimerRing(secTotaal, secResterend, type) {
 let pickerGeselecteerd = new Set();
 let pickerAlleeLeerlingen = [];
 
-async function openLeerlingenPicker() {
+async function openLeerlingenPicker(targetTextareaId) {
+  // Sla het doel-textarea op zodat bevestig weet waar naartoe
+  pickerTargetTextarea = targetTextareaId || 'leerlingen-input';
   const modal = document.getElementById('ll-picker-modal');
   modal.style.display = 'flex';
   pickerGeselecteerd = new Set();
   pickerAlleeLeerlingen = [];
+  document.getElementById('picker-lijst').innerHTML =
+    '<p style="padding:1rem;color:var(--muted);font-size:0.82rem;text-align:center;"><span class="spinner"></span> Laden...</p>';
 
-  // Laad periodes + klassen
   try {
-    const [periodes, klassen] = await Promise.all([
+    const [periodes, meta] = await Promise.all([
       apiFetch('/api/leerlingen/periodes'),
       apiFetch('/api/leerlingen/klassen'),
     ]);
@@ -3594,23 +3623,41 @@ async function openLeerlingenPicker() {
     pSel.innerHTML = '<option value="">— Alle periodes —</option>'
       + periodes.map(p => `<option value="${p}" ${p === periodes[0] ? 'selected' : ''}>${p}</option>`).join('');
 
+    // Klassen-dropdown
     const kSel = document.getElementById('picker-klas');
+    const klassen = Array.isArray(meta) ? meta : (meta.klassen || []);
     kSel.innerHTML = '<option value="">— Alle klassen —</option>'
       + klassen.map(k => `<option value="${k}">${k}</option>`).join('');
 
     await laadPickerLeerlingen();
   } catch(e) {
     document.getElementById('picker-lijst').innerHTML =
-      '<p style="padding:1rem;color:var(--muted);">Geen leerlingen gevonden. Importeer eerst een klas in het Leerlingenbeheer.</p>';
+      '<p style="padding:1rem;color:var(--muted);">Geen leerlingen gevonden. Importeer eerst leerlingen via de Toetsapp.</p>';
   }
 }
 
+let pickerTargetTextarea = 'leerlingen-input';
+
+function selecteerAllePickerLeerlingen() {
+  pickerAlleeLeerlingen.forEach(l => pickerGeselecteerd.add(l.id));
+  renderPickerLijst();
+}
+
+function deselecteerAllePickerLeerlingen() {
+  pickerGeselecteerd.clear();
+  renderPickerLijst();
+}
+
 async function laadPickerLeerlingen() {
-  const klas    = document.getElementById('picker-klas')?.value || '';
-  const periode = document.getElementById('picker-periode')?.value || '';
+  const klas     = document.getElementById('picker-klas')?.value     || '';
+  const periode  = document.getElementById('picker-periode')?.value  || '';
+  const niveau   = document.getElementById('picker-niveau')?.value   || '';
+  const leerjaar = document.getElementById('picker-leerjaar')?.value || '';
   const qs = new URLSearchParams();
-  if (klas)    qs.set('klas', klas);
-  if (periode) qs.set('lesperiode', periode);
+  if (klas)     qs.set('klas', klas);
+  if (periode)  qs.set('lesperiode', periode);
+  if (niveau)   qs.set('leerniveau', niveau);
+  if (leerjaar) qs.set('leerjaar', leerjaar);
   try {
     pickerAlleeLeerlingen = await apiFetch('/api/leerlingen?' + qs);
     renderPickerLijst();
@@ -3629,10 +3676,14 @@ function renderPickerLijst() {
   lijst.innerHTML = pickerAlleeLeerlingen.map(l => {
     const naam = [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ');
     const sel  = pickerGeselecteerd.has(l.id);
+    const badge = l.leerniveau
+      ? `<span style="font-size:0.62rem;padding:1px 5px;border-radius:3px;
+           background:rgba(27,58,107,0.12);color:var(--blue);margin-right:3px;">${l.leerniveau.slice(0,3)}</span>`
+      : '';
     return `<div class="ll-picker-rij ${sel ? 'geselecteerd' : ''}" onclick="togglePickerKeuze('${l.id}')" data-id="${l.id}">
       <div class="ll-picker-check">${sel ? '✓' : ''}</div>
       <span class="ll-picker-naam">${naam}</span>
-      <span class="ll-picker-klas">${l.klas || ''}</span>
+      <span class="ll-picker-klas">${badge}${l.klas || ''} ${l.leerjaar ? '·&nbsp;jr ' + l.leerjaar : ''}</span>
     </div>`;
   }).join('');
   updatePickerCount();
@@ -3660,7 +3711,7 @@ function updatePickerCount() {
 function bevestigLeerlingenKeuze() {
   const gekozen = pickerAlleeLeerlingen.filter(l => pickerGeselecteerd.has(l.id));
   const namen   = gekozen.map(l => [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' '));
-  const textarea = document.getElementById('leerlingen-input');
+  const textarea = document.getElementById(pickerTargetTextarea || 'leerlingen-input');
   if (textarea) {
     const bestaand = textarea.value.trim();
     textarea.value = bestaand

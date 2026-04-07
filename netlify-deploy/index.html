@@ -1081,6 +1081,27 @@
           </select>
         </div>
         <div>
+          <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Niveau</label>
+          <select id="ll-filter-niveau" onchange="laadLeerlingen()" style="min-width:130px;">
+            <option value="">— Alle niveaus —</option>
+            <option value="Atheneum">Atheneum</option>
+            <option value="Gymnasium">Gymnasium</option>
+            <option value="HAVO">HAVO</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Leerjaar</label>
+          <select id="ll-filter-leerjaar" onchange="laadLeerlingen()" style="min-width:100px;">
+            <option value="">— Alle jaren —</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+        </div>
+        <div>
           <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Zoeken</label>
           <input type="text" id="ll-zoek" placeholder="naam..." oninput="filterLeerlingenLokaal()"
             style="min-width:160px;" />
@@ -3341,7 +3362,11 @@ function renderLeerlingenTabel(leerlingen) {
       <td style="font-weight:600;">${naam}</td>
       <td><span style="font-size:0.75rem;background:rgba(79,163,232,0.12);color:var(--blue);
         padding:0.1rem 0.4rem;border-radius:4px;">${l.klas || '—'}</span></td>
-      <td style="font-size:0.78rem;color:var(--muted);">${l.studie || '—'}</td>
+      <td style="font-size:0.75rem;">
+        ${l.leerniveau ? `<span style="font-size:0.7rem;background:rgba(27,58,107,0.1);color:var(--navy);
+          padding:0.1rem 0.4rem;border-radius:4px;">${l.leerniveau}</span>` : '—'}
+      </td>
+      <td style="font-size:0.78rem;color:var(--muted);">${l.leerjaar || '—'}</td>
       <td style="font-size:0.78rem;color:var(--muted);">${l.lesperiode}</td>
     </tr>`;
   }).join('');
@@ -3350,7 +3375,8 @@ function renderLeerlingenTabel(leerlingen) {
       <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Stamnr.</th>
       <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Naam</th>
       <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Klas</th>
-      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Studie</th>
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Niveau</th>
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Leerjaar</th>
       <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Periode</th>
     </tr></thead>
     <tbody>${rijen}</tbody>
@@ -3387,8 +3413,11 @@ function handleXlsxUpload(input) {
           return '';
         };
         // Leerjaar uit studie (laatste cijfer)
-        const studie   = get('studie');
-        const leerjaar = studie.match(/(\d)$/)?.[1] || '';
+        const studie    = get('studie');
+        const leerjaar  = studie.match(/(\d)$/)?.[1] || '';
+        const niveauMap = { 'AT': 'Atheneum', 'GY': 'Gymnasium', 'HA': 'HAVO' };
+        const niveauCode = studie.match(/W-([A-Z]{2})\d/)?.[1] || '';
+        const leerniveau = niveauMap[niveauCode] || '';
         return {
           stamnummer:    get('stamnummer'),
           roepnaam:      get('roepnaam'),
@@ -3399,6 +3428,7 @@ function handleXlsxUpload(input) {
           leerjaar,
           email:         get('email'),
           telefoon:      get('telefoon', 'tel'),
+          leerniveau,
         };
       }).filter(l => l.roepnaam || l.achternaam);
 
