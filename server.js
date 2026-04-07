@@ -1,27 +1,170 @@
-const express = require('express');
-const cors = require('cors');
+const express  = require('express');
+const cors     = require('cors');
+const bcrypt   = require('bcryptjs');
+const jwt      = require('jsonwebtoken');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const supabase  = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+const anthropic  = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const supabase   = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+const JWT_SECRET = process.env.JWT_SECRET || 'stanislascollege_mol_secret_2025';
+
+// ── JWT middleware ────────────────────────────────────────────
+function verifyToken(req, res, next) {
+  const auth = req.headers['authorization'];
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Niet ingelogd' });
+  }
+  try {
+    req.leraar = jwt.verify(auth.slice(7), JWT_SECRET);
+    next();
+  } catch(e) {
+    res.status(401).json({ error: 'Token ongeldig of verlopen' });
+  }
+}
+
+// Optionele auth — vult req.leraar als token aanwezig, maar blokkeert niet
+function optionalToken(req, res, next) {
+  const auth = req.headers['authorization'];
+  if (auth && auth.startsWith('Bearer ')) {
+    try { req.leraar = jwt.verify(auth.slice(7), JWT_SECRET); } catch(e) {}
+  }
+  next();
+}
 
 app.get('/', (req, res) => res.json({ status: 'ok', app: 'Socratische Toetsapp' }));
 
+// ════════════════════════════════════════════════════════════
+// AUTH — registreren + inloggen
+// ════════════════════════════════════════════════════════════
+app.post('/api/auth/registreer', async (req, res) => {
+  try {
+    const { naam, email, wachtwoord } = req.body;
+    if (!naam || !email || !wachtwoord) return res.status(400).json({ error: 'Vul alle velden in' });
+    if (wachtwoord.length < 6) return res.status(400).json({ error: 'Wachtwoord minimaal 6 tekens' });
+    // Check of e-mail al bestaat
+    const { data: bestaand } = await supabase.from('leraren').select('id').eq('email', email.toLowerCase()).maybeSingle();
+    if (bestaand) return res.status(409).json({ error: 'E-mailadres al in gebruik' });
+    const hash = await bcrypt.hash(wachtwoord, 10);
+    const { data, error } = await supabase.from('leraren').insert([{
+      naam, email: email.toLowerCase(),
+      wachtwoord: hash, aangemaakt_op: Date.now(),
+    }]).select('id, naam, email').single();
+    if (error) return res.status(500).json({ error: error.message });
+    const token = jwt.sign({ id: data.id, naam: data.naam, email: data.email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ ok: true, token, leraar: { id: data.id, naam: data.naam, email: data.email } });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, wachtwoord } = req.body;
+    if (!email || !wachtwoord) return res.status(400).json({ error: 'Vul e-mail en wachtwoord in' });
+    const { data: leraar } = await supabase.from('leraren').select('*').eq('email', email.toLowerCase()).maybeSingle();
+    if (!leraar) return res.status(401).json({ error: 'E-mail of wachtwoord onjuist' });
+    const ok = await bcrypt.compare(wachtwoord, leraar.wachtwoord);
+    if (!ok) return res.status(401).json({ error: 'E-mail of wachtwoord onjuist' });
+    const token = jwt.sign({ id: leraar.id, naam: leraar.naam, email: leraar.email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ ok: true, token, leraar: { id: leraar.id, naam: leraar.naam, email: leraar.email } });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/auth/mij', verifyToken, async (req, res) => {
+  const { data } = await supabase.from('leraren').select('id, naam, email, aangemaakt_op').eq('id', req.leraar.id).single();
+  res.json(data || req.leraar);
+});
+
+// ════════════════════════════════════════════════════════════
+// LEERLINGEN — import + ophalen + verwijderen
+// ════════════════════════════════════════════════════════════
+app.post('/api/leerlingen/import', verifyToken, async (req, res) => {
+  try {
+    const { lesperiode, leerlingen } = req.body;
+    if (!lesperiode || !leerlingen?.length) return res.status(400).json({ error: 'Lesperiode en leerlingen zijn verplicht' });
+    const leraar_id = req.leraar.id;
+    // Verwijder bestaande import voor deze leraar + lesperiode
+    await supabase.from('leerlingen_import').delete()
+      .eq('leraar_id', leraar_id).eq('lesperiode', lesperiode);
+    // Maak records aan
+    const records = leerlingen.map(l => ({
+      id:            `ll_${leraar_id}_${lesperiode}_${l.stamnummer || Math.random().toString(36).slice(2)}`,
+      leraar_id, lesperiode,
+      stamnummer:    l.stamnummer   || null,
+      roepnaam:      l.roepnaam     || l.naam || '',
+      tussenvoegsel: l.tussenvoegsel || null,
+      achternaam:    l.achternaam   || '',
+      klas:          l.klas         || null,
+      studie:        l.studie       || null,
+      leerjaar:      l.leerjaar     || null,
+      email:         l.email        || null,
+      telefoon:      l.telefoon     || null,
+    }));
+    const { error } = await supabase.from('leerlingen_import').insert(records);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true, aantalImported: records.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/leerlingen', verifyToken, async (req, res) => {
+  try {
+    const { lesperiode, klas, leerjaar, studie } = req.query;
+    let q = supabase.from('leerlingen_import').select('*')
+      .eq('leraar_id', req.leraar.id)
+      .order('achternaam');
+    if (lesperiode) q = q.eq('lesperiode', lesperiode);
+    if (klas)       q = q.eq('klas', klas);
+    if (leerjaar)   q = q.eq('leerjaar', leerjaar);
+    if (studie)     q = q.eq('studie', studie);
+    const { data, error } = await q;
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/leerlingen/periodes', verifyToken, async (req, res) => {
+  try {
+    const { data } = await supabase.from('leerlingen_import')
+      .select('lesperiode').eq('leraar_id', req.leraar.id);
+    const uniek = [...new Set((data || []).map(r => r.lesperiode))].sort().reverse();
+    res.json(uniek);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/leerlingen/klassen', verifyToken, async (req, res) => {
+  try {
+    const { lesperiode } = req.query;
+    let q = supabase.from('leerlingen_import').select('klas, leerjaar, studie').eq('leraar_id', req.leraar.id);
+    if (lesperiode) q = q.eq('lesperiode', lesperiode);
+    const { data } = await q;
+    const klassen = [...new Set((data||[]).map(r => r.klas).filter(Boolean))].sort();
+    res.json(klassen);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/leerlingen/periode/:lesperiode', verifyToken, async (req, res) => {
+  try {
+    await supabase.from('leerlingen_import')
+      .delete().eq('leraar_id', req.leraar.id).eq('lesperiode', req.params.lesperiode);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // KLASSEN
-app.get('/api/classes', async (req, res) => {
-  const { data, error } = await supabase.from('classes').select('*').order('name');
+app.get('/api/classes', optionalToken, async (req, res) => {
+  let q = supabase.from('classes').select('*').order('name');
+  if (req.leraar?.id) q = q.eq('leraar_id', req.leraar.id);
+  const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 app.post('/api/classes', async (req, res) => {
   const { id, name, created_at } = req.body;
   if (!id || !name) return res.status(400).json({ error: 'Velden ontbreken' });
-  const { data, error } = await supabase.from('classes').insert([{ id, name, created_at }]).select();
+  const { data, error } = await supabase.from('classes').insert([{ id, name, created_at, leraar_id: req.leraar?.id || null }]).select();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data[0]);
 });
@@ -33,14 +176,15 @@ app.delete('/api/classes/:id', async (req, res) => {
 });
 
 // LESSEN
-app.get('/api/lessons', async (req, res) => {
+app.get('/api/lessons', optionalToken, async (req, res) => {
   let query = supabase.from('lessons').select('*').order('created_at', { ascending: false });
+  if (req.leraar?.id) query = query.eq('leraar_id', req.leraar.id);
   if (req.query.class_id) query = query.eq('class_id', req.query.class_id);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-app.post('/api/lessons', async (req, res) => {
+app.post('/api/lessons', optionalToken, async (req, res) => {
   const { id, name, content, leerdoelen, chapter_val, created_at, class_id,
           toegestane_lesvormen, lesvorm_mode } = req.body;
   if (!id || !name || !content) return res.status(400).json({ error: 'Velden ontbreken' });
@@ -52,6 +196,7 @@ app.post('/api/lessons', async (req, res) => {
     // Fase 2: lesvorminstellingen
     toegestane_lesvormen: toegestane_lesvormen || ['socratisch'],
     lesvorm_mode:         lesvorm_mode || 'locked',
+    leraar_id:            req.leraar?.id || null,
   };
   const { data, error } = await supabase.from('lessons').insert([record]).select();
   if (error) return res.status(500).json({ error: error.message });
@@ -479,7 +624,7 @@ function randCode(n, chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789') {
 }
 
 // ── POST /api/mol/sessie — docent maakt sessie aan ──────────────────────────
-app.post('/api/mol/sessie', async (req, res) => {
+app.post('/api/mol/sessie', optionalToken, async (req, res) => {
   try {
     const { les_id, les_naam, les_content, klas_id, klas_naam, n_rondes, leerlingen, groep_grootte, vragen, groepsindeling, timer_discussie, timer_stem } = req.body;
 
@@ -542,6 +687,7 @@ app.post('/api/mol/sessie', async (req, res) => {
       les_content: les_content || '',
       klas_id:     klas_id  || null,
       klas_naam:   klas_naam || '',
+      leraar_id:   req.leraar?.id || null,
       n_rondes:    n_rondes || 3,
       groep_grootte,
       status:      'setup',
@@ -593,16 +739,16 @@ app.post('/api/mol/sessie', async (req, res) => {
 
 
 // ── GET /api/mol/sessies — docent haalt lijst van alle sessies op ────────────
-app.get('/api/mol/sessies', async (req, res) => {
+app.get('/api/mol/sessies', optionalToken, async (req, res) => {
   try {
     const { docent_token } = req.query;
-    if (docent_token !== process.env.TEACHER_TOKEN && docent_token !== 'leraar123') {
-      return res.status(403).json({ error: 'Niet geautoriseerd' });
-    }
-    const { data, error } = await supabase
-      .from('mol_sessies')
+    const geldig = docent_token === 'leraar123' || docent_token === process.env.TEACHER_TOKEN || !!req.leraar;
+    if (!geldig) return res.status(403).json({ error: 'Niet geautoriseerd' });
+    let q = supabase.from('mol_sessies')
       .select('id, les_naam, status, created_at, sessie_code, docent_code, n_rondes, groep_grootte')
       .order('created_at', { ascending: false });
+    if (req.leraar?.id) q = q.eq('leraar_id', req.leraar.id);
+    const { data, error } = await q;
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
   } catch (e) {

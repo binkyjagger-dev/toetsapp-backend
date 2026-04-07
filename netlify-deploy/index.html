@@ -588,6 +588,7 @@
   .hm-high  { background: rgba(34,197,94,0.22);   color: #86efac; }
 
 </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -638,14 +639,65 @@
     <!-- TEACHER FORM -->
     <div id="teacher-form" style="display:none">
       <div class="form-section">
-        <label>Wachtwoord leraar</label>
-        <input type="password" id="teacher-password" placeholder="••••••••" onkeydown="if(event.key==='Enter') loginTeacher()" />
+        <label>E-mailadres</label>
+        <input type="email" id="teacher-email" placeholder="naam@school.nl"
+          onkeydown="if(event.key==='Enter') loginTeacher()" autocomplete="email" />
+      </div>
+      <div class="form-section">
+        <label>Wachtwoord</label>
+        <input type="password" id="teacher-password" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter') loginTeacher()" autocomplete="current-password" />
       </div>
       <div id="teacher-error" class="error-msg" style="display:none"></div>
-      <button class="btn btn-teacher btn-full" onclick="loginTeacher()">
-        Inloggen als leraar →
+      <button class="btn btn-teacher btn-full" id="login-btn" onclick="loginTeacher()">
+        Inloggen →
       </button>
+      <div style="text-align:center;margin-top:0.85rem;font-size:0.82rem;color:var(--muted);">
+        Nog geen account?
+        <button class="btn btn-ghost btn-sm" style="font-size:0.82rem;" onclick="showScreen('screen-register')">
+          Account aanmaken →
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
+<!-- ═══════════════════════════════════════════════ -->
+<!--  SCREEN: REGISTREREN                            -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="screen-register" class="screen">
+  <div class="landing-inner">
+    <div style="text-align:center;margin-bottom:1.5rem;">
+      <img src="https://www.stanislascollegewestplantsoen.nl/lcms2/RESIZE/w250/bestanden/Stanislas_SCW_lichtgroen_witrgb@2x.png"
+        alt="Stanislascollege" style="height:56px;object-fit:contain;"
+        onerror="this.style.display='none'">
+    </div>
+    <div class="landing-eyebrow">Stanislascollege Westplantsoen</div>
+    <h1 class="landing-title" style="font-size:1.6rem;">Account aanmaken</h1>
+    <p class="landing-desc" style="margin-bottom:1.5rem;">Maak een leraar-account aan om lessen, leerlingen en resultaten te beheren.</p>
+    <div class="form-section">
+      <label>Volledige naam</label>
+      <input type="text" id="reg-naam" placeholder="bijv. M. de Vries" autocomplete="name" />
+    </div>
+    <div class="form-section">
+      <label>E-mailadres</label>
+      <input type="email" id="reg-email" placeholder="naam@school.nl" autocomplete="email" />
+    </div>
+    <div class="form-section">
+      <label>Wachtwoord <span style="font-weight:400;color:var(--muted);">(minimaal 6 tekens)</span></label>
+      <input type="password" id="reg-ww" placeholder="••••••••" autocomplete="new-password" />
+    </div>
+    <div class="form-section">
+      <label>Wachtwoord bevestigen</label>
+      <input type="password" id="reg-ww2" placeholder="••••••••" autocomplete="new-password"
+        onkeydown="if(event.key==='Enter') registreer()" />
+    </div>
+    <div id="register-error" class="error-msg" style="display:none"></div>
+    <button class="btn btn-teacher btn-full" id="reg-btn" onclick="registreer()">Account aanmaken →</button>
+    <div style="text-align:center;margin-top:0.85rem;font-size:0.82rem;color:var(--muted);">
+      Al een account?
+      <button class="btn btn-ghost btn-sm" style="font-size:0.82rem;"
+        onclick="showScreen('screen-landing');selectRole('teacher')">Inloggen →</button>
     </div>
   </div>
 </div>
@@ -928,7 +980,7 @@
   <div class="topbar">
     <div class="topbar-brand" style="display:flex;align-items:center;gap:0.6rem;">
       <img src="https://www.stanislascollegewestplantsoen.nl/lcms2/RESIZE/w250/bestanden/Stanislas_SCW_lichtgroen_witrgb@2x.png" alt="Stanislas" style="height:28px;object-fit:contain;" onerror="this.style.display='none'">
-      Socratische Toetsapp — Leraar
+      Socratische Toetsapp — <span id="topbar-leraar-naam" style="color:var(--accent);"></span>
     </div>
     <div class="topbar-right">
       <button class="btn btn-ghost btn-sm" onclick="openCreateLesson()">+ Nieuwe les</button>
@@ -947,7 +999,73 @@
       <button class="tab-btn active" id="tab-overzicht" onclick="switchTab('overzicht')">Lessen & leerlingen</button>
       <button class="tab-btn" id="tab-lessen" onclick="switchTab('lessen')">Lessen beheren</button>
       <button class="tab-btn" id="tab-klassen" onclick="switchTab('klassen')">Klassen beheren</button>
+      <button class="tab-btn" id="tab-leerlingen" onclick="switchTab('leerlingen')" style="border-color:rgba(79,163,232,0.35);color:var(--blue);">👥 Leerlingen</button>
       <button class="tab-btn" id="tab-analyse" onclick="switchTab('analyse')" style="border-color:rgba(197,160,40,0.35);color:var(--gold);">📊 Analyse</button>
+    </div>
+
+    <!-- TAB: LEERLINGEN -->
+    <div id="tab-content-leerlingen" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;">
+        <div>
+          <div class="page-eyebrow">Leerlingenbeheer</div>
+          <h3 class="page-title" style="font-size:1.3rem;margin:0;">Mijn leerlingen</h3>
+        </div>
+        <button class="btn btn-primary" onclick="document.getElementById('xlsx-upload-input').click()">
+          📥 XLSX importeren
+        </button>
+        <input type="file" id="xlsx-upload-input" accept=".xlsx,.xls" style="display:none"
+          onchange="handleXlsxUpload(this)">
+      </div>
+
+      <!-- Import-preview modal -->
+      <div id="import-preview" style="display:none;" class="card" style="margin-bottom:1rem;">
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.65rem;color:#fff;">📋 Preview import</div>
+        <div id="import-preview-info" style="font-size:0.82rem;color:var(--text2);margin-bottom:0.75rem;"></div>
+        <div class="form-section">
+          <label>Lesperiode <span style="font-weight:400;color:var(--muted);">(bijv. 2025-2026)</span></label>
+          <input type="text" id="import-lesperiode" placeholder="2025-2026"
+            style="max-width:180px;" />
+        </div>
+        <div id="import-error" class="error-msg" style="display:none;"></div>
+        <div style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-top:0.75rem;">
+          <button class="btn btn-primary" id="import-bevestig-btn" onclick="bevestigImport()">
+            ✅ Importeren
+          </button>
+          <button class="btn btn-ghost" onclick="annuleerImport()">Annuleren</button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end;">
+        <div>
+          <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Lesperiode</label>
+          <select id="ll-filter-periode" onchange="laadLeerlingen()" style="min-width:130px;">
+            <option value="">— Alle —</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Klas</label>
+          <select id="ll-filter-klas" onchange="laadLeerlingen()" style="min-width:120px;">
+            <option value="">— Alle klassen —</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Zoeken</label>
+          <input type="text" id="ll-zoek" placeholder="naam..." oninput="filterLeerlingenLokaal()"
+            style="min-width:160px;" />
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="verwijderPeriode()" title="Lesperiode verwijderen"
+          style="color:var(--red);border-color:rgba(232,92,92,0.3);">🗑 Periode verwijderen</button>
+      </div>
+
+      <!-- Leerlingen-tabel -->
+      <div id="ll-tabel-wrap">
+        <div class="empty-state">
+          <div class="empty-icon">👥</div>
+          <p>Importeer een XLSX-bestand om je leerlingen te laden.</p>
+        </div>
+      </div>
+      <div id="ll-count" style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;"></div>
     </div>
 
     <!-- TAB: OVERZICHT -->
@@ -1248,8 +1366,10 @@
 // ═══════════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════════
-const TEACHER_PASSWORD = 'leraar123';
-let currentRole = 'student';
+// ── Auth state ───────────────────────────────────────────────
+let leraarToken  = localStorage.getItem('leraar_token') || null;
+let leraarProfiel = null; // { id, naam, email }
+let currentRole  = 'student';
 let studentName = '';
 let selectedClass = null; // { id, name }
 let selectedLesson = null;
@@ -1278,11 +1398,21 @@ const API_BASE = window.location.hostname === 'localhost'
   : 'https://toetsapp-backend-production.up.railway.app'; // ← wordt in stap 6 ingevuld
 
 async function apiFetch(path, options = {}) {
-  const res = await fetch(API_BASE + path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options
-  });
-  if (!res.ok) throw new Error(await res.text());
+  const headers = { 'Content-Type': 'application/json' };
+  if (leraarToken) headers['Authorization'] = 'Bearer ' + leraarToken;
+  const res = await fetch(API_BASE + path, { headers, ...options });
+  if (res.status === 401) {
+    // Token verlopen — uitloggen
+    leraarToken = null; localStorage.removeItem('leraar_token');
+    showScreen('screen-landing'); selectRole('teacher');
+    throw new Error('Sessie verlopen, log opnieuw in');
+  }
+  if (!res.ok) {
+    let errMsg;
+    try { const j = await res.json(); errMsg = j.error || res.statusText; }
+    catch(e) { errMsg = await res.text().catch(() => res.statusText); }
+    throw new Error(errMsg);
+  }
   return res.json();
 }
 
@@ -1320,23 +1450,90 @@ async function startStudentFlow() {
   await loadLessonsForStudent();
 }
 
-function loginTeacher() {
-  const pw = document.getElementById('teacher-password').value;
-  const err = document.getElementById('teacher-error');
-  if (pw !== TEACHER_PASSWORD) { err.textContent = 'Onjuist wachtwoord. Probeer het opnieuw.'; err.style.display = 'block'; return; }
+async function loginTeacher() {
+  const email = document.getElementById('teacher-email').value.trim();
+  const pw    = document.getElementById('teacher-password').value;
+  const err   = document.getElementById('teacher-error');
+  const btn   = document.getElementById('login-btn');
+  if (!email || !pw) { err.textContent = 'Vul e-mail en wachtwoord in.'; err.style.display='block'; return; }
   err.style.display = 'none';
-  loadTeacherDashboard();
-  showScreen('screen-teacher');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Inloggen...';
+  try {
+    const data = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, wachtwoord: pw }),
+    });
+    leraarToken   = data.token;
+    leraarProfiel = data.leraar;
+    localStorage.setItem('leraar_token', leraarToken);
+    document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
+    loadTeacherDashboard();
+    showScreen('screen-teacher');
+  } catch(e) {
+    err.textContent = e.message || 'Inloggen mislukt.';
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.innerHTML = 'Inloggen →';
+  }
 }
 
-function logoutTeacher() { showScreen('screen-landing'); }
+async function registreer() {
+  const naam  = document.getElementById('reg-naam').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const ww    = document.getElementById('reg-ww').value;
+  const ww2   = document.getElementById('reg-ww2').value;
+  const err   = document.getElementById('register-error');
+  const btn   = document.getElementById('reg-btn');
+  if (!naam || !email || !ww) { err.textContent = 'Vul alle velden in.'; err.style.display='block'; return; }
+  if (ww !== ww2) { err.textContent = 'Wachtwoorden komen niet overeen.'; err.style.display='block'; return; }
+  err.style.display = 'none';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Account aanmaken...';
+  try {
+    const data = await apiFetch('/api/auth/registreer', {
+      method: 'POST',
+      body: JSON.stringify({ naam, email, wachtwoord: ww }),
+    });
+    leraarToken   = data.token;
+    leraarProfiel = data.leraar;
+    localStorage.setItem('leraar_token', leraarToken);
+    document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
+    loadTeacherDashboard();
+    showScreen('screen-teacher');
+  } catch(e) {
+    err.textContent = e.message || 'Registratie mislukt.';
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.innerHTML = 'Account aanmaken →';
+  }
+}
+
+function logoutTeacher() {
+  leraarToken = null; leraarProfiel = null;
+  localStorage.removeItem('leraar_token');
+  showScreen('screen-landing');
+}
 function goHome() { showScreen('screen-landing'); }
 
 function openMolApp() {
-  // Geef het wachtwoord mee als token zodat mol-lesvorm de leraar herkent
-  const token = encodeURIComponent(TEACHER_PASSWORD);
-  window.open('mol-lesvorm.html?leraar=' + token, '_blank');
+  if (!leraarToken) { alert('Log eerst in als leraar.'); return; }
+  window.open('mol-lesvorm.html?leraar=' + encodeURIComponent(leraarToken), '_blank');
 }
+
+// Auto-inloggen als token in localStorage staat
+window.addEventListener('DOMContentLoaded', async () => {
+  if (leraarToken) {
+    try {
+      leraarProfiel = await apiFetch('/api/auth/mij');
+      document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
+      loadTeacherDashboard();
+      showScreen('screen-teacher');
+    } catch(e) {
+      leraarToken = null; localStorage.removeItem('leraar_token');
+    }
+  }
+  // Laad klassen voor leerling-dropdown altijd
+  loadClasses();
+});
 
 // ═══════════════════════════════════════════════════════════
 //  LESSONS
@@ -2605,7 +2802,8 @@ function showStudentDetail(idx) {
 //  TABS
 // ═══════════════════════════════════════════════════════════
 function switchTab(tab) {
-  ['overzicht','lessen','klassen','analyse'].forEach(t => {
+  if (tab === 'leerlingen') { laadLeerlingenTab(); }
+  ['overzicht','lessen','klassen','leerlingen','analyse'].forEach(t => {
     document.getElementById('tab-content-' + t).style.display = t === tab ? 'block' : 'none';
     document.getElementById('tab-' + t).classList.toggle('active', t === tab);
   });
@@ -3035,6 +3233,211 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
   } catch(e) { console.error('Klassen laden mislukt:', e); }
   selectRole('student');
 })();
+
+// ════════════════════════════════════════════════════════════
+// LEERLINGEN TAB
+// ════════════════════════════════════════════════════════════
+let xlsxImportData = null;  // { leerlingen: [], periodeVoorstel: '' }
+let alleLeerlingen = [];     // huidige view
+
+async function laadLeerlingenTab() {
+  await Promise.all([laadPeriodes(), laadKlassenFilter()]);
+  laadLeerlingen();
+}
+
+async function laadPeriodes() {
+  try {
+    const periodes = await apiFetch('/api/leerlingen/periodes');
+    const sel = document.getElementById('ll-filter-periode');
+    const huidig = sel.value;
+    sel.innerHTML = '<option value="">— Alle periodes —</option>'
+      + periodes.map(p => `<option value="${p}" ${p === huidig ? 'selected' : ''}>${p}</option>`).join('');
+    // Stel default in op meest recent
+    if (!huidig && periodes.length > 0) sel.value = periodes[0];
+    // Update ook import-veld
+    const impInp = document.getElementById('import-lesperiode');
+    if (impInp && !impInp.value && periodes.length > 0) impInp.value = periodes[0];
+  } catch(e) {}
+}
+
+async function laadKlassenFilter() {
+  try {
+    const periode = document.getElementById('ll-filter-periode')?.value || '';
+    const klassen = await apiFetch('/api/leerlingen/klassen' + (periode ? '?lesperiode='+periode : ''));
+    const sel = document.getElementById('ll-filter-klas');
+    const huidig = sel.value;
+    sel.innerHTML = '<option value="">— Alle klassen —</option>'
+      + klassen.map(k => `<option value="${k}" ${k === huidig ? 'selected' : ''}>${k}</option>`).join('');
+  } catch(e) {}
+}
+
+async function laadLeerlingen() {
+  await laadKlassenFilter();
+  const periode = document.getElementById('ll-filter-periode')?.value || '';
+  const klas    = document.getElementById('ll-filter-klas')?.value || '';
+  const qs = new URLSearchParams();
+  if (periode) qs.set('lesperiode', periode);
+  if (klas)    qs.set('klas', klas);
+  try {
+    alleLeerlingen = await apiFetch('/api/leerlingen' + (qs.toString() ? '?' + qs : ''));
+    renderLeerlingenTabel(alleLeerlingen);
+  } catch(e) {
+    document.getElementById('ll-tabel-wrap').innerHTML =
+      '<p style="color:var(--red-l);font-size:0.82rem;">Laden mislukt: ' + e.message + '</p>';
+  }
+}
+
+function filterLeerlingenLokaal() {
+  const zoek = document.getElementById('ll-zoek').value.toLowerCase();
+  const gefilterd = zoek
+    ? alleLeerlingen.filter(l =>
+        (l.roepnaam + ' ' + (l.tussenvoegsel||'') + ' ' + l.achternaam).toLowerCase().includes(zoek)
+        || (l.stamnummer||'').includes(zoek))
+    : alleLeerlingen;
+  renderLeerlingenTabel(gefilterd);
+}
+
+function renderLeerlingenTabel(leerlingen) {
+  const wrap = document.getElementById('ll-tabel-wrap');
+  const count = document.getElementById('ll-count');
+  if (count) count.textContent = leerlingen.length + ' leerlingen';
+  if (!leerlingen.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><p>Geen leerlingen gevonden.</p></div>';
+    return;
+  }
+  const rijen = leerlingen.map(l => {
+    const naam = [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ');
+    return `<tr>
+      <td style="font-size:0.78rem;color:var(--muted);">${l.stamnummer || '—'}</td>
+      <td style="font-weight:600;">${naam}</td>
+      <td><span style="font-size:0.75rem;background:rgba(79,163,232,0.12);color:var(--blue);
+        padding:0.1rem 0.4rem;border-radius:4px;">${l.klas || '—'}</span></td>
+      <td style="font-size:0.78rem;color:var(--muted);">${l.studie || '—'}</td>
+      <td style="font-size:0.78rem;color:var(--muted);">${l.lesperiode}</td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:0.83rem;">
+    <thead><tr style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);">
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Stamnr.</th>
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Naam</th>
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Klas</th>
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Studie</th>
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Periode</th>
+    </tr></thead>
+    <tbody>${rijen}</tbody>
+  </table>`;
+}
+
+// ── XLSX Upload ───────────────────────────────────────────────
+function handleXlsxUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb   = XLSX.read(data, { type: 'array' });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const raw  = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Zoek header-rij met 'Stamnummer' of 'Roepnaam'
+      let headerIdx = raw.findIndex(row =>
+        row.some(c => String(c).toLowerCase().includes('stamnummer') ||
+                      String(c).toLowerCase().includes('roepnaam')));
+      if (headerIdx === -1) headerIdx = 0;
+
+      const headers = raw[headerIdx].map(h => String(h).trim().toLowerCase());
+      const rijen   = raw.slice(headerIdx + 1).filter(r => r.some(c => c));
+
+      const leerlingen = rijen.map(r => {
+        const get = (...keys) => {
+          for (const k of keys) {
+            const i = headers.findIndex(h => h.includes(k));
+            if (i !== -1 && r[i]) return String(r[i]).trim();
+          }
+          return '';
+        };
+        // Leerjaar uit studie (laatste cijfer)
+        const studie   = get('studie');
+        const leerjaar = studie.match(/(\d)$/)?.[1] || '';
+        return {
+          stamnummer:    get('stamnummer'),
+          roepnaam:      get('roepnaam'),
+          tussenvoegsel: get('tussenvoegsel', 'tussen'),
+          achternaam:    get('achternaam'),
+          klas:          get('klas'),
+          studie,
+          leerjaar,
+          email:         get('email'),
+          telefoon:      get('telefoon', 'tel'),
+        };
+      }).filter(l => l.roepnaam || l.achternaam);
+
+      // Detecteer lesperiode
+      const periodeRij = raw.find(r => r.some(c => String(c).match(/\d{4}-\d{4}/)));
+      const periodeVoorstel = periodeRij
+        ? periodeRij.find(c => String(c).match(/\d{4}-\d{4}/))
+        : new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
+
+      xlsxImportData = { leerlingen, periodeVoorstel };
+
+      // Toon preview
+      const prev = document.getElementById('import-preview');
+      const info = document.getElementById('import-preview-info');
+      const perInp = document.getElementById('import-lesperiode');
+      info.innerHTML = `<strong>${leerlingen.length}</strong> leerlingen gevonden · ` +
+        `<strong>${[...new Set(leerlingen.map(l => l.klas).filter(Boolean))].length}</strong> klassen`;
+      if (perInp && periodeVoorstel) perInp.value = periodeVoorstel;
+      prev.style.display = 'block';
+    } catch(ex) {
+      alert('Fout bij lezen bestand: ' + ex.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value = '';
+}
+
+async function bevestigImport() {
+  const periode = document.getElementById('import-lesperiode').value.trim();
+  const err     = document.getElementById('import-error');
+  const btn     = document.getElementById('import-bevestig-btn');
+  if (!periode) { err.textContent = 'Vul een lesperiode in.'; err.style.display='block'; return; }
+  if (!xlsxImportData?.leerlingen?.length) return;
+  err.style.display = 'none';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Importeren...';
+  try {
+    const result = await apiFetch('/api/leerlingen/import', {
+      method: 'POST',
+      body: JSON.stringify({ lesperiode: periode, leerlingen: xlsxImportData.leerlingen }),
+    });
+    xlsxImportData = null;
+    document.getElementById('import-preview').style.display = 'none';
+    alert(result.aantalImported + ' leerlingen geïmporteerd voor ' + periode + '!');
+    await laadLeerlingenTab();
+  } catch(e) {
+    err.textContent = 'Importeren mislukt: ' + e.message;
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.innerHTML = '✅ Importeren';
+  }
+}
+
+function annuleerImport() {
+  xlsxImportData = null;
+  document.getElementById('import-preview').style.display = 'none';
+}
+
+async function verwijderPeriode() {
+  const periode = document.getElementById('ll-filter-periode').value;
+  if (!periode) { alert('Kies eerst een lesperiode.'); return; }
+  if (!confirm('Alle leerlingen van ' + periode + ' verwijderen?')) return;
+  try {
+    await apiFetch('/api/leerlingen/periode/' + encodeURIComponent(periode), { method: 'DELETE' });
+    alert('Lesperiode ' + periode + ' verwijderd.');
+    await laadLeerlingenTab();
+  } catch(e) { alert('Verwijderen mislukt: ' + e.message); }
+}
+
 </script>
 </body>
 </html>
