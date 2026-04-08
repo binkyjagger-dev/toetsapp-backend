@@ -180,7 +180,12 @@ app.delete('/api/leerlingen/periode/:lesperiode', verifyToken, async (req, res) 
 // KLASSEN
 app.get('/api/classes', optionalToken, async (req, res) => {
   let q = supabase.from('classes').select('*').order('name');
-  if (req.leraar?.id) q = q.eq('leraar_id', req.leraar.id);
+  if (req.leraar?.id) {
+    // Haal klassen op van deze leraar OF klassen zonder leraar_id (legacy)
+    q = supabase.from('classes').select('*')
+      .or('leraar_id.eq.' + req.leraar.id + ',leraar_id.is.null')
+      .order('name');
+  }
   const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);

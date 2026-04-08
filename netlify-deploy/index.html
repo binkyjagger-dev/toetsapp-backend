@@ -2852,8 +2852,11 @@ function setMainActions(view, klasId) {
 function openKlas(klasId) {
   huidigView = 'klas-detail';
   huidigKlasId = klasId;
+  // Reset leerlingen-kiezer state
+  klasLlKiezerGeselecteerd = new Set();
+  klasLlKiezerAlle = [];
   const klas = classesCache.find(c => c.id === klasId);
-  if (!klas) return;
+  if (!klas) { console.warn('Klas niet gevonden in cache:', klasId); navNaar('klassen'); return; }
   // Sidebar
   document.getElementById('nav-klassen')?.classList.add('active');
   // Klas-header invullen
@@ -3361,6 +3364,17 @@ function renderClassenGrid(klassen) {
   const grid = document.getElementById('classes-grid-new');
   if (!grid) return;
   const niveauMap = { 'atheneum': 'niveau-atheneum', 'gymnasium': 'niveau-gymnasium', 'havo': 'niveau-havo' };
+  if (!klassen || klassen.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+      <div class="empty-icon">🏫</div>
+      <p>Nog geen klassen aangemaakt.</p>
+    </div>
+    <div class="class-card class-card-add" onclick="openCreateClass()">
+      <div style="font-size:22px;margin-bottom:4px;color:var(--navy);">+</div>
+      <div style="font-size:12px;font-weight:500;">Nieuwe klas</div>
+    </div>`;
+    return;
+  }
   let html = klassen.map(k => {
     const niveauLower = (k.name?.toLowerCase().includes('gy') ? 'gymnasium' :
                          k.name?.toLowerCase().includes('h')  ? 'havo' : 'atheneum');
@@ -4161,10 +4175,15 @@ async function createClass() {
     populateStudentClassDropdown();
     renderClassenGrid(classesCache);
     // Ga direct naar de klas-detailpagina, tab leerlingen
-    const nieuweKlas = classesCache.find(c => c.name === name);
+    // Zoek op naam (case-insensitive) of gebruik de nieuwste klas
+    const nieuweKlas = classesCache.find(c => c.name === name)
+      || classesCache.sort((a,b) => (b.created_at||0)-(a.created_at||0))[0];
     if (nieuweKlas) {
-      openKlas(nieuweKlas.id);
-      switchKlasTab('leerlingen');
+      navNaar('klassen'); // zorg dat het view actief is
+      setTimeout(() => {
+        openKlas(nieuweKlas.id);
+        setTimeout(() => switchKlasTab('leerlingen'), 50);
+      }, 100);
     } else {
       navNaar('klassen');
     }
