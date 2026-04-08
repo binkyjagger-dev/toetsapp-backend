@@ -1256,12 +1256,12 @@ function getLesCode(lesId) {
     </div>
   </div>
   <div class="sidebar-nav">
-    <button class="nav-item active" id="nav-klassen" onclick="navNaar('klassen')">
-      <span class="nav-icon">🏠</span> Mijn klassen
-    </button>
     <button class="nav-item" id="nav-leerlingen" onclick="navNaar('leerlingen')">
       <span class="nav-icon">👥</span> Leerlingen
       <span class="nav-badge" id="nav-ll-badge"></span>
+    </button>
+    <button class="nav-item" id="nav-klassen" onclick="navNaar('klassen')">
+      <span class="nav-icon">🏫</span> Klassen
     </button>
     <button class="nav-item" id="nav-lessen" onclick="navNaar('lessen')">
       <span class="nav-icon">📚</span> Lessen
@@ -1766,7 +1766,7 @@ async function loginTeacher() {
     if(document.getElementById('topbar-leraar-naam')) document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
     showScreen('screen-teacher');
     await loadTeacherDashboard();
-    navNaar('klassen');
+    navNaar('leerlingen');
   } catch(e) {
     err.textContent = e.message || 'Inloggen mislukt.';
     err.style.display = 'block';
@@ -1794,7 +1794,7 @@ async function registreer() {
     leraarToken = data.token; leraarProfiel = data.leraar;
     localStorage.setItem('leraar_token', leraarToken);
     if(document.getElementById('topbar-leraar-naam')) document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
-    showScreen('screen-teacher'); await loadTeacherDashboard(); navNaar('klassen');
+    showScreen('screen-teacher'); await loadTeacherDashboard(); navNaar('leerlingen');
   } catch(e) {
     err.textContent = e.message || 'Registratie mislukt.';
     err.style.display = 'block';
@@ -2837,10 +2837,11 @@ function setMainActions(view, klasId) {
   const el = document.getElementById('main-actions');
   if (!el) return;
   if (view === 'klassen') {
-    el.innerHTML = `<button class="btn btn-ghost-navy btn-sm" onclick="openCreateClass()">+ Nieuwe klas</button>
-      <button class="btn btn-primary btn-sm" onclick="openCreateLesson()">+ Nieuwe les</button>`;
+    el.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openCreateClass()">+ Nieuwe klas</button>`;
   } else if (view === 'leerlingen') {
     el.innerHTML = `<button class="btn btn-primary btn-sm" onclick="document.getElementById('xlsx-upload-input').click()">📥 XLSX importeren</button>`;
+  } else if (view === 'lessen') {
+    el.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openCreateLesson()">+ Nieuwe les</button>`;
   } else if (view === 'klas-detail') {
     el.innerHTML = '';
   } else {
@@ -3846,10 +3847,103 @@ function renderHiatenKaart(data, f) {
 // ═══════════════════════════════════════════════════════════
 //  KLASBEHEER
 // ═══════════════════════════════════════════════════════════
-function openCreateClass() {
+let modalLlGeselecteerd = new Set();
+let modalLlAlle = [];
+
+async function openCreateClass() {
   document.getElementById('new-class-name').value = '';
   document.getElementById('create-class-error').style.display = 'none';
+  modalLlGeselecteerd = new Set();
+  modalLlAlle = [];
   openModal('modal-create-class');
+  // Laad periodes
+  try {
+    const periodes = await apiFetch('/api/leerlingen/periodes');
+    const sel = document.getElementById('modal-ll-periode');
+    sel.innerHTML = '<option value="">— Alle periodes —</option>'
+      + periodes.map(p => `<option value="${p}">${p}</option>`).join('');
+    if (periodes.length === 1) sel.value = periodes[0];
+    if (sel.value) laadModalLeerlingen();
+  } catch(e) {}
+}
+
+async function laadModalLeerlingen() {
+  const periode  = document.getElementById('modal-ll-periode')?.value  || '';
+  const niveau   = document.getElementById('modal-ll-niveau')?.value   || '';
+  const leerjaar = document.getElementById('modal-ll-leerjaar')?.value || '';
+  if (!periode && !niveau && !leerjaar) {
+    document.getElementById('modal-ll-lijst').innerHTML =
+      '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Stel minimaal één filter in</div>';
+    return;
+  }
+  const qs = new URLSearchParams();
+  if (periode)  qs.set('lesperiode', periode);
+  if (niveau)   qs.set('leerniveau', niveau);
+  if (leerjaar) qs.set('leerjaar', leerjaar);
+  try {
+    modalLlAlle = await apiFetch('/api/leerlingen?' + qs);
+    renderModalLlLijst();
+  } catch(e) {
+    document.getElementById('modal-ll-lijst').innerHTML =
+      `<div style="padding:1rem;text-align:center;color:var(--red);font-size:0.82rem;">${e.message}</div>`;
+  }
+}
+
+function filterModalLeerlingen() {
+  renderModalLlLijst();
+}
+
+function renderModalLlLijst() {
+  const zoek = document.getElementById('modal-ll-zoek')?.value.toLowerCase() || '';
+  const gefilterd = zoek
+    ? modalLlAlle.filter(l => (l.roepnaam + ' ' + (l.tussenvoegsel||'') + ' ' + l.achternaam).toLowerCase().includes(zoek))
+    : modalLlAlle;
+  const lijst = document.getElementById('modal-ll-lijst');
+  if (!gefilterd.length) {
+    lijst.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Geen leerlingen gevonden</div>';
+    updateModalLlTelling();
+    return;
+  }
+  lijst.innerHTML = gefilterd.map(l => {
+    const naam = [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ');
+    const sel  = modalLlGeselecteerd.has(l.id);
+    return `<div class="ll-picker-rij ${sel ? 'geselecteerd' : ''}" onclick="toggleModalLl('${l.id}')" data-id="${l.id}">
+      <div class="ll-picker-check">${sel ? '✓' : ''}</div>
+      <span class="ll-picker-naam">${naam}</span>
+      <span class="ll-picker-klas" style="font-size:0.7rem;color:var(--muted);">${l.klas || ''}</span>
+    </div>`;
+  }).join('');
+  updateModalLlTelling();
+}
+
+function toggleModalLl(id) {
+  if (modalLlGeselecteerd.has(id)) modalLlGeselecteerd.delete(id);
+  else modalLlGeselecteerd.add(id);
+  const el = document.querySelector(`[data-id="${id}"]`);
+  if (el) {
+    const sel = modalLlGeselecteerd.has(id);
+    el.classList.toggle('geselecteerd', sel);
+    const check = el.querySelector('.ll-picker-check');
+    if (check) check.textContent = sel ? '✓' : '';
+  }
+  updateModalLlTelling();
+}
+
+function selecteerAlleModalLl() {
+  modalLlAlle.forEach(l => modalLlGeselecteerd.add(l.id));
+  renderModalLlLijst();
+}
+
+function deselecteerAlleModalLl() {
+  modalLlGeselecteerd.clear();
+  renderModalLlLijst();
+}
+
+function updateModalLlTelling() {
+  const el = document.getElementById('modal-ll-telling');
+  if (el) el.textContent = modalLlGeselecteerd.size
+    ? modalLlGeselecteerd.size + ' leerlingen geselecteerd'
+    : '';
 }
 
 async function createClass() {
@@ -3858,22 +3952,31 @@ async function createClass() {
   const btn  = document.getElementById('create-class-btn');
   if (!name) { err.textContent = 'Vul een klasnaam in.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
-  btn.disabled = true; btn.textContent = 'Aanmaken...';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Aanmaken...';
   try {
     await apiFetch('/api/classes', {
       method: 'POST',
       body: JSON.stringify({ id: 'class_' + Date.now(), name, created_at: Date.now() })
     });
-    btn.disabled = false; btn.textContent = 'Klas aanmaken';
+    // Als leerlingen geselecteerd: update hun klas-veld in leerlingen_import
+    if (modalLlGeselecteerd.size > 0) {
+      await apiFetch('/api/leerlingen/koppel-klas', {
+        method: 'POST',
+        body: JSON.stringify({ leerling_ids: [...modalLlGeselecteerd], klas_naam: name }),
+      }).catch(() => {}); // stil falen als endpoint nog niet bestaat
+    }
+    const aantalLl = modalLlGeselecteerd.size;
     closeModal('modal-create-class');
-    showToast('✓ Klas "' + name + '" aangemaakt!');
+    showToast('✓ Klas "' + name + '" aangemaakt!' + (aantalLl ? ' · ' + aantalLl + ' leerlingen gekoppeld' : ''));
     classesCache = await getClasses();
     populateStudentClassDropdown();
     loadClassesTab();
-    loadTeacherDashboard();
+    await loadTeacherDashboard();
+    renderClassenGrid(classesCache);
   } catch(e) {
     err.textContent = 'Opslaan mislukt: ' + e.message; err.style.display = 'block';
-    btn.disabled = false; btn.textContent = 'Klas aanmaken';
+  } finally {
+    btn.disabled = false; btn.innerHTML = 'Klas aanmaken';
   }
 }
 

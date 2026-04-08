@@ -153,6 +153,22 @@ app.get('/api/leerlingen/klassen', verifyToken, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// ── POST /api/leerlingen/koppel-klas — koppel leerlingen aan klasnaam ─────────
+app.post('/api/leerlingen/koppel-klas', verifyToken, async (req, res) => {
+  try {
+    const { leerling_ids, klas_naam } = req.body;
+    if (!leerling_ids?.length || !klas_naam) return res.status(400).json({ error: 'leerling_ids en klas_naam verplicht' });
+    // Update klas-veld van alle geselecteerde leerlingen
+    const { error } = await supabase.from('leerlingen_import')
+      .update({ klas: klas_naam })
+      .in('id', leerling_ids)
+      .eq('leraar_id', req.leraar.id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true, bijgewerkt: leerling_ids.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.delete('/api/leerlingen/periode/:lesperiode', verifyToken, async (req, res) => {
   try {
     await supabase.from('leerlingen_import')
