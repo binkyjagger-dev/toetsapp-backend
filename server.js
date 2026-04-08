@@ -184,30 +184,43 @@ app.delete('/api/leerlingen/periode/:lesperiode', verifyToken, async (req, res) 
 
 // KLASSEN
 app.get('/api/classes', optionalToken, async (req, res) => {
-  let q = supabase.from('classes').select('*').order('name');
-  if (req.leraar?.id) {
-    // Haal klassen op van deze leraar OF klassen zonder leraar_id (legacy)
-    q = supabase.from('classes').select('*')
-      .or('leraar_id.eq.' + req.leraar.id + ',leraar_id.is.null')
-      .order('name');
-  }
-  const { data, error } = await q;
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  try {
+    // Probeer met leraar_id filter
+    if (req.leraar?.id) {
+      const { data, error } = await supabase.from('classes').select('*')
+        .or('leraar_id.eq.' + req.leraar.id + ',leraar_id.is.null')
+        .order('name');
+      if (!error) return res.json(data || []);
+      // Als de kolom niet bestaat: val terug op alles ophalen
+      console.warn('leraar_id filter mislukt (kolom bestaat mogelijk niet):', error.message);
+    }
+    // Fallback: alle klassen (of filter op naam als dat niet werkt)
+    const { data, error } = await supabase.from('classes').select('*').order('name');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/api/classes', optionalToken, async (req, res) => {
   try {
     const { id, name, niveau, leerjaar, created_at } = req.body;
     if (!id || !name) return res.status(400).json({ error: 'Velden ontbreken' });
-    const { data, error } = await supabase.from('classes').insert([{
-      id, name,
-      niveau:   niveau   || null,
-      leerjaar: leerjaar || null,
-      created_at,
-      leraar_id: req.leraar?.id || null
-    }]).select();
+    // Probeer met alle kolommen
+    let insertData = { id, name, created_at };
+    if (niveau)   insertData.niveau   = niveau;
+    if (leerjaar) insertData.leerjaar = leerjaar;
+    if (req.leraar?.id) insertData.leraar_id = req.leraar.id;
+
+    let { data, error } = await supabase.from('classes').insert([insertData]).select();
+
+    // Als kolommen ontbreken: probeer zonder optionele kolommen
+    if (error && error.message.includes('column')) {
+      console.warn('Insert met extra kolommen mislukt, probeer basis insert:', error.message);
+      const basis = await supabase.from('classes').insert([{ id, name, created_at }]).select();
+      data  = basis.data;
+      error = basis.error;
+    }
     if (error) return res.status(500).json({ error: error.message });
-    res.json(data[0]);
+    res.json(data[0] || { id, name });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 

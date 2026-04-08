@@ -4392,14 +4392,28 @@ async function _slaKlasOp(metLeerlingen) {
     const actie = editId ? 'bijgewerkt' : 'aangemaakt';
     showToast('✓ Klas "' + name + '" ' + actie + (llIds.length ? ' · ' + llIds.length + ' leerlingen gekoppeld' : ''));
 
-    // Refresh en navigeer
-    classesCache = await getClasses();
+    // Voeg klas direct toe aan cache als fallback (zodat grid altijd werkt)
+    if (!editId) {
+      const nieuweKlasObj = { id: klasId, name, niveau: niveau||null, leerjaar: leerjaar||null, created_at: Date.now() };
+      if (!classesCache.find(c => c.id === klasId)) classesCache = [...classesCache, nieuweKlasObj];
+    } else {
+      classesCache = classesCache.map(c => c.id === editId ? { ...c, name, niveau: niveau||null, leerjaar: leerjaar||null } : c);
+    }
+
+    // Refresh van server (als dat lukt; als niet, werkt de cache-fallback)
+    try {
+      const verse = await getClasses();
+      if (verse?.length) classesCache = verse;
+    } catch(fetchErr) {
+      console.warn('getClasses na opslaan mislukt, gebruik cache:', fetchErr.message);
+    }
+
     populateStudentClassDropdown();
-    await renderClassenGrid(classesCache);
     navNaar('klassen');
 
   } catch(e) {
-    err.textContent = 'Opslaan mislukt: ' + e.message; err.style.display = 'block';
+    // Sla op mislukt — toon fout in stap 1
+    if (err) { err.textContent = 'Opslaan mislukt: ' + e.message; err.style.display = 'block'; }
     zetKlasModalStap(1);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = metLeerlingen ? 'Klas opslaan' : 'Klas aanmaken'; }
