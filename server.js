@@ -163,12 +163,12 @@ app.get('/api/leerlingen/klassen', verifyToken, async (req, res) => {
 app.post('/api/leerlingen/koppel-klas', verifyToken, async (req, res) => {
   try {
     const { leerling_ids, klas_naam } = req.body;
-    if (!leerling_ids?.length || !klas_naam) return res.status(400).json({ error: 'leerling_ids en klas_naam verplicht' });
+    if (!leerling_ids?.length) return res.status(400).json({ error: 'leerling_ids verplicht' });
     // Update klas-veld van alle geselecteerde leerlingen
+    // Update klas-veld — filter NIET op leraar_id want leerlingen hebben dat niet altijd
     const { error } = await supabase.from('leerlingen_import')
       .update({ klas: klas_naam })
-      .in('id', leerling_ids)
-      .eq('leraar_id', req.leraar.id);
+      .in('id', leerling_ids);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ ok: true, bijgewerkt: leerling_ids.length });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -195,24 +195,34 @@ app.get('/api/classes', optionalToken, async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-app.post('/api/classes', async (req, res) => {
-  const { id, name, created_at } = req.body;
-  if (!id || !name) return res.status(400).json({ error: 'Velden ontbreken' });
-  const { data, error } = await supabase.from('classes').insert([{ id, name, niveau: niveau||null, leerjaar: leerjaar||null, created_at, leraar_id: req.leraar?.id || null }]).select();
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data[0]);
+app.post('/api/classes', optionalToken, async (req, res) => {
+  try {
+    const { id, name, niveau, leerjaar, created_at } = req.body;
+    if (!id || !name) return res.status(400).json({ error: 'Velden ontbreken' });
+    const { data, error } = await supabase.from('classes').insert([{
+      id, name,
+      niveau:   niveau   || null,
+      leerjaar: leerjaar || null,
+      created_at,
+      leraar_id: req.leraar?.id || null
+    }]).select();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data[0]);
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // ── PATCH /api/classes/:id — klas bewerken ───────────────────
-app.patch('/api/classes/:id', verifyToken, async (req, res) => {
+app.patch('/api/classes/:id', optionalToken, async (req, res) => {
   try {
     const { name, niveau, leerjaar } = req.body;
     if (!name) return res.status(400).json({ error: 'naam verplicht' });
     const update = { name };
     if (niveau   !== undefined) update.niveau   = niveau;
     if (leerjaar !== undefined) update.leerjaar = leerjaar;
-    const { data, error } = await supabase.from('classes')
-      .update(update).eq('id', req.params.id).eq('leraar_id', req.leraar.id).select();
+    // Update — filter op leraar_id als beschikbaar, anders update altijd
+    let q = supabase.from('classes').update(update).eq('id', req.params.id);
+    if (req.leraar?.id) q = q.eq('leraar_id', req.leraar.id);
+    const { data, error } = await q.select();
     if (error) return res.status(500).json({ error: error.message });
     res.json(data?.[0] || {});
   } catch(e) { res.status(500).json({ error: e.message }); }
