@@ -805,6 +805,68 @@
     .klas-tabs { overflow-x: auto; }
   }
 
+
+  /* ── Pill multi-select filter ──────────────────────────── */
+  .pill-filter-groep { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .pill-filter {
+    font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 99px;
+    border: 1.5px solid var(--border); background: #fff; color: var(--muted);
+    cursor: pointer; transition: all 0.12s; user-select: none; white-space: nowrap;
+  }
+  .pill-filter:hover { border-color: var(--navy); color: var(--navy); }
+  .pill-filter.actief { background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 600; }
+
+  /* ── Klaskaart knoppen ─────────────────────────────────── */
+  .class-card-acties {
+    display: flex; gap: 6px; margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .class-card-acties button {
+    flex: 1; font-size: 11px; font-weight: 500; padding: 5px 8px; border-radius: 6px;
+    border: 1px solid var(--border); background: transparent; cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.12s; color: var(--muted);
+  }
+  .class-card-acties .btn-open { color: var(--navy); border-color: rgba(27,58,107,0.25); }
+  .class-card-acties .btn-open:hover { background: var(--navy-glow); }
+  .class-card-acties .btn-edit:hover { background: var(--gold-glow); border-color: var(--gold); color: #8a6200; }
+  .class-card-acties .btn-del:hover { background: rgba(192,57,43,0.08); border-color: rgba(192,57,43,0.3); color: var(--red); }
+
+  /* ── Modal stappen ─────────────────────────────────────── */
+  .modal-stap { display: none; }
+  .modal-stap.actief { display: block; }
+  .stap-indicator {
+    display: flex; gap: 8px; margin-bottom: 1.25rem; align-items: center;
+  }
+  .stap-dot {
+    width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--muted); flex-shrink: 0;
+  }
+  .stap-dot.actief { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .stap-dot.klaar  { background: var(--gold); border-color: var(--gold); color: #1B3A6B; }
+  .stap-lijn { flex: 1; height: 2px; background: var(--border); border-radius: 2px; }
+  .stap-lijn.klaar { background: var(--gold); }
+
+
+  /* ── Leerlingen picker rijen ────────────────────────────── */
+  .ll-picker-rij {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 10px; border-radius: 7px; cursor: pointer;
+    transition: background 0.1s; user-select: none;
+    font-size: 13px;
+  }
+  .ll-picker-rij:hover { background: var(--navy-glow); }
+  .ll-picker-rij.geselecteerd { background: rgba(27,58,107,0.07); }
+  .ll-picker-check {
+    width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--navy); flex-shrink: 0;
+    background: #fff;
+  }
+  .ll-picker-rij.geselecteerd .ll-picker-check { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .ll-picker-naam { font-weight: 500; flex: 1; color: var(--text); }
+  .ll-picker-klas { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
 // (verificatie verwijderd)
@@ -1320,11 +1382,9 @@ function getLesCode(lesId) {
 
   <!-- Views -->
   <div id="view-klassen" class="main-content">
-    <div class="page-eyebrow" id="dashboard-eyebrow">Dashboard</div>
+    <div class="page-eyebrow">Klassenbeheer</div>
     <h2 class="page-title" id="dashboard-greeting">Mijn klassen</h2>
     <div style="font-size:13px;color:var(--muted);margin-bottom:1.5rem;" id="dashboard-sub"></div>
-    <div class="stats-row" id="dashboard-stats" style="margin-bottom:1.5rem;"></div>
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:10px;">Klassen</div>
     <div class="classes-grid" id="classes-grid-new"></div>
   </div>
 
@@ -1353,37 +1413,45 @@ function getLesCode(lesId) {
         <button class="btn btn-ghost-navy" onclick="annuleerImport()">Annuleren</button>
       </div>
     </div>
-    <div style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end;">
-      <div>
-        <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Lesperiode</label>
-        <select id="ll-filter-periode" onchange="laadLeerlingen()" style="min-width:130px;"><option value="">— Alle —</option></select>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:1rem;">
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:4px;">Lesperiode</label>
+          <select id="ll-filter-periode" onchange="laadLeerlingen()" style="min-width:130px;"><option value="">— Alle —</option></select>
+        </div>
+        <div>
+          <label style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:4px;">Klas</label>
+          <select id="ll-filter-klas" onchange="laadLeerlingen()" style="min-width:120px;"><option value="">— Alle klassen —</option></select>
+        </div>
+        <div style="flex:1;min-width:160px;">
+          <label style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:4px;">Zoeken</label>
+          <input type="text" id="ll-zoek" placeholder="naam of stamnummer..." oninput="filterLeerlingenLokaal()" style="width:100%;" />
+        </div>
       </div>
-      <div>
-        <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Klas</label>
-        <select id="ll-filter-klas" onchange="laadLeerlingen()" style="min-width:120px;"><option value="">— Alle klassen —</option></select>
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+        <div>
+          <label style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:4px;">Niveau</label>
+          <div class="pill-filter-groep" id="ll-filter-niveau-pills">
+            <span class="pill-filter" data-val="Atheneum" onclick="togglePillFilter(this,'niveau')">Atheneum</span>
+            <span class="pill-filter" data-val="Gymnasium" onclick="togglePillFilter(this,'niveau')">Gymnasium</span>
+            <span class="pill-filter" data-val="HAVO" onclick="togglePillFilter(this,'niveau')">HAVO</span>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:4px;">Leerjaar</label>
+          <div class="pill-filter-groep" id="ll-filter-leerjaar-pills">
+            <span class="pill-filter" data-val="1" onclick="togglePillFilter(this,'leerjaar')">1</span>
+            <span class="pill-filter" data-val="2" onclick="togglePillFilter(this,'leerjaar')">2</span>
+            <span class="pill-filter" data-val="3" onclick="togglePillFilter(this,'leerjaar')">3</span>
+            <span class="pill-filter" data-val="4" onclick="togglePillFilter(this,'leerjaar')">4</span>
+            <span class="pill-filter" data-val="5" onclick="togglePillFilter(this,'leerjaar')">5</span>
+            <span class="pill-filter" data-val="6" onclick="togglePillFilter(this,'leerjaar')">6</span>
+          </div>
+        </div>
+        <div style="margin-left:auto;align-self:flex-end;">
+          <button class="btn btn-ghost-navy btn-sm" onclick="verwijderPeriode()" style="color:var(--red);border-color:rgba(192,57,43,0.3);font-size:11px;">🗑 Periode verwijderen</button>
+        </div>
       </div>
-      <div>
-        <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Niveau</label>
-        <select id="ll-filter-niveau" onchange="laadLeerlingen()" style="min-width:130px;">
-          <option value="">— Alle niveaus —</option>
-          <option value="Atheneum">Atheneum</option>
-          <option value="Gymnasium">Gymnasium</option>
-          <option value="HAVO">HAVO</option>
-        </select>
-      </div>
-      <div>
-        <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Leerjaar</label>
-        <select id="ll-filter-leerjaar" onchange="laadLeerlingen()" style="min-width:100px;">
-          <option value="">— Alle jaren —</option>
-          <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-          <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-        </select>
-      </div>
-      <div>
-        <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Zoeken</label>
-        <input type="text" id="ll-zoek" placeholder="naam..." oninput="filterLeerlingenLokaal()" style="min-width:160px;" />
-      </div>
-      <button class="btn btn-ghost-navy btn-sm" onclick="verwijderPeriode()" style="color:var(--red);border-color:rgba(192,57,43,0.3);">🗑 Periode verwijderen</button>
     </div>
     <div id="ll-tabel-wrap"><div class="empty-state"><div class="empty-icon">👥</div><p>Importeer een XLSX-bestand om je leerlingen te laden.</p></div></div>
     <div id="ll-count" style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;"></div>
@@ -1587,20 +1655,110 @@ function getLesCode(lesId) {
 </div>
 
 <!-- ═══════════════════════════════════════════════ -->
-<!--  MODAL: CREATE CLASS                            -->
+<!--  MODAL: KLAS AANMAKEN / BEWERKEN               -->
 <!-- ═══════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-create-class">
-  <div class="modal" style="max-width:440px;">
+  <div class="modal" style="max-width:600px;">
     <button class="modal-close" onclick="closeModal('modal-create-class')">×</button>
-    <div class="modal-title">Nieuwe klas aanmaken</div>
-    <div class="form-section">
-      <label>Naam van de klas *</label>
-      <input type="text" id="new-class-name" placeholder="bijv. 3H, 4A, 5VWO" maxlength="40" />
+    <div class="modal-title" id="klas-modal-titel">Nieuwe klas aanmaken</div>
+    <input type="hidden" id="edit-class-id" value="">
+
+    <!-- Stap indicator -->
+    <div class="stap-indicator">
+      <div class="stap-dot actief" id="stap-dot-1">1</div>
+      <div class="stap-lijn" id="stap-lijn-1"></div>
+      <div class="stap-dot" id="stap-dot-2">2</div>
     </div>
-    <div id="create-class-error" class="error-msg" style="display:none"></div>
-    <div style="display:flex; gap:0.75rem; margin-top:1rem;">
-      <button class="btn btn-page-ghost" onclick="closeModal('modal-create-class')">Annuleren</button>
-      <button class="btn btn-teacher" id="create-class-btn" onclick="createClass()">Klas aanmaken</button>
+
+    <!-- STAP 1: Klas details -->
+    <div class="modal-stap actief" id="klas-stap-1">
+      <div class="form-section">
+        <label>Naam van de klas *</label>
+        <input type="text" id="new-class-name" placeholder="bijv. HAVO 3, Wv4a, 5VWO" maxlength="40" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+        <div class="form-section">
+          <label>Niveau</label>
+          <select id="new-class-niveau">
+            <option value="">— Kies niveau —</option>
+            <option value="HAVO">HAVO</option>
+            <option value="Atheneum">Atheneum</option>
+            <option value="Gymnasium">Gymnasium</option>
+            <option value="VWO">VWO</option>
+          </select>
+        </div>
+        <div class="form-section">
+          <label>Leerjaar</label>
+          <select id="new-class-leerjaar">
+            <option value="">— Kies jaar —</option>
+            <option value="1">1</option><option value="2">2</option>
+            <option value="3">3</option><option value="4">4</option>
+            <option value="5">5</option><option value="6">6</option>
+          </select>
+        </div>
+      </div>
+      <div id="create-class-error" class="error-msg" style="display:none"></div>
+      <div style="display:flex;gap:0.65rem;margin-top:1rem;">
+        <button class="btn btn-ghost-navy" onclick="closeModal('modal-create-class')">Annuleren</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="klasNaarStap2()">Volgende: leerlingen toevoegen →</button>
+      </div>
+      <div style="text-align:center;margin-top:0.5rem;">
+        <button class="btn btn-ghost-navy btn-sm" onclick="slaKlasOpZonderLeerlingen()" style="font-size:0.78rem;color:var(--muted);">
+          Overslaan — klas aanmaken zonder leerlingen
+        </button>
+      </div>
+    </div>
+
+    <!-- STAP 2: Leerlingen koppelen -->
+    <div class="modal-stap" id="klas-stap-2">
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem;">
+        Koppel leerlingen aan <strong id="klas-stap2-naam"></strong>
+      </div>
+
+      <!-- Filters -->
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:8px;">
+        <select id="klas-modal-periode" onchange="laadKlasModalLl()" style="flex:1;min-width:130px;">
+          <option value="">— Alle periodes —</option>
+        </select>
+        <select id="klas-modal-niveau" onchange="laadKlasModalLl()" style="min-width:120px;">
+          <option value="">— Alle niveaus —</option>
+          <option value="Atheneum">Atheneum</option>
+          <option value="Gymnasium">Gymnasium</option>
+          <option value="HAVO">HAVO</option>
+        </select>
+        <select id="klas-modal-leerjaar" onchange="laadKlasModalLl()" style="min-width:100px;">
+          <option value="">— Alle jaren —</option>
+          <option value="1">Jr 1</option><option value="2">Jr 2</option>
+          <option value="3">Jr 3</option><option value="4">Jr 4</option>
+          <option value="5">Jr 5</option><option value="6">Jr 6</option>
+        </select>
+        <input type="text" id="klas-modal-zoek" placeholder="naam..."
+          oninput="filterKlasModalLl()" style="min-width:130px;" />
+      </div>
+
+      <!-- Selecteer alles -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost-navy btn-sm" onclick="selecteerAlleKlasModal()" style="font-size:0.7rem;">Alles selecteren</button>
+          <button class="btn btn-ghost-navy btn-sm" onclick="deselecteerAlleKlasModal()" style="font-size:0.7rem;">Deselecteren</button>
+        </div>
+        <span id="klas-modal-telling" style="font-size:0.75rem;color:var(--muted);"></span>
+      </div>
+
+      <!-- Lijst -->
+      <div id="klas-modal-ll-lijst" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);
+        border-radius:10px;padding:4px;margin-bottom:10px;background:#fafbfd;">
+        <div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">
+          Stel filters in om leerlingen te tonen
+        </div>
+      </div>
+
+      <div style="display:flex;gap:0.65rem;">
+        <button class="btn btn-ghost-navy" onclick="klasTerug()">← Terug</button>
+        <button class="btn btn-primary" style="flex:1;" id="klas-opslaan-btn" onclick="slaKlasOpMetLeerlingen()">
+          Klas opslaan
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -2811,6 +2969,7 @@ function navNaar(view) {
   toggleSidebar(false);
   // Laad content
   if (view === 'leerlingen') laadLeerlingenTab();
+  if (view === 'klassen')   renderClassenGrid(classesCache);
   if (view === 'lessen')    laadLessenView();
   if (view === 'analyse')   { vulAnalyseFilters(); runAnalyse(); }
   if (view === 'socratisch') { vulClassFilter(); loadLessonsForTeacher(); }
@@ -3363,11 +3522,37 @@ function toggleSidebar(open) {
 function renderClassenGrid(klassen) {
   const grid = document.getElementById('classes-grid-new');
   if (!grid) return;
-  const niveauMap = { 'atheneum': 'niveau-atheneum', 'gymnasium': 'niveau-gymnasium', 'havo': 'niveau-havo' };
-  if (!klassen || klassen.length === 0) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
-      <div class="empty-icon">🏫</div>
-      <p>Nog geen klassen aangemaakt.</p>
+
+  const niveauCls = nv => {
+    const l = (nv || '').toLowerCase();
+    return l === 'gymnasium' ? 'niveau-gymnasium' : l === 'havo' ? 'niveau-havo' : 'niveau-atheneum';
+  };
+  const escQ = s => (s || '').replace(/'/g, "\\'");
+
+  const kaart = k => {
+    const nv      = k.niveau || '';
+    const lj      = k.leerjaar || detecteerLeerjaar(k.name) || '';
+    const meta    = [nv, lj ? 'Leerjaar ' + lj : ''].filter(Boolean).join(' · ');
+    const lessen  = (lessonsCache || []).filter(l => l.class_id === k.id);
+    return `<div class="class-card">
+      <div class="class-card-naam" onclick="openKlas('${k.id}')" style="cursor:pointer;">${k.name}</div>
+      ${meta ? `<div class="class-card-meta">${meta}</div>` : ''}
+      <div class="class-card-stats" style="margin-top:8px;">
+        <div class="class-card-stat"><strong>${lessen.length}</strong> les${lessen.length !== 1 ? 'sen' : ''}</div>
+        <div class="class-card-stat" id="ll-count-${k.id}"><span style="color:var(--muted);">…</span></div>
+      </div>
+      ${nv ? `<span class="niveau-tag ${niveauCls(nv)}" style="margin-top:8px;display:inline-block;">${nv}</span>` : ''}
+      <div class="class-card-acties">
+        <button class="btn-open" onclick="openKlas('${k.id}')">Openen</button>
+        <button class="btn-edit" onclick="event.stopPropagation();openEditClass('${k.id}')">✏ Bewerken</button>
+        <button class="btn-del"  onclick="event.stopPropagation();deleteClass('${k.id}','${escQ(k.name)}')">🗑</button>
+      </div>
+    </div>`;
+  };
+
+  if (!klassen?.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;padding:2rem;">
+      <div class="empty-icon">🏫</div><p>Nog geen klassen. Maak je eerste klas aan.</p>
     </div>
     <div class="class-card class-card-add" onclick="openCreateClass()">
       <div style="font-size:22px;margin-bottom:4px;color:var(--navy);">+</div>
@@ -3375,52 +3560,23 @@ function renderClassenGrid(klassen) {
     </div>`;
     return;
   }
-  let html = klassen.map(k => {
-    const niveauLower = (k.name?.toLowerCase().includes('gy') ? 'gymnasium' :
-                         k.name?.toLowerCase().includes('h')  ? 'havo' : 'atheneum');
-    const niveauLabel = niveauLower.charAt(0).toUpperCase() + niveauLower.slice(1);
-    const klasLessen = lessonsCache ? lessonsCache.filter(l => l.class_id === k.id) : [];
-    return `<div class="class-card" onclick="openKlas('${k.id}')">
-      <div class="class-card-naam">${k.name}</div>
-      <div class="class-card-meta">${niveauLabel}</div>
-      <div class="class-card-stats">
-        <div class="class-card-stat"><strong>${klasLessen.length}</strong> les${klasLessen.length !== 1 ? 'sen' : ''}</div>
-        <div class="class-card-stat" id="ll-count-${k.id}"></div>
-      </div>
-      <span class="niveau-tag niveau-${niveauLower}">${niveauLabel}</span>
-    </div>`;
-  }).join('');
-  html += `<div class="class-card class-card-add" onclick="openCreateClass()">
-    <div style="font-size:22px;margin-bottom:4px;color:var(--navy);">+</div>
-    <div style="font-size:12px;font-weight:500;">Nieuwe klas</div>
-  </div>`;
-  grid.innerHTML = html;
 
-  // Vul leerlingenaantallen asynchroon per klas
+  grid.innerHTML = klassen.map(kaart).join('')
+    + `<div class="class-card class-card-add" onclick="openCreateClass()">
+        <div style="font-size:22px;margin-bottom:4px;color:var(--navy);">+</div>
+        <div style="font-size:12px;font-weight:500;">Nieuwe klas</div>
+       </div>`;
+
+  // Leerlingenaantallen asynchroon laden
   klassen.forEach(k => {
-    apiFetch('/api/leerlingen/klassen?lesperiode=')
-      .then(meta => {
-        // meta kan array of object zijn
-        // We gebruiken een aparte call per klas
-      }).catch(() => {});
     apiFetch('/api/leerlingen?klas=' + encodeURIComponent(k.name))
       .then(ll => {
         const el = document.getElementById('ll-count-' + k.id);
-        if (el && ll?.length) {
-          el.innerHTML = '<strong>' + ll.length + '</strong> leerlingen';
-          // Update ook nav-badge
-          const badge = document.getElementById('nav-ll-badge');
-          if (badge && ll.length > 0) {
-            // tel totaal over alle klassen
-            const allCounts = klassen.map(kk => {
-              const cEl = document.getElementById('ll-count-' + kk.id);
-              return cEl?.querySelector('strong') ? parseInt(cEl.querySelector('strong').textContent) || 0 : 0;
-            });
-            const totaal = allCounts.reduce((a, b) => a + b, 0);
-            if (totaal > 0) badge.textContent = totaal;
-          }
-        }
-      }).catch(() => {});
+        if (el) el.innerHTML = '<strong>' + (Array.isArray(ll) ? ll.length : 0) + '</strong> leerlingen';
+      }).catch(() => {
+        const el = document.getElementById('ll-count-' + k.id);
+        if (el) el.innerHTML = '';
+      });
   });
 }
 
@@ -4051,158 +4207,219 @@ function renderHiatenKaart(data, f) {
 let modalLlGeselecteerd = new Set();
 let modalLlAlle = [];
 
+// ── Klas modal state ─────────────────────────────────────────
+let klasModalLlAlle = [];
+let klasModalLlGeselecteerd = new Set();
+let klasModalEditId = null;
+
 async function openCreateClass() {
+  klasModalEditId = null;
+  klasModalLlAlle = [];
+  klasModalLlGeselecteerd = new Set();
   document.getElementById('new-class-name').value = '';
+  document.getElementById('new-class-niveau').value = '';
+  document.getElementById('new-class-leerjaar').value = '';
   document.getElementById('create-class-error').style.display = 'none';
-  modalLlGeselecteerd = new Set();
-  modalLlAlle = [];
+  document.getElementById('edit-class-id').value = '';
+  document.getElementById('klas-modal-titel').textContent = 'Nieuwe klas aanmaken';
+  document.getElementById('klas-opslaan-btn').textContent = 'Klas opslaan';
+  zetKlasModalStap(1);
   openModal('modal-create-class');
-  // Laad periodes
-  try {
-    const periodes = await apiFetch('/api/leerlingen/periodes');
-    const sel = document.getElementById('modal-ll-periode');
-    sel.innerHTML = '<option value="">— Alle periodes —</option>'
-      + periodes.map(p => `<option value="${p}">${p}</option>`).join('');
-    if (periodes.length === 1) sel.value = periodes[0];
-    if (sel.value) laadModalLeerlingen();
-  } catch(e) {}
 }
 
-async function laadModalLeerlingen() {
-  const periode  = document.getElementById('modal-ll-periode')?.value  || '';
-  const niveau   = document.getElementById('modal-ll-niveau')?.value   || '';
-  const leerjaar = document.getElementById('modal-ll-leerjaar')?.value || '';
+async function openEditClass(id) {
+  const klas = classesCache.find(c => c.id === id);
+  if (!klas) return;
+  klasModalEditId = id;
+  klasModalLlAlle = [];
+  klasModalLlGeselecteerd = new Set();
+  document.getElementById('new-class-name').value = klas.name || '';
+  document.getElementById('new-class-niveau').value = klas.niveau || '';
+  document.getElementById('new-class-leerjaar').value = klas.leerjaar || '';
+  document.getElementById('create-class-error').style.display = 'none';
+  document.getElementById('edit-class-id').value = id;
+  document.getElementById('klas-modal-titel').textContent = 'Klas bewerken';
+  document.getElementById('klas-opslaan-btn').textContent = 'Wijzigingen opslaan';
+  zetKlasModalStap(1);
+  openModal('modal-create-class');
+}
+
+function zetKlasModalStap(stap) {
+  document.getElementById('klas-stap-1').classList.toggle('actief', stap === 1);
+  document.getElementById('klas-stap-2').classList.toggle('actief', stap === 2);
+  document.getElementById('stap-dot-1').className = 'stap-dot ' + (stap === 1 ? 'actief' : 'klaar');
+  document.getElementById('stap-dot-2').className = 'stap-dot ' + (stap === 2 ? 'actief' : '');
+  document.getElementById('stap-lijn-1').className = 'stap-lijn ' + (stap === 2 ? 'klaar' : '');
+}
+
+async function klasNaarStap2() {
+  const naam = document.getElementById('new-class-name').value.trim();
+  const err  = document.getElementById('create-class-error');
+  if (!naam) { err.textContent = 'Vul een klasnaam in.'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  document.getElementById('klas-stap2-naam').textContent = naam;
+  zetKlasModalStap(2);
+  // Laad periodes voor picker
+  try {
+    const periodes = await apiFetch('/api/leerlingen/periodes');
+    const sel = document.getElementById('klas-modal-periode');
+    sel.innerHTML = '<option value="">— Alle periodes —</option>'
+      + periodes.map(p => `<option value="${p}">${p}</option>`).join('');
+    if (periodes.length >= 1) { sel.value = periodes[0]; laadKlasModalLl(); }
+  } catch(e) {}
+  // Als bewerken: pre-select huidige leerlingen
+  if (klasModalEditId) {
+    const klas = classesCache.find(c => c.id === klasModalEditId);
+    if (klas) {
+      try {
+        const ll = await apiFetch('/api/leerlingen?klas=' + encodeURIComponent(klas.name));
+        ll.forEach(l => klasModalLlGeselecteerd.add(l.id));
+      } catch(e) {}
+    }
+  }
+}
+
+function klasTerug() { zetKlasModalStap(1); }
+
+async function laadKlasModalLl() {
+  const periode  = document.getElementById('klas-modal-periode')?.value  || '';
+  const niveau   = document.getElementById('klas-modal-niveau')?.value   || '';
+  const leerjaar = document.getElementById('klas-modal-leerjaar')?.value || '';
+  const lijst = document.getElementById('klas-modal-ll-lijst');
   if (!periode && !niveau && !leerjaar) {
-    document.getElementById('modal-ll-lijst').innerHTML =
-      '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Stel minimaal één filter in</div>';
+    if (lijst) lijst.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Stel minimaal één filter in</div>';
     return;
   }
+  if (lijst) lijst.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;"><span class="spinner" style="display:inline-block;border-top-color:var(--navy);"></span> Laden...</div>';
   const qs = new URLSearchParams();
   if (periode)  qs.set('lesperiode', periode);
   if (niveau)   qs.set('leerniveau', niveau);
   if (leerjaar) qs.set('leerjaar', leerjaar);
   try {
-    modalLlAlle = await apiFetch('/api/leerlingen?' + qs);
-    renderModalLlLijst();
+    klasModalLlAlle = await apiFetch('/api/leerlingen?' + qs);
+    renderKlasModalLlLijst();
   } catch(e) {
-    document.getElementById('modal-ll-lijst').innerHTML =
-      `<div style="padding:1rem;text-align:center;color:var(--red);font-size:0.82rem;">${e.message}</div>`;
+    if (lijst) lijst.innerHTML = `<div style="padding:1rem;text-align:center;color:var(--red);font-size:0.82rem;">${e.message}</div>`;
   }
 }
 
-function filterModalLeerlingen() {
-  renderModalLlLijst();
-}
+function filterKlasModalLl() { renderKlasModalLlLijst(); }
 
-function renderModalLlLijst() {
-  const zoek = document.getElementById('modal-ll-zoek')?.value.toLowerCase() || '';
+function renderKlasModalLlLijst() {
+  const zoek = (document.getElementById('klas-modal-zoek')?.value || '').toLowerCase();
   const gefilterd = zoek
-    ? modalLlAlle.filter(l => (l.roepnaam + ' ' + (l.tussenvoegsel||'') + ' ' + l.achternaam).toLowerCase().includes(zoek))
-    : modalLlAlle;
-  const lijst = document.getElementById('modal-ll-lijst');
+    ? klasModalLlAlle.filter(l => (l.roepnaam+' '+(l.tussenvoegsel||'')+' '+l.achternaam).toLowerCase().includes(zoek))
+    : klasModalLlAlle;
+  const lijst = document.getElementById('klas-modal-ll-lijst');
+  if (!lijst) return;
   if (!gefilterd.length) {
-    lijst.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Geen leerlingen gevonden</div>';
-    updateModalLlTelling();
-    return;
+    lijst.innerHTML = '<div style="padding:0.75rem;text-align:center;color:var(--muted);font-size:0.82rem;">Geen leerlingen gevonden</div>';
+    updateKlasModalTelling(); return;
   }
   lijst.innerHTML = gefilterd.map(l => {
     const naam = [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ');
-    const sel  = modalLlGeselecteerd.has(l.id);
-    return `<div class="ll-picker-rij ${sel ? 'geselecteerd' : ''}" onclick="toggleModalLl('${l.id}')" data-id="${l.id}">
-      <div class="ll-picker-check">${sel ? '✓' : ''}</div>
+    const sel  = klasModalLlGeselecteerd.has(l.id);
+    return `<div class="ll-picker-rij ${sel?'geselecteerd':''}" onclick="toggleKlasModalLl('${l.id}')" data-modal-id="${l.id}">
+      <div class="ll-picker-check">${sel?'✓':''}</div>
       <span class="ll-picker-naam">${naam}</span>
-      <span class="ll-picker-klas" style="font-size:0.7rem;color:var(--muted);">${l.klas || ''}</span>
+      <span class="ll-picker-klas">${l.leerniveau||''} ${l.leerjaar ? '· jr '+l.leerjaar : ''}</span>
     </div>`;
   }).join('');
-  updateModalLlTelling();
+  updateKlasModalTelling();
 }
 
-function toggleModalLl(id) {
-  if (modalLlGeselecteerd.has(id)) modalLlGeselecteerd.delete(id);
-  else modalLlGeselecteerd.add(id);
-  const el = document.querySelector(`[data-id="${id}"]`);
+function toggleKlasModalLl(id) {
+  if (klasModalLlGeselecteerd.has(id)) klasModalLlGeselecteerd.delete(id);
+  else klasModalLlGeselecteerd.add(id);
+  const el = document.querySelector(`[data-modal-id="${id}"]`);
   if (el) {
-    const sel = modalLlGeselecteerd.has(id);
+    const sel = klasModalLlGeselecteerd.has(id);
     el.classList.toggle('geselecteerd', sel);
-    const check = el.querySelector('.ll-picker-check');
-    if (check) check.textContent = sel ? '✓' : '';
+    const c = el.querySelector('.ll-picker-check');
+    if (c) c.textContent = sel ? '✓' : '';
   }
-  updateModalLlTelling();
+  updateKlasModalTelling();
 }
 
-function selecteerAlleModalLl() {
-  modalLlAlle.forEach(l => modalLlGeselecteerd.add(l.id));
-  renderModalLlLijst();
+function selecteerAlleKlasModal() { klasModalLlAlle.forEach(l => klasModalLlGeselecteerd.add(l.id)); renderKlasModalLlLijst(); }
+function deselecteerAlleKlasModal() { klasModalLlGeselecteerd.clear(); renderKlasModalLlLijst(); }
+
+function updateKlasModalTelling() {
+  const el = document.getElementById('klas-modal-telling');
+  if (el) el.textContent = klasModalLlGeselecteerd.size ? klasModalLlGeselecteerd.size + ' geselecteerd' : '';
 }
 
-function deselecteerAlleModalLl() {
-  modalLlGeselecteerd.clear();
-  renderModalLlLijst();
-}
+async function _slaKlasOp(metLeerlingen) {
+  const name     = document.getElementById('new-class-name').value.trim();
+  const niveau   = document.getElementById('new-class-niveau').value;
+  const leerjaar = document.getElementById('new-class-leerjaar').value;
+  const editId   = document.getElementById('edit-class-id').value;
+  const err      = document.getElementById('create-class-error');
+  const btn      = document.getElementById(metLeerlingen ? 'klas-opslaan-btn' : 'create-class-btn');
 
-function updateModalLlTelling() {
-  const el = document.getElementById('modal-ll-telling');
-  if (el) el.textContent = modalLlGeselecteerd.size
-    ? modalLlGeselecteerd.size + ' leerlingen geselecteerd'
-    : '';
-}
-
-async function createClass() {
-  const name = document.getElementById('new-class-name').value.trim();
-  const err  = document.getElementById('create-class-error');
-  const btn  = document.getElementById('create-class-btn');
-  if (!name) { err.textContent = 'Vul een klasnaam in.'; err.style.display = 'block'; return; }
+  if (!name) { err.textContent = 'Vul een klasnaam in.'; err.style.display = 'block'; zetKlasModalStap(1); return; }
   err.style.display = 'none';
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Aanmaken...';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" style="display:inline-block;border-top-color:#fff;"></span> Opslaan...'; }
+
   try {
-    await apiFetch('/api/classes', {
-      method: 'POST',
-      body: JSON.stringify({ id: 'class_' + Date.now(), name, created_at: Date.now() })
-    });
-    // Als leerlingen geselecteerd: update hun klas-veld in leerlingen_import
-    if (modalLlGeselecteerd.size > 0) {
+    let klasId;
+    if (editId) {
+      // Bewerken
+      await apiFetch('/api/classes/' + editId, {
+        method: 'PATCH',
+        body: JSON.stringify({ name, niveau: niveau || null, leerjaar: leerjaar || null }),
+      });
+      klasId = editId;
+    } else {
+      // Nieuw aanmaken
+      klasId = 'class_' + Date.now();
+      await apiFetch('/api/classes', {
+        method: 'POST',
+        body: JSON.stringify({ id: klasId, name, niveau: niveau || null, leerjaar: leerjaar || null, created_at: Date.now() }),
+      });
+    }
+
+    // Leerlingen koppelen als geselecteerd
+    const llIds = [...klasModalLlGeselecteerd];
+    if (llIds.length > 0) {
       await apiFetch('/api/leerlingen/koppel-klas', {
         method: 'POST',
-        body: JSON.stringify({ leerling_ids: [...modalLlGeselecteerd], klas_naam: name }),
-      }).catch(() => {}); // stil falen als endpoint nog niet bestaat
+        body: JSON.stringify({ leerling_ids: llIds, klas_naam: name }),
+      }).catch(e => console.warn('koppel-klas:', e.message));
     }
-    const aantalLl = modalLlGeselecteerd.size;
+
     closeModal('modal-create-class');
-    showToast('✓ Klas "' + name + '" aangemaakt!' + (aantalLl ? ' · ' + aantalLl + ' leerlingen gekoppeld' : ''));
-    // Refresh caches
+    const actie = editId ? 'bijgewerkt' : 'aangemaakt';
+    showToast('✓ Klas "' + name + '" ' + actie + (llIds.length ? ' · ' + llIds.length + ' leerlingen gekoppeld' : ''));
+
+    // Refresh en navigeer
     classesCache = await getClasses();
-    lessonsCache = (lessonsCache || []);
     populateStudentClassDropdown();
-    renderClassenGrid(classesCache);
-    // Ga direct naar de klas-detailpagina, tab leerlingen
-    // Zoek op naam (case-insensitive) of gebruik de nieuwste klas
-    const nieuweKlas = classesCache.find(c => c.name === name)
-      || classesCache.sort((a,b) => (b.created_at||0)-(a.created_at||0))[0];
-    if (nieuweKlas) {
-      navNaar('klassen'); // zorg dat het view actief is
-      setTimeout(() => {
-        openKlas(nieuweKlas.id);
-        setTimeout(() => switchKlasTab('leerlingen'), 50);
-      }, 100);
-    } else {
-      navNaar('klassen');
-    }
+    await renderClassenGrid(classesCache);
+    navNaar('klassen');
+
   } catch(e) {
     err.textContent = 'Opslaan mislukt: ' + e.message; err.style.display = 'block';
+    zetKlasModalStap(1);
   } finally {
-    btn.disabled = false; btn.innerHTML = 'Klas aanmaken';
+    if (btn) { btn.disabled = false; btn.textContent = metLeerlingen ? 'Klas opslaan' : 'Klas aanmaken'; }
   }
 }
 
+async function slaKlasOpZonderLeerlingen() { await _slaKlasOp(false); }
+async function slaKlasOpMetLeerlingen()    { await _slaKlasOp(true);  }
+// Legacy alias
+async function createClass() { await _slaKlasOp(false); }
+
 async function deleteClass(id, name) {
-  if (!confirm('Weet je zeker dat je klas "' + name + '" wilt verwijderen? Lessen worden losgekoppeld.')) return;
+  if (!confirm('Klas "' + name + '" verwijderen? Lessen worden losgekoppeld maar leerlingen blijven bewaard.')) return;
   try {
     await apiFetch('/api/classes/' + id, { method: 'DELETE' });
-    showToast('Klas verwijderd.');
+    showToast('Klas "' + name + '" verwijderd.');
     classesCache = await getClasses();
     populateStudentClassDropdown();
-    loadClassesTab();
-    loadTeacherDashboard();
+    navNaar('klassen');
+    await renderClassenGrid(classesCache);
   } catch(e) { showToast('Verwijderen mislukt: ' + e.message); }
 }
 
@@ -4358,23 +4575,51 @@ async function laadKlassenEnFilters() {
   } catch(e) { console.error('laadKlassenEnFilters fout:', e); }
 }
 
+// Lees actieve pill-filters
+function getActievePills(groep) {
+  return [...document.querySelectorAll('#ll-filter-' + groep + '-pills .pill-filter.actief')]
+    .map(el => el.dataset.val);
+}
+
+function togglePillFilter(el, groep) {
+  el.classList.toggle('actief');
+  laadLeerlingen();
+}
+
 async function laadLeerlingen() {
-  const wrap   = document.getElementById('ll-tabel-wrap');
-  const periode = document.getElementById('ll-filter-periode')?.value  || '';
-  const klas    = document.getElementById('ll-filter-klas')?.value     || '';
-  const niveau  = document.getElementById('ll-filter-niveau')?.value   || '';
-  const leerjaar= document.getElementById('ll-filter-leerjaar')?.value || '';
+  const wrap    = document.getElementById('ll-tabel-wrap');
+  const periode = document.getElementById('ll-filter-periode')?.value || '';
+  const klas    = document.getElementById('ll-filter-klas')?.value    || '';
+  const niveaus = getActievePills('niveau');
+  const jaren   = getActievePills('leerjaar');
 
   if (wrap) wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);"><span class="spinner" style="border-top-color:var(--navy);display:inline-block;margin-right:8px;"></span>Laden...</div>';
 
-  const qs = new URLSearchParams();
-  if (periode)  qs.set('lesperiode', periode);
-  if (klas)     qs.set('klas', klas);
-  if (niveau)   qs.set('leerniveau', niveau);
-  if (leerjaar) qs.set('leerjaar', leerjaar);
+  // Bouw meerdere requests als meerdere niveaus/jaren geselecteerd
+  const niveauLijst  = niveaus.length  ? niveaus  : [''];
+  const jaarLijst    = jaren.length    ? jaren    : [''];
+
+  const combis = [];
+  for (const nv of niveauLijst) {
+    for (const jr of jaarLijst) {
+      const qs = new URLSearchParams();
+      if (periode) qs.set('lesperiode', periode);
+      if (klas)    qs.set('klas', klas);
+      if (nv)      qs.set('leerniveau', nv);
+      if (jr)      qs.set('leerjaar', jr);
+      combis.push(qs.toString());
+    }
+  }
 
   try {
-    alleLeerlingen = await apiFetch('/api/leerlingen' + (qs.toString() ? '?' + qs : ''));
+    // Parallel ophalen als meerdere combinaties
+    const resultaten = await Promise.all(
+      combis.map(q => apiFetch('/api/leerlingen' + (q ? '?' + q : '')))
+    );
+    // Dedup op id
+    const gededup = new Map();
+    resultaten.flat().forEach(l => gededup.set(l.id, l));
+    alleLeerlingen = [...gededup.values()].sort((a,b) => a.achternaam.localeCompare(b.achternaam));
     renderLeerlingenTabel(alleLeerlingen);
   } catch(e) {
     if (wrap) wrap.innerHTML = '<p style="color:var(--red);font-size:0.82rem;">Laden mislukt: ' + e.message + '</p>';

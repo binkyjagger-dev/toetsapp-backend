@@ -1,4 +1,9 @@
 const express  = require('express');
+// ══ SQL MIGRATIES IN SUPABASE (éénmalig uitvoeren) ══════════
+// alter table classes add column if not exists niveau text;
+// alter table classes add column if not exists leerjaar text;
+// alter table classes add column if not exists leraar_id uuid;
+// ════════════════════════════════════════════════════════════
 const cors     = require('cors');
 const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
@@ -193,10 +198,26 @@ app.get('/api/classes', optionalToken, async (req, res) => {
 app.post('/api/classes', async (req, res) => {
   const { id, name, created_at } = req.body;
   if (!id || !name) return res.status(400).json({ error: 'Velden ontbreken' });
-  const { data, error } = await supabase.from('classes').insert([{ id, name, created_at, leraar_id: req.leraar?.id || null }]).select();
+  const { data, error } = await supabase.from('classes').insert([{ id, name, niveau: niveau||null, leerjaar: leerjaar||null, created_at, leraar_id: req.leraar?.id || null }]).select();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data[0]);
 });
+
+// ── PATCH /api/classes/:id — klas bewerken ───────────────────
+app.patch('/api/classes/:id', verifyToken, async (req, res) => {
+  try {
+    const { name, niveau, leerjaar } = req.body;
+    if (!name) return res.status(400).json({ error: 'naam verplicht' });
+    const update = { name };
+    if (niveau   !== undefined) update.niveau   = niveau;
+    if (leerjaar !== undefined) update.leerjaar = leerjaar;
+    const { data, error } = await supabase.from('classes')
+      .update(update).eq('id', req.params.id).eq('leraar_id', req.leraar.id).select();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data?.[0] || {});
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.delete('/api/classes/:id', async (req, res) => {
   await supabase.from('lessons').update({ class_id: null }).eq('class_id', req.params.id);
   const { error } = await supabase.from('classes').delete().eq('id', req.params.id);
