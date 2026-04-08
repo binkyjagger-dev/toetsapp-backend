@@ -4290,8 +4290,12 @@ let xlsxImportData = null;  // { leerlingen: [], periodeVoorstel: '' }
 let alleLeerlingen = [];     // huidige view
 
 async function laadLeerlingenTab() {
-  await Promise.all([laadPeriodes(), laadKlassenFilter()]);
-  laadLeerlingen();
+  // Toon loader direct — niet wachten
+  const wrap = document.getElementById('ll-tabel-wrap');
+  if (wrap) wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);"><span class="spinner" style="border-top-color:var(--navy);display:inline-block;margin-right:8px;"></span>Leerlingen laden...</div>';
+  await laadPeriodes();
+  await laadKlassenEnFilters();
+  await laadLeerlingen();
 }
 
 async function laadPeriodes() {
@@ -4310,38 +4314,80 @@ async function laadPeriodes() {
 }
 
 async function laadKlassenFilter() {
+  // Wordt nog aangeroepen via onchange — herlaad alleen klas-filter
+  await laadKlassenEnFilters();
+}
+
+async function laadKlassenEnFilters() {
   try {
     const periode = document.getElementById('ll-filter-periode')?.value || '';
-    const klassen = await apiFetch('/api/leerlingen/klassen' + (periode ? '?lesperiode='+periode : ''));
-    const sel = document.getElementById('ll-filter-klas');
-    const huidig = sel.value;
-    sel.innerHTML = '<option value="">— Alle klassen —</option>'
-      + klassen.map(k => `<option value="${k}" ${k === huidig ? 'selected' : ''}>${k}</option>`).join('');
-  } catch(e) {}
+    const data = await apiFetch('/api/leerlingen/klassen' + (periode ? '?lesperiode=' + encodeURIComponent(periode) : ''));
+    // Server geeft { klassen: [], leerjaren: [], niveaus: [] }
+    // OF (als oud endpoint) gewoon een array
+    const klassen  = Array.isArray(data) ? data : (data.klassen  || []);
+    const niveaus  = Array.isArray(data) ? []   : (data.niveaus  || []);
+    const leerjaren= Array.isArray(data) ? []   : (data.leerjaren|| []);
+
+    // Vul klas-dropdown
+    const klasSel = document.getElementById('ll-filter-klas');
+    if (klasSel) {
+      const huidigKlas = klasSel.value;
+      klasSel.innerHTML = '<option value="">— Alle klassen —</option>'
+        + klassen.map(k => `<option value="${k}" ${k === huidigKlas ? 'selected' : ''}>${k}</option>`).join('');
+    }
+
+    // Vul niveau-dropdown dynamisch als server niveaus geeft
+    if (niveaus.length) {
+      const nvSel = document.getElementById('ll-filter-niveau');
+      if (nvSel) {
+        const huidigNv = nvSel.value;
+        nvSel.innerHTML = '<option value="">— Alle niveaus —</option>'
+          + niveaus.map(n => `<option value="${n}" ${n === huidigNv ? 'selected' : ''}>${n}</option>`).join('');
+      }
+    }
+
+    // Vul leerjaar-dropdown dynamisch als server leerjaren geeft
+    if (leerjaren.length) {
+      const ljSel = document.getElementById('ll-filter-leerjaar');
+      if (ljSel) {
+        const huidigLj = ljSel.value;
+        ljSel.innerHTML = '<option value="">— Alle jaren —</option>'
+          + leerjaren.map(j => `<option value="${j}" ${j === huidigLj ? 'selected' : ''}>${j}</option>`).join('');
+      }
+    }
+  } catch(e) { console.error('laadKlassenEnFilters fout:', e); }
 }
 
 async function laadLeerlingen() {
-  await laadKlassenFilter();
-  const periode = document.getElementById('ll-filter-periode')?.value || '';
-  const klas    = document.getElementById('ll-filter-klas')?.value || '';
+  const wrap   = document.getElementById('ll-tabel-wrap');
+  const periode = document.getElementById('ll-filter-periode')?.value  || '';
+  const klas    = document.getElementById('ll-filter-klas')?.value     || '';
+  const niveau  = document.getElementById('ll-filter-niveau')?.value   || '';
+  const leerjaar= document.getElementById('ll-filter-leerjaar')?.value || '';
+
+  if (wrap) wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);"><span class="spinner" style="border-top-color:var(--navy);display:inline-block;margin-right:8px;"></span>Laden...</div>';
+
   const qs = new URLSearchParams();
-  if (periode) qs.set('lesperiode', periode);
-  if (klas)    qs.set('klas', klas);
+  if (periode)  qs.set('lesperiode', periode);
+  if (klas)     qs.set('klas', klas);
+  if (niveau)   qs.set('leerniveau', niveau);
+  if (leerjaar) qs.set('leerjaar', leerjaar);
+
   try {
     alleLeerlingen = await apiFetch('/api/leerlingen' + (qs.toString() ? '?' + qs : ''));
     renderLeerlingenTabel(alleLeerlingen);
   } catch(e) {
-    document.getElementById('ll-tabel-wrap').innerHTML =
-      '<p style="color:var(--red-l);font-size:0.82rem;">Laden mislukt: ' + e.message + '</p>';
+    if (wrap) wrap.innerHTML = '<p style="color:var(--red);font-size:0.82rem;">Laden mislukt: ' + e.message + '</p>';
   }
 }
 
 function filterLeerlingenLokaal() {
-  const zoek = document.getElementById('ll-zoek').value.toLowerCase();
+  const zoek = (document.getElementById('ll-zoek')?.value || '').toLowerCase();
   const gefilterd = zoek
     ? alleLeerlingen.filter(l =>
         (l.roepnaam + ' ' + (l.tussenvoegsel||'') + ' ' + l.achternaam).toLowerCase().includes(zoek)
-        || (l.stamnummer||'').includes(zoek))
+        || (l.stamnummer||'').includes(zoek)
+        || (l.klas||'').toLowerCase().includes(zoek))
     : alleLeerlingen;
   renderLeerlingenTabel(gefilterd);
 }
