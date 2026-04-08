@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Socratische Toetsapp — Economie</title>
+<title>Stanislascollege Leerplatform</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -808,6 +808,12 @@
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
 // (verificatie verwijderd)
+
+// Bereken korte lescode uit les-ID
+function getLesCode(lesId) {
+  return lesId ? lesId.slice(0, 4).toUpperCase() : '—';
+}
+
 </script>
 </head>
 <body>
@@ -822,38 +828,73 @@
       <div id="logo-fallback" style="display:none;font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--accent);letter-spacing:0.05em;">Stanislascollege Westplantsoen</div>
     </div>
     <div class="landing-eyebrow">Stanislascollege Westplantsoen</div>
-    <h1 class="landing-title">De <em>Socratische</em> Toetsapp</h1>
-    <p class="landing-desc">Een wereld vol mogelijkheden — ook in de klas.</p>
+    <h1 class="landing-title"><em>Stanislascollege</em> Leerplatform</h1>
+    <p class="landing-desc">Jouw digitale leeromgeving voor Economie.</p>
 
     <div class="role-selector">
       <div class="role-card active-student" id="role-student" onclick="selectRole('student')">
         <div class="role-icon">🎓</div>
         <div class="role-name">Leerling</div>
-        <div class="role-desc">Start een reflectie</div>
+        <div class="role-desc">Ga aan de slag met een les</div>
       </div>
       <div class="role-card" id="role-teacher" onclick="selectRole('teacher')">
         <div class="role-icon">👩‍🏫</div>
         <div class="role-name">Leraar</div>
-        <div class="role-desc">Bekijk resultaten</div>
+        <div class="role-desc">Beheer klassen & lesactiviteiten</div>
       </div>
     </div>
 
     <!-- STUDENT FORM -->
     <div id="student-form">
       <div class="form-section">
-        <label>Jouw klas</label>
-        <select id="student-class">
-          <option value="">— Laden... —</option>
-        </select>
-      </div>
-      <div class="form-section">
         <label>Jouw voornaam</label>
-        <input type="text" id="student-name" placeholder="bijv. Emma" maxlength="40" />
+        <input type="text" id="student-name" placeholder="bijv. Emma" maxlength="40"
+          autocomplete="given-name" />
       </div>
-      <div id="landing-error" class="error-msg" style="display:none"></div>
-      <button class="btn btn-student btn-full" onclick="startStudentFlow()">
-        Verder naar lesoefening →
-      </button>
+
+      <!-- Toegang via code -->
+      <div id="student-via-code">
+        <div class="form-section">
+          <label>Lescodes
+            <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(van je leraar)</span>
+          </label>
+          <input type="text" id="student-lesson-code" placeholder="bijv. AB12"
+            maxlength="10" autocomplete="off"
+            style="text-transform:uppercase;letter-spacing:0.12em;font-family:'DM Mono',monospace;font-size:1.1rem;"
+            oninput="this.value=this.value.toUpperCase()"
+            onkeydown="if(event.key==='Enter') startStudentMetCode()" />
+        </div>
+        <div id="landing-error" class="error-msg" style="display:none"></div>
+        <button class="btn btn-student btn-full" onclick="startStudentMetCode()">
+          Verder →
+        </button>
+      </div>
+
+      <!-- Scheidingslijn -->
+      <div style="display:flex;align-items:center;gap:0.75rem;margin:1rem 0;">
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <span style="font-size:0.75rem;color:var(--muted);">of via klas kiezen</span>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+
+      <!-- Toegang via klas + les -->
+      <div id="student-via-klas">
+        <div class="form-section">
+          <label>Klas</label>
+          <select id="student-class" onchange="onStudentKlasChange()">
+            <option value="">— Laden... —</option>
+          </select>
+        </div>
+        <div class="form-section">
+          <label>Les</label>
+          <select id="student-les-select">
+            <option value="">— Kies eerst een klas —</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost-navy btn-full" onclick="startStudentViaklas()">
+          Verder →
+        </button>
+      </div>
     </div>
 
     <!-- TEACHER FORM -->
@@ -983,7 +1024,7 @@
   <div class="topbar">
     <div class="topbar-brand" style="display:flex;align-items:center;gap:0.6rem;">
       <img src="https://www.stanislascollegewestplantsoen.nl/lcms2/RESIZE/w250/bestanden/Stanislas_SCW_lichtgroen_witrgb@2x.png" alt="Stanislas" style="height:28px;object-fit:contain;" onerror="this.style.display='none'">
-      Socratische Toetsapp
+      Stanislascollege Leerplatform
     </div>
     <div class="topbar-right">
       <span class="topbar-info" id="explain-lesson-name-topbar"></span>
@@ -1018,7 +1059,7 @@
   <div class="topbar">
     <div class="topbar-brand" style="display:flex;align-items:center;gap:0.6rem;">
       <img src="https://www.stanislascollegewestplantsoen.nl/lcms2/RESIZE/w250/bestanden/Stanislas_SCW_lichtgroen_witrgb@2x.png" alt="Stanislas" style="height:28px;object-fit:contain;" onerror="this.style.display='none'">
-      Socratische Toetsapp
+      Stanislascollege Leerplatform
     </div>
     <div class="topbar-right">
       <span class="topbar-info" id="chat-progress-label" style="color:var(--student)"></span>
@@ -1076,7 +1117,7 @@
   <div class="topbar">
     <div class="topbar-brand" style="display:flex;align-items:center;gap:0.6rem;">
       <img src="https://www.stanislascollegewestplantsoen.nl/lcms2/RESIZE/w250/bestanden/Stanislas_SCW_lichtgroen_witrgb@2x.png" alt="Stanislas" style="height:28px;object-fit:contain;" onerror="this.style.display='none'">
-      Socratische Toetsapp
+      Stanislascollege Leerplatform
     </div>
   </div>
   <div class="content-wrap">
@@ -1134,7 +1175,7 @@
   <div class="topbar">
     <div class="topbar-brand" style="display:flex;align-items:center;gap:0.6rem;">
       <img src="https://www.stanislascollegewestplantsoen.nl/lcms2/RESIZE/w250/bestanden/Stanislas_SCW_lichtgroen_witrgb@2x.png" alt="Stanislas" style="height:28px;object-fit:contain;" onerror="this.style.display='none'">
-      Socratische Toetsapp
+      Stanislascollege Leerplatform
     </div>
     <div class="topbar-right">
       <div class="topbar-info">Oefenopgaven · <strong id="opgaven-lesson-topbar"></strong></div>
@@ -1642,17 +1683,68 @@ function selectRole(role) {
 }
 
 async function startStudentFlow() {
+  // Legacy wrapper — via klas
+  await startStudentViaKlas();
+}
+
+async function startStudentMetCode() {
   const name = document.getElementById('student-name').value.trim();
-  const classId = document.getElementById('student-class').value;
-  const err = document.getElementById('landing-error');
-  if (!classId) { err.textContent = 'Kies eerst jouw klas.'; err.style.display = 'block'; return; }
+  const code = document.getElementById('student-lesson-code').value.trim().toUpperCase();
+  const err  = document.getElementById('landing-error');
   if (!name) { err.textContent = 'Vul je voornaam in.'; err.style.display = 'block'; return; }
+  if (!code || code.length < 2) { err.textContent = 'Vul een lescode in (van je leraar).'; err.style.display = 'block'; return; }
   err.style.display = 'none';
-  studentName = name;
-  selectedClass = classesCache.find(c => c.id === classId) || { id: classId, name: '—' };
+  // Zoek les op code (eerste 4 tekens van id, uppercase)
+  try {
+    const lessen = await apiFetch('/api/lessons');
+    const gevonden = lessen.find(l => l.id.slice(0,4).toUpperCase() === code.slice(0,4) ||
+                                      l.id.toUpperCase().startsWith(code));
+    if (!gevonden) { err.textContent = 'Geen les gevonden voor code "' + code + '". Controleer de code bij je leraar.'; err.style.display = 'block'; return; }
+    studentName   = name;
+    selectedLesson = gevonden;
+    selectedClass  = classesCache.find(c => c.id === gevonden.class_id) || { id: gevonden.class_id || '', name: gevonden.class_id || '—' };
+    document.getElementById('topbar-student-name').textContent = name;
+    showScreen('screen-kies-lesvorm');
+    renderLesvormKeuze(gevonden);
+  } catch(e) {
+    err.textContent = 'Fout bij ophalen: ' + e.message; err.style.display = 'block';
+  }
+}
+
+async function startStudentViaKlas() {
+  const name    = document.getElementById('student-name').value.trim();
+  const classId = document.getElementById('student-class').value;
+  const lesId   = document.getElementById('student-les-select').value;
+  const err     = document.getElementById('landing-error');
+  if (!name) { err.textContent = 'Vul je voornaam in.'; err.style.display = 'block'; return; }
+  if (!classId) { err.textContent = 'Kies eerst jouw klas.'; err.style.display = 'block'; return; }
+  if (!lesId) { err.textContent = 'Kies ook een les.'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  studentName    = name;
+  selectedClass  = classesCache.find(c => c.id === classId) || { id: classId, name: '—' };
+  selectedLesson = lessonsCache?.find(l => l.id === lesId) || null;
   document.getElementById('topbar-student-name').textContent = name + ' · ' + selectedClass.name;
-  showScreen('screen-choose-lesson');
-  await loadLessonsForStudent();
+  if (selectedLesson) {
+    showScreen('screen-kies-lesvorm');
+    renderLesvormKeuze(selectedLesson);
+  } else {
+    showScreen('screen-choose-lesson');
+    await loadLessonsForStudent();
+  }
+}
+
+// Vul les-dropdown als klas verandert (leerling-flow)
+async function onStudentKlasChange() {
+  const classId = document.getElementById('student-class').value;
+  const lesSel  = document.getElementById('student-les-select');
+  lesSel.innerHTML = '<option value="">— Laden... —</option>';
+  if (!classId) { lesSel.innerHTML = '<option value="">— Kies eerst een klas —</option>'; return; }
+  try {
+    const lessen = await apiFetch('/api/lessons?class_id=' + classId);
+    lesSel.innerHTML = '<option value="">— Kies een les —</option>';
+    lessen.forEach(l => lesSel.add(new Option(l.name, l.id)));
+    if (!lessen.length) lesSel.innerHTML = '<option value="">Geen lessen beschikbaar</option>';
+  } catch(e) { lesSel.innerHTML = '<option value="">Fout bij laden</option>'; }
 }
 
 async function loginTeacher() {
@@ -1671,9 +1763,9 @@ async function loginTeacher() {
     leraarToken   = data.token;
     leraarProfiel = data.leraar;
     localStorage.setItem('leraar_token', leraarToken);
-    document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
-    await loadTeacherDashboard();
+    if(document.getElementById('topbar-leraar-naam')) document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
     showScreen('screen-teacher');
+    await loadTeacherDashboard();
     navNaar('klassen');
   } catch(e) {
     err.textContent = e.message || 'Inloggen mislukt.';
@@ -1701,8 +1793,8 @@ async function registreer() {
     });
     leraarToken = data.token; leraarProfiel = data.leraar;
     localStorage.setItem('leraar_token', leraarToken);
-    document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
-    await loadTeacherDashboard(); showScreen('screen-teacher'); navNaar('klassen');
+    if(document.getElementById('topbar-leraar-naam')) document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
+    showScreen('screen-teacher'); await loadTeacherDashboard(); navNaar('klassen');
   } catch(e) {
     err.textContent = e.message || 'Registratie mislukt.';
     err.style.display = 'block';
@@ -1725,19 +1817,37 @@ function openMolApp() {
 
 // Auto-inloggen als token in localStorage staat
 window.addEventListener('DOMContentLoaded', async () => {
+  // Check URL parameter ?les=LESID voor directe leerling-link
+  const urlParams   = new URLSearchParams(window.location.search);
+  const directLesId = urlParams.get('les');
+
   if (leraarToken) {
     try {
       leraarProfiel = await apiFetch('/api/auth/mij');
-      document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
-      await loadTeacherDashboard();
+      if(document.getElementById('topbar-leraar-naam')) document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
       showScreen('screen-teacher');
+      await loadTeacherDashboard();
       navNaar('klassen');
     } catch(e) {
       leraarToken = null; localStorage.removeItem('leraar_token');
     }
   }
+
   // Laad klassen voor leerling-dropdown altijd
   loadClasses();
+
+  // Directe link: ?les=LESID → toon leerling-inlog met code al ingevuld
+  if (directLesId && !leraarToken) {
+    selectRole('student');
+    const codeIn = document.getElementById('student-lesson-code');
+    if (codeIn) codeIn.value = directLesId.slice(0,4).toUpperCase();
+    const errEl = document.getElementById('landing-error');
+    if (errEl) {
+      errEl.textContent = '✓ Les gevonden via link — vul je naam in en klik op Verder';
+      errEl.style.color  = 'var(--green)';
+      errEl.style.display = 'block';
+    }
+  }
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -2683,13 +2793,14 @@ function navNaar(view) {
     const el = document.getElementById('nav-' + v);
     if (el) el.classList.toggle('active', v === view);
   });
-  // Klas-header verbergen
-  document.getElementById('klas-header').style.display = 'none';
+  // Klas-header verbergen (guard voor als element nog niet in DOM is)
+  const klasHeader = document.getElementById('klas-header');
+  if (klasHeader) klasHeader.style.display = 'none';
   // Views
   const views = ['klassen','klas-detail','leerlingen','lessen','analyse','socratisch'];
   views.forEach(v => {
     const el = document.getElementById('view-' + v);
-    if (el) { el.style.display = 'none'; if (el.style.display !== undefined) el.style.removeProperty('display'); el.style.display = 'none'; }
+    if (el) el.style.display = 'none';
   });
   const target = document.getElementById('view-' + view);
   if (target) target.style.display = view === 'klas-detail' ? 'flex' : 'block';
@@ -2743,7 +2854,7 @@ function openKlas(klasId) {
   const klas = classesCache.find(c => c.id === klasId);
   if (!klas) return;
   // Sidebar
-  document.getElementById('nav-klassen').classList.add('active');
+  document.getElementById('nav-klassen')?.classList.add('active');
   // Klas-header invullen
   document.getElementById('klas-badge-naam').textContent = klas.name;
   document.getElementById('klas-detail-titel').textContent = klas.name;
@@ -2760,13 +2871,13 @@ function openKlas(klasId) {
       const el = document.getElementById('klas-detail-sub');
       if (el) el.textContent = niveauLbl + (leerjaar ? ' ' + leerjaar : '');
     });
-  document.getElementById('klas-header').style.display = 'block';
+  const kh2 = document.getElementById('klas-header'); if(kh2) kh2.style.display = 'block';
   // Views wisselen
   ['klassen','leerlingen','lessen','analyse','socratisch'].forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.style.display = 'none';
   });
-  document.getElementById('view-klas-detail').style.display = 'flex';
+  const vkd = document.getElementById('view-klas-detail'); if(vkd) vkd.style.display = 'flex';
   // Breadcrumb
   setBreadcrumb([
     { label: 'Mijn klassen', onclick: "navNaar('klassen')" },
@@ -2835,7 +2946,11 @@ async function renderKlasActiviteiten(klas, wrap) {
         <div class="act-icon ${isMol ? 'act-icon-mol' : 'act-icon-socratisch'}">${isMol ? '🕵️' : '💬'}</div>
         <div class="act-info">
           <div class="act-naam">${act.naam || '—'}</div>
-          <div class="act-meta">${isMol ? 'Wie is de Mol' : 'Socratische toets'} · ${datumStr}</div>
+          <div class="act-meta">${isMol ? 'Wie is de Mol' : 'Socratische toets'} · ${datumStr}
+            ${!isMol ? `<span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--navy);
+              background:var(--navy-glow);padding:1px 5px;border-radius:3px;margin-left:4px;">
+              code: ${getLesCode(act.id)}</span>` : ''}
+          </div>
         </div>
         <div class="act-status ${statusCls}">${statusLabel}</div>
       </div>`;
@@ -3121,107 +3236,64 @@ function vulClassFilter() {
 }
 
 async function loadTeacherDashboard() {
-  const [lessons, allResults, classes] = await Promise.all([
-    apiFetch('/api/lessons'),
-    apiFetch('/api/results'),
-    apiFetch('/api/classes')
-  ]);
-  classesCache = classes;
+  try {
+    const [classes, lessons, results] = await Promise.all([
+      apiFetch('/api/classes'),
+      apiFetch('/api/lessons'),
+      apiFetch('/api/results'),
+    ]);
+    classesCache  = classes  || [];
+    lessonsCache  = lessons  || [];
+    resultsCache  = results  || [];
 
-  // Stats
-  const totalStudents = new Set(allResults.map(r => r.student_name));
-  const stats = document.getElementById('dashboard-stats');
-  stats.innerHTML = `
-    <div class="stat-card"><div class="stat-num">${classes.length}</div><div class="stat-label">Klassen</div></div>
-    <div class="stat-card"><div class="stat-num">${lessons.length}</div><div class="stat-label">Lessen</div></div>
-    <div class="stat-card"><div class="stat-num">${totalStudents.size}</div><div class="stat-label">Leerlingen</div></div>
-    <div class="stat-card"><div class="stat-num">${allResults.length}</div><div class="stat-label">Reflecties</div></div>
-  `;
+    // ── Klassen-grid renderen ─────────────────────────────
+    renderClassenGrid(classesCache);
 
-  // Class overview cards
-  const classOverviewSection = document.getElementById('class-overview-section');
-  const classOverviewGrid    = document.getElementById('class-overview-grid');
-  if (classes.length > 0) {
-    classOverviewSection.style.display = 'block';
-    classOverviewGrid.innerHTML = '';
-    classes.forEach(c => {
-      const lessonCount  = lessons.filter(l => l.class_id === c.id).length;
-      const classResults = allResults.filter(r => r.class_id === c.id);
-      const studentCount = new Set(classResults.map(r => r.student_name)).size;
-      const goedPct = classResults.length
-        ? Math.round(classResults.filter(r => r.understanding === 'goed' || r.understanding === 'uitstekend').length / classResults.length * 100)
-        : null;
-      const card = document.createElement('div');
-      card.style.cssText = 'background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:0.9rem 1rem;cursor:pointer;transition:border-color 0.2s;';
-      card.onmouseenter = () => card.style.borderColor = 'var(--accent)';
-      card.onmouseleave = () => card.style.borderColor = 'var(--border)';
-      card.onclick = () => {
-        document.getElementById('teacher-class-filter').value = c.id;
-        onClassFilterChange();
-      };
-      const progressBar = goedPct !== null
-        ? '<div style="margin-top:0.5rem;height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + goedPct + '%;background:var(--green);border-radius:3px;"></div></div><div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">' + goedPct + '% goed/uitstekend</div>'
-        : '<div style="font-size:0.72rem;color:var(--muted2);margin-top:0.4rem;">Nog geen reflecties</div>';
-      card.innerHTML =
-        '<div style="font-weight:700;font-size:0.95rem;color:var(--text);margin-bottom:0.4rem;">🏫 ' + escHtml(c.name) + '</div>' +
-        '<div style="font-size:0.8rem;color:var(--muted);">' + lessonCount + ' les' + (lessonCount !== 1 ? 'sen' : '') + ' · ' + studentCount + ' leerling' + (studentCount !== 1 ? 'en' : '') + '</div>' +
-        progressBar;
-      classOverviewGrid.appendChild(card);
-    });
-  } else {
-    classOverviewSection.style.display = 'none';
-  }
+    // ── Dashboard greeting ────────────────────────────────
+    const uur   = new Date().getHours();
+    const groet = uur < 12 ? 'Goedemorgen' : uur < 18 ? 'Goedemiddag' : 'Goedenavond';
+    const naam  = leraarProfiel?.naam?.split(' ')[0] || 'Leraar';
+    const greetEl = document.getElementById('dashboard-greeting');
+    if (greetEl) greetEl.textContent = groet + ', ' + naam;
+    const subEl = document.getElementById('dashboard-sub');
+    if (subEl) subEl.textContent = 'Schooljaar 2025–2026 · ' + classesCache.length + ' klassen · ' + lessonsCache.length + ' lessen';
 
-  // Class filter dropdown
-  const classSel = document.getElementById('teacher-class-filter');
-  const prevClass = classSel.value;
-  classSel.innerHTML = '<option value="">— Alle klassen —</option>';
-  classesCache.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id; opt.textContent = c.name;
-    classSel.appendChild(opt);
-  });
-  if (prevClass) classSel.value = prevClass;
-
-  // Lesson select dropdown (filter by selected class)
-  const sel = document.getElementById('teacher-lesson-select');
-  const prev = sel.value;
-  sel.innerHTML = '<option value="">— Kies een les —</option>';
-  const filteredLessons = prevClass ? lessons.filter(l => l.class_id === prevClass) : lessons;
-  filteredLessons.forEach(l => {
-    const opt = document.createElement('option');
-    opt.value = l.id; opt.textContent = l.name + (l.class_id ? '' : ' (alle klassen)');
-    sel.appendChild(opt);
-  });
-  if (prev) sel.value = prev;
-
-  // Lessons grid
-  const grid = document.getElementById('teacher-lessons-grid');
-  const noMsg = document.getElementById('no-lessons-teacher');
-  grid.innerHTML = '';
-  if (lessons.length === 0) { noMsg.style.display = 'block'; }
-  else {
-    noMsg.style.display = 'none';
-    for (const l of lessons) {
-      const lessonResults = allResults.filter(r => r.lesson_id === l.id);
-      const card = document.createElement('div');
-      card.className = 'lesson-card';
-      card.innerHTML = `
-        <div class="lesson-card-name">${escHtml(l.name)}</div>
-        <div class="lesson-card-desc">${escHtml(l.content.substring(0,100))}...</div>
-        <div class="lesson-card-meta">
-          <span class="badge badge-blue">📋 ${lessonResults.length} reflecties</span>
-          <span class="badge badge-neutral">${formatDate(l.created_at)}</span>
-        </div>
-        <div style="margin-top:0.75rem;display:flex;gap:0.5rem;">
-          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteLesson('${l.id}','${escAttr(l.name)}')">🗑 Verwijderen</button>
-        </div>
+    // ── Stats ─────────────────────────────────────────────
+    const stats = document.getElementById('dashboard-stats');
+    if (stats) {
+      const uniekeLL = new Set(resultsCache.map(r => r.student_name)).size;
+      stats.innerHTML = `
+        <div class="stat-card"><div class="stat-val">${classesCache.length}</div><div class="stat-lbl">Klassen</div></div>
+        <div class="stat-card"><div class="stat-val">${lessonsCache.length}</div><div class="stat-lbl">Lessen</div></div>
+        <div class="stat-card"><div class="stat-val">${uniekeLL}</div><div class="stat-lbl">Actieve leerlingen</div></div>
+        <div class="stat-card"><div class="stat-val">${resultsCache.length}</div><div class="stat-lbl">Resultaten</div></div>
       `;
-      grid.appendChild(card);
     }
-  }
 
-  if (prev) loadStudentResults();
+    // ── Sidebar naam + avatar ─────────────────────────────
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const naamEl   = document.getElementById('sidebar-naam');
+    if (leraarProfiel) {
+      if (avatarEl) {
+        const initials = leraarProfiel.naam.split(' ').filter(Boolean).map(w => w[0]).slice(0,2).join('').toUpperCase();
+        avatarEl.textContent = initials;
+      }
+      if (naamEl) naamEl.textContent = leraarProfiel.naam;
+    }
+
+    // ── Acties voor klassen-view ──────────────────────────
+    setMainActions('klassen');
+
+    // ── Analyse-dropdowns vullen (achtergrond) ────────────
+    vulAnalyseFilters();
+
+    // ── Socratisch-filters vullen ─────────────────────────
+    vulClassFilter();
+    loadLessonsForTeacher();
+
+  } catch(e) {
+    console.error('loadTeacherDashboard fout:', e);
+  }
 }
 
 async function deleteLesson(id, name) {
