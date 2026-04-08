@@ -3011,55 +3011,242 @@ function bekijkMolResultaten(sessieId) {
 }
 
 async function renderKlasLeerlingen(klas, wrap) {
-  wrap.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);"><span class="spinner" style="border-top-color:var(--navy);"></span></div>`;
-  try {
-    // Probeer op klas-naam te filteren
-    const qs = new URLSearchParams({ klas: klas?.name || '' });
-    const leerlingen = await apiFetch('/api/leerlingen?' + qs);
+  // Bouw de volledige leerlingenpagina voor een klas
+  // met huidige leerlingen + toevoeg-sectie
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.5rem;">
+      <div>
+        <div class="page-eyebrow">Leerlingen</div>
+        <h3 class="page-title" style="font-size:1.2rem;margin:0;">${klas?.name || ''}</h3>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="toggleLlToevoegSectie()">
+        + Leerlingen toevoegen
+      </button>
+    </div>
 
+    <!-- Toevoeg-sectie (initieel verborgen) -->
+    <div id="ll-toevoeg-sectie" style="display:none;background:#fff;border:1.5px solid var(--border);
+      border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;">
+      <div style="font-weight:700;font-size:0.88rem;color:var(--navy);margin-bottom:0.75rem;">
+        Leerlingen toevoegen aan ${klas?.name || 'deze klas'}
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+        <select id="klas-ll-periode" onchange="laadKlasLlKiezer()" style="flex:1;min-width:120px;">
+          <option value="">— Alle periodes —</option>
+        </select>
+        <select id="klas-ll-niveau" onchange="laadKlasLlKiezer()" style="min-width:120px;">
+          <option value="">— Alle niveaus —</option>
+          <option value="Atheneum">Atheneum</option>
+          <option value="Gymnasium">Gymnasium</option>
+          <option value="HAVO">HAVO</option>
+        </select>
+        <select id="klas-ll-leerjaar" onchange="laadKlasLlKiezer()" style="min-width:100px;">
+          <option value="">— Alle jaren —</option>
+          <option value="1">Jaar 1</option><option value="2">Jaar 2</option>
+          <option value="3">Jaar 3</option><option value="4">Jaar 4</option>
+          <option value="5">Jaar 5</option><option value="6">Jaar 6</option>
+        </select>
+        <input type="text" id="klas-ll-zoek" placeholder="naam zoeken..."
+          oninput="filterKlasLlKiezer()" style="min-width:140px;" />
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn btn-ghost-navy btn-sm" onclick="selecteerAlleKlasLl()" style="font-size:0.72rem;">Alles selecteren</button>
+          <button class="btn btn-ghost-navy btn-sm" onclick="deselecteerAlleKlasLl()" style="font-size:0.72rem;">Deselecteren</button>
+        </div>
+        <span id="klas-ll-telling" style="font-size:0.75rem;color:var(--muted);"></span>
+      </div>
+      <div id="klas-ll-kiezer-lijst" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);
+        border-radius:10px;padding:0.3rem;margin-bottom:0.75rem;">
+        <div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">
+          Stel filters in om leerlingen te tonen
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-primary btn-sm" onclick="voegLlToeAanKlas('${klas?.id}','${klas?.name}')">
+          Toevoegen aan klas →
+        </button>
+        <button class="btn btn-ghost-navy btn-sm" onclick="toggleLlToevoegSectie()">Annuleren</button>
+      </div>
+    </div>
+
+    <!-- Huidige leerlingen -->
+    <div id="klas-ll-huidig-wrap">
+      <div style="text-align:center;padding:2rem;color:var(--muted);">
+        <span class="spinner" style="border-top-color:var(--navy);display:inline-block;"></span>
+      </div>
+    </div>`;
+
+  // Laad periodes voor de kiezer
+  try {
+    const periodes = await apiFetch('/api/leerlingen/periodes');
+    const sel = document.getElementById('klas-ll-periode');
+    if (sel) {
+      periodes.forEach(p => sel.add(new Option(p, p)));
+      if (periodes.length === 1) { sel.value = periodes[0]; laadKlasLlKiezer(); }
+    }
+  } catch(e) {}
+
+  // Laad huidige leerlingen van deze klas
+  await laadKlasLlHuidig(klas);
+}
+
+async function laadKlasLlHuidig(klas) {
+  const wrap = document.getElementById('klas-ll-huidig-wrap');
+  if (!wrap) return;
+  try {
+    const leerlingen = await apiFetch('/api/leerlingen?klas=' + encodeURIComponent(klas?.name || ''));
     if (!leerlingen?.length) {
       wrap.innerHTML = `<div class="empty-state" style="padding:2rem 0;">
         <div class="empty-icon">👥</div>
-        <p>Geen leerlingen gevonden voor ${klas?.name}.<br>
-          <button class="btn btn-ghost-navy btn-sm" style="margin-top:0.75rem;" onclick="navNaar('leerlingen')">
-            📥 Leerlingen importeren
-          </button>
-        </p>
+        <p>Nog geen leerlingen in deze klas.<br>
+        Gebruik de knop "+ Leerlingen toevoegen" hierboven.</p>
       </div>`;
       return;
     }
-
     const rijen = leerlingen.map(l => {
       const naam = [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ');
       return `<tr>
-        <td style="font-size:0.78rem;color:var(--muted);padding:0.65rem 0.75rem;">${l.stamnummer || '—'}</td>
-        <td style="padding:0.65rem 0.75rem;font-weight:500;">${naam}</td>
-        <td style="padding:0.65rem 0.75rem;">
-          ${l.leerniveau ? `<span style="font-size:0.7rem;background:var(--navy-glow);color:var(--navy);padding:1px 6px;border-radius:4px;">${l.leerniveau}</span>` : ''}
+        <td style="font-size:0.78rem;color:var(--muted);padding:0.6rem 0.75rem;">${l.stamnummer || '—'}</td>
+        <td style="padding:0.6rem 0.75rem;font-weight:500;">${naam}</td>
+        <td style="padding:0.6rem 0.75rem;">
+          ${l.leerniveau ? `<span style="font-size:0.68rem;background:var(--navy-glow);color:var(--navy);padding:1px 6px;border-radius:4px;">${l.leerniveau}</span>` : '—'}
         </td>
-        <td style="padding:0.65rem 0.75rem;font-size:0.78rem;color:var(--muted);">${l.email || '—'}</td>
+        <td style="padding:0.6rem 0.75rem;font-size:0.78rem;color:var(--muted);">${l.email || '—'}</td>
+        <td style="padding:0.6rem 0.75rem;text-align:right;">
+          <button onclick="verwijderLlUitKlas('${l.id}','${klas?.id}','${klas?.name}')"
+            style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;"
+            title="Verwijder uit klas">✕</button>
+        </td>
       </tr>`;
     }).join('');
-
-    wrap.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-        <span style="font-size:13px;font-weight:600;color:var(--navy);">${leerlingen.length} leerlingen</span>
-        <button class="btn btn-ghost-navy btn-sm" onclick="navNaar('leerlingen')">Beheren</button>
-      </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-          <thead><tr style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);border-bottom:1px solid var(--border);">
-            <th style="text-align:left;padding:0.4rem 0.75rem 0.6rem;">Stamnr.</th>
-            <th style="text-align:left;padding:0.4rem 0.75rem 0.6rem;">Naam</th>
-            <th style="text-align:left;padding:0.4rem 0.75rem 0.6rem;">Niveau</th>
-            <th style="text-align:left;padding:0.4rem 0.75rem 0.6rem;">E-mail</th>
-          </tr></thead>
-          <tbody style="border-top:1px solid var(--border);">${rijen}</tbody>
-        </table>
-      </div>`;
+    wrap.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+      <span style="font-size:13px;font-weight:600;color:var(--navy);">${leerlingen.length} leerlingen in deze klas</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+        <thead><tr style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:0.4rem 0.75rem 0.5rem;">Stamnr.</th>
+          <th style="text-align:left;padding:0.4rem 0.75rem 0.5rem;">Naam</th>
+          <th style="text-align:left;padding:0.4rem 0.75rem 0.5rem;">Niveau</th>
+          <th style="text-align:left;padding:0.4rem 0.75rem 0.5rem;">E-mail</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${rijen}</tbody>
+      </table>
+    </div>`;
   } catch(e) {
-    wrap.innerHTML = `<p style="color:var(--red);font-size:0.85rem;">Laden mislukt: ${e.message}
-      <br><button class="btn btn-ghost-navy btn-sm" style="margin-top:0.5rem;" onclick="navNaar('leerlingen')">→ Naar leerlingenbeheer</button></p>`;
+    wrap.innerHTML = `<p style="color:var(--red);font-size:0.85rem;">Laden mislukt: ${e.message}</p>`;
   }
+}
+
+// Klas leerlingen kiezer state
+let klasLlKiezerAlle = [];
+let klasLlKiezerGeselecteerd = new Set();
+
+function toggleLlToevoegSectie() {
+  const s = document.getElementById('ll-toevoeg-sectie');
+  if (s) s.style.display = s.style.display === 'none' ? 'block' : 'none';
+}
+
+async function laadKlasLlKiezer() {
+  const periode  = document.getElementById('klas-ll-periode')?.value  || '';
+  const niveau   = document.getElementById('klas-ll-niveau')?.value   || '';
+  const leerjaar = document.getElementById('klas-ll-leerjaar')?.value || '';
+  if (!periode && !niveau && !leerjaar) return;
+  const qs = new URLSearchParams();
+  if (periode)  qs.set('lesperiode', periode);
+  if (niveau)   qs.set('leerniveau', niveau);
+  if (leerjaar) qs.set('leerjaar', leerjaar);
+  try {
+    klasLlKiezerAlle = await apiFetch('/api/leerlingen?' + qs);
+    renderKlasLlKiezer();
+  } catch(e) {}
+}
+
+function filterKlasLlKiezer() { renderKlasLlKiezer(); }
+
+function renderKlasLlKiezer() {
+  const zoek = document.getElementById('klas-ll-zoek')?.value.toLowerCase() || '';
+  const gefilterd = zoek
+    ? klasLlKiezerAlle.filter(l => (l.roepnaam+' '+(l.tussenvoegsel||'')+' '+l.achternaam).toLowerCase().includes(zoek))
+    : klasLlKiezerAlle;
+  const lijst = document.getElementById('klas-ll-kiezer-lijst');
+  if (!lijst) return;
+  if (!gefilterd.length) {
+    lijst.innerHTML = '<div style="padding:0.75rem;text-align:center;color:var(--muted);font-size:0.82rem;">Geen leerlingen gevonden</div>';
+    updateKlasLlTelling(); return;
+  }
+  lijst.innerHTML = gefilterd.map(l => {
+    const naam = [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ');
+    const sel  = klasLlKiezerGeselecteerd.has(l.id);
+    return `<div class="ll-picker-rij ${sel ? 'geselecteerd' : ''}" onclick="toggleKlasLl('${l.id}')" data-id="${l.id}">
+      <div class="ll-picker-check">${sel ? '✓' : ''}</div>
+      <span class="ll-picker-naam">${naam}</span>
+      <span class="ll-picker-klas">${l.klas||''} ${l.leerniveau ? '· '+l.leerniveau : ''}</span>
+    </div>`;
+  }).join('');
+  updateKlasLlTelling();
+}
+
+function toggleKlasLl(id) {
+  if (klasLlKiezerGeselecteerd.has(id)) klasLlKiezerGeselecteerd.delete(id);
+  else klasLlKiezerGeselecteerd.add(id);
+  const el = document.querySelector(`#klas-ll-kiezer-lijst [data-id="${id}"]`);
+  if (el) {
+    const sel = klasLlKiezerGeselecteerd.has(id);
+    el.classList.toggle('geselecteerd', sel);
+    const check = el.querySelector('.ll-picker-check');
+    if (check) check.textContent = sel ? '✓' : '';
+  }
+  updateKlasLlTelling();
+}
+
+function selecteerAlleKlasLl() { klasLlKiezerAlle.forEach(l => klasLlKiezerGeselecteerd.add(l.id)); renderKlasLlKiezer(); }
+function deselecteerAlleKlasLl() { klasLlKiezerGeselecteerd.clear(); renderKlasLlKiezer(); }
+
+function updateKlasLlTelling() {
+  const el = document.getElementById('klas-ll-telling');
+  if (el) el.textContent = klasLlKiezerGeselecteerd.size ? klasLlKiezerGeselecteerd.size + ' geselecteerd' : '';
+}
+
+async function voegLlToeAanKlas(klasId, klasNaam) {
+  if (!klasLlKiezerGeselecteerd.size) { showToast('Selecteer eerst leerlingen.'); return; }
+  try {
+    await apiFetch('/api/leerlingen/koppel-klas', {
+      method: 'POST',
+      body: JSON.stringify({ leerling_ids: [...klasLlKiezerGeselecteerd], klas_naam: klasNaam }),
+    });
+    showToast('✓ ' + klasLlKiezerGeselecteerd.size + ' leerlingen toegevoegd aan ' + klasNaam);
+    klasLlKiezerGeselecteerd = new Set();
+    toggleLlToevoegSectie();
+    // Herlaad huidig overzicht
+    const klas = classesCache.find(c => c.id === klasId);
+    if (klas) {
+      await laadKlasLlHuidig(klas);
+      // Update leerlingenaantal in header
+      const sub = document.getElementById('klas-detail-sub');
+      if (sub) {
+        const ll = await apiFetch('/api/leerlingen?klas=' + encodeURIComponent(klasNaam)).catch(() => []);
+        const niveauLbl = { atheneum:'Atheneum', gymnasium:'Gymnasium', havo:'HAVO' }[detecteerNiveau(klasNaam)] || '';
+        const leerjaar  = detecteerLeerjaar(klasNaam);
+        sub.textContent  = niveauLbl + (leerjaar ? ' ' + leerjaar : '') + (ll.length ? ' · ' + ll.length + ' leerlingen' : '');
+      }
+    }
+  } catch(e) { showToast('Fout: ' + e.message); }
+}
+
+async function verwijderLlUitKlas(llId, klasId, klasNaam) {
+  try {
+    // Verwijder klas-koppeling door klas-veld leeg te maken
+    await apiFetch('/api/leerlingen/koppel-klas', {
+      method: 'POST',
+      body: JSON.stringify({ leerling_ids: [llId], klas_naam: '' }),
+    });
+    const klas = classesCache.find(c => c.id === klasId);
+    if (klas) await laadKlasLlHuidig(klas);
+    showToast('Leerling verwijderd uit klas.');
+  } catch(e) { showToast('Fout: ' + e.message); }
 }
 
 function renderKlasResultaten(klas, wrap) {
@@ -3968,11 +4155,19 @@ async function createClass() {
     const aantalLl = modalLlGeselecteerd.size;
     closeModal('modal-create-class');
     showToast('✓ Klas "' + name + '" aangemaakt!' + (aantalLl ? ' · ' + aantalLl + ' leerlingen gekoppeld' : ''));
+    // Refresh caches
     classesCache = await getClasses();
+    lessonsCache = (lessonsCache || []);
     populateStudentClassDropdown();
-    loadClassesTab();
-    await loadTeacherDashboard();
     renderClassenGrid(classesCache);
+    // Ga direct naar de klas-detailpagina, tab leerlingen
+    const nieuweKlas = classesCache.find(c => c.name === name);
+    if (nieuweKlas) {
+      openKlas(nieuweKlas.id);
+      switchKlasTab('leerlingen');
+    } else {
+      navNaar('klassen');
+    }
   } catch(e) {
     err.textContent = 'Opslaan mislukt: ' + e.message; err.style.display = 'block';
   } finally {
