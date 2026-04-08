@@ -1849,8 +1849,10 @@ async function maakSessie() {
         timer_discussie: setupData.timerDiscussie || 120,
         timer_stem:      setupData.timerStem      || 60,
         leerlingen:     setupData.leerlingen || leerlingen,
-        groepsindeling: setupData.groepsindeling || null, // met docent-Mol keuzes
+        groepsindeling: setupData.groepsindeling || null,
         vragen:         vragenData.length > 0 ? vragenData : null,
+        klas_id:        document.getElementById('setup-klas-id')?.value   || null,
+        klas_naam:      document.getElementById('setup-klas-naam')?.value || null,
       }),
     });
     sessieId   = result.sessieId;
@@ -3164,7 +3166,7 @@ function bouwScoreOpbouw(score, isMol, nRondes) {
 // ════════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
 
   if (params.get('rol') === 'speler') {
@@ -3173,14 +3175,42 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // Lees JWT-token uit URL (gezet door index.html) of localStorage
-  docentToken = params.get('leraar') || localStorage.getItem('leraar_token') || localStorage.getItem('mol_docent_token') || 'leraar123';
+  docentToken = params.get('leraar') ? decodeURIComponent(params.get('leraar'))
+    : localStorage.getItem('leraar_token') || localStorage.getItem('mol_docent_token') || 'leraar123';
   if (params.get('leraar')) {
-    localStorage.setItem('mol_docent_token', params.get('leraar'));
+    localStorage.setItem('mol_docent_token', docentToken);
   }
 
-  // Toon sessie-lijst als docent-login scherm actief wordt
-  if (!params.get('rol')) {
-    laadSessieLijst();
+  // klas_id + klas_naam vanuit index.html
+  const voorafKlasId   = params.get('klas_id')   ? decodeURIComponent(params.get('klas_id'))   : '';
+  const voorafKlasNaam = params.get('klas_naam')  ? decodeURIComponent(params.get('klas_naam')) : '';
+
+  // open_sessie: ga direct naar resultaten van een sessie
+  const openSessieId = params.get('open_sessie');
+
+  showScreen('screen-docent-sessies');
+  await laadSessieLijst();
+
+  if (openSessieId) {
+    // Open direct de resultaten voor deze sessie
+    setTimeout(() => toonResultaten(openSessieId), 400);
+  }
+
+  if (voorafKlasId || voorafKlasNaam) {
+    setTimeout(() => {
+      const klasIdIn   = document.getElementById('setup-klas-id');
+      const klasNaamIn = document.getElementById('setup-klas-naam');
+      if (klasIdIn)   klasIdIn.value   = voorafKlasId;
+      if (klasNaamIn) klasNaamIn.value = voorafKlasNaam;
+      // Toon klas-badge in setup-scherm
+      if (voorafKlasNaam) {
+        const badge = document.createElement('div');
+        badge.style.cssText = 'margin-bottom:0.75rem;padding:6px 12px;background:rgba(200,169,81,0.1);border:1px solid rgba(200,169,81,0.3);border-radius:7px;font-size:0.78rem;color:var(--gold);display:inline-flex;align-items:center;gap:6px;';
+        badge.innerHTML = '🏫 Gestart vanuit klas <strong>' + voorafKlasNaam + '</strong>';
+        const setupErr = document.getElementById('setup-error');
+        if (setupErr) setupErr.parentNode.insertBefore(badge, setupErr);
+      }
+    }, 400);
   }
 });
 

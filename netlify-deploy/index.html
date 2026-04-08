@@ -615,6 +615,196 @@
   .hm-mid   { background: rgba(245,158,11,0.22);  color: #fcd34d; }
   .hm-high  { background: rgba(34,197,94,0.22);   color: #86efac; }
 
+
+  /* ══ APP SHELL ══════════════════════════════════════════════ */
+  .app-shell { display: flex; min-height: 100vh; }
+
+  /* ── Sidebar ─────────────────────────────────────────────── */
+  .sidebar {
+    width: 220px; background: var(--navy); flex-shrink: 0;
+    display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 50;
+    transition: transform 0.25s ease;
+  }
+  .sidebar-logo {
+    padding: 16px 18px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sidebar-logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+  .sidebar-logo-name { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.3; }
+  .sidebar-logo-sub  { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 0.05em; }
+  .sidebar-user {
+    padding: 10px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sidebar-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(200,169,81,0.2); border: 1.5px solid rgba(200,169,81,0.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: var(--gold); flex-shrink: 0;
+  }
+  .sidebar-user-name { font-size: 12px; font-weight: 600; color: #fff; }
+  .sidebar-user-role { font-size: 10px; color: rgba(255,255,255,0.4); }
+  .sidebar-nav { flex: 1; padding: 10px 8px; overflow-y: auto; }
+  .nav-section-label {
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.3); padding: 8px 10px 4px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 7px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.6);
+    transition: all 0.12s; margin-bottom: 1px; border: none; background: none;
+    font-family: 'Plus Jakarta Sans', sans-serif; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+  .nav-item.active { background: rgba(200,169,81,0.18); color: #f0c764; font-weight: 600; }
+  .nav-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+  .nav-badge {
+    margin-left: auto; font-size: 9px; background: rgba(200,169,81,0.25);
+    color: var(--gold); padding: 1px 6px; border-radius: 99px; font-weight: 600;
+  }
+  .sidebar-bottom { padding: 10px 8px; border-top: 1px solid rgba(255,255,255,0.08); }
+
+  /* ── Main area ───────────────────────────────────────────── */
+  .main-area {
+    flex: 1; margin-left: 220px; display: flex; flex-direction: column; min-height: 100vh;
+    background: #f5f7fb;
+  }
+  .main-topbar {
+    background: #fff; border-bottom: 1px solid var(--border);
+    padding: 0 1.75rem; height: 52px; display: flex; align-items: center;
+    justify-content: space-between; flex-shrink: 0;
+    position: sticky; top: 0; z-index: 40;
+  }
+  .main-breadcrumb {
+    display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted);
+  }
+  .main-breadcrumb .bc-link {
+    cursor: pointer; color: var(--muted); background: none; border: none;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; padding: 0;
+  }
+  .main-breadcrumb .bc-link:hover { color: var(--navy); }
+  .main-breadcrumb .bc-current { color: var(--navy); font-weight: 600; }
+  .main-breadcrumb .bc-sep { color: var(--border2); }
+  .main-actions { display: flex; gap: 8px; align-items: center; }
+  .main-content { flex: 1; padding: 1.75rem; max-width: 1000px; }
+
+  /* ── Klassen grid ────────────────────────────────────────── */
+  .classes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .class-card {
+    background: #fff; border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 16px; cursor: pointer; transition: all 0.15s;
+  }
+  .class-card:hover { border-color: var(--navy); box-shadow: 0 2px 12px rgba(27,58,107,0.08); }
+  .class-card-naam { font-size: 20px; font-weight: 800; color: var(--navy); margin-bottom: 2px; }
+  .class-card-meta { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+  .class-card-stats { display: flex; gap: 12px; margin-bottom: 8px; }
+  .class-card-stat { font-size: 11px; color: var(--muted); }
+  .class-card-stat strong { color: var(--text); font-weight: 600; }
+  .class-card-add {
+    border-style: dashed; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 4px; color: var(--muted); min-height: 110px;
+  }
+  .class-card-add:hover { border-color: var(--navy); color: var(--navy); background: var(--navy-glow); }
+
+  /* Niveau tags */
+  .niveau-tag { display: inline-block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; padding: 2px 7px; border-radius: 4px; }
+  .niveau-atheneum { background: var(--navy-glow); color: var(--navy); }
+  .niveau-gymnasium { background: rgba(90,74,138,0.1); color: #5a4a8a; }
+  .niveau-havo      { background: rgba(13,148,136,0.1); color: #0d7a70; }
+
+  /* ── Klas-detailpagina ───────────────────────────────────── */
+  .klas-header {
+    background: #fff; border-bottom: 1px solid var(--border);
+    padding: 14px 1.75rem 0; flex-shrink: 0;
+  }
+  .klas-title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .klas-badge {
+    background: var(--navy); color: #fff; font-size: 20px; font-weight: 800;
+    padding: 8px 14px; border-radius: 10px; letter-spacing: 0.02em; flex-shrink: 0;
+  }
+  .klas-tabs { display: flex; gap: 0; margin-top: 4px; }
+  .klas-tab {
+    padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--muted);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    background: none; border-top: none; border-left: none; border-right: none;
+    font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.12s;
+  }
+  .klas-tab:hover { color: var(--navy); }
+  .klas-tab.active { color: var(--navy); border-bottom-color: var(--gold); font-weight: 600; }
+  .klas-content { padding: 1.5rem 1.75rem; flex: 1; background: #f5f7fb; max-width: 1000px; }
+
+  /* ── Lesactiviteiten ─────────────────────────────────────── */
+  .act-lijst { display: flex; flex-direction: column; gap: 10px; }
+  .act-kaart {
+    background: #fff; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; display: flex; align-items: center; gap: 14px;
+  }
+  .act-icon {
+    width: 40px; height: 40px; border-radius: 10px; display: flex;
+    align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+  }
+  .act-icon-socratisch { background: var(--navy-glow); }
+  .act-icon-mol        { background: var(--gold-glow); }
+  .act-info { flex: 1; min-width: 0; }
+  .act-naam { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .act-meta { font-size: 11px; color: var(--muted); }
+  .act-status { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+  .status-actief { background: rgba(42,138,90,0.1); color: #1a6a40; }
+  .status-klaar  { background: var(--navy-glow); color: var(--navy); }
+
+  .nieuwe-act-btn {
+    background: transparent; border: 1.5px dashed var(--border2);
+    border-radius: 10px; padding: 14px 16px; display: flex; align-items: center;
+    gap: 10px; cursor: pointer; color: var(--muted); font-size: 13px;
+    font-weight: 500; font-family: 'Plus Jakarta Sans', sans-serif; width: 100%;
+    transition: all 0.15s;
+  }
+  .nieuwe-act-btn:hover { border-color: var(--navy); color: var(--navy); background: var(--navy-glow); }
+  .act-dropdown {
+    background: #fff; border: 1.5px solid var(--border); border-radius: 10px;
+    overflow: hidden; box-shadow: 0 4px 16px rgba(27,58,107,0.1); display: none;
+  }
+  .act-dropdown.open { display: block; }
+  .act-dropdown-item {
+    padding: 11px 16px; font-size: 13px; cursor: pointer; display: flex;
+    align-items: center; gap: 12px; border-bottom: 1px solid var(--border);
+    transition: background 0.1s; color: var(--text);
+  }
+  .act-dropdown-item:last-child { border-bottom: none; }
+  .act-dropdown-item:hover { background: var(--navy-glow); }
+  .act-dropdown-item-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+  .act-dropdown-label { font-weight: 600; font-size: 13px; }
+  .act-dropdown-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .act-dropdown-item.soon { opacity: 0.5; cursor: default; }
+  .act-dropdown-item.soon:hover { background: none; }
+
+  /* ── Hamburger (mobiel) ──────────────────────────────────── */
+  .hamburger-btn {
+    display: none; background: none; border: none; cursor: pointer;
+    flex-direction: column; gap: 4px; padding: 4px;
+  }
+  .hamburger-btn span { width: 18px; height: 2px; background: #fff; border-radius: 2px; display: block; }
+  .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 49; }
+
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-overlay.open { display: block; }
+    .main-area { margin-left: 0; }
+    .hamburger-btn { display: flex; }
+    .main-topbar { padding: 0 1rem; }
+    .main-content, .klas-content { padding: 1rem; }
+    .classes-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px) {
+    .classes-grid { grid-template-columns: 1fr; }
+    .klas-tabs { overflow-x: auto; }
+  }
+
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
 // (verificatie verwijderd)
@@ -1008,242 +1198,205 @@
 <!--  SCREEN: TEACHER DASHBOARD                      -->
 <!-- ═══════════════════════════════════════════════ -->
 <div id="screen-teacher" class="screen">
-  <div class="topbar">
-    <div class="topbar-brand" style="display:flex;align-items:center;gap:0.6rem;">
-      <img src="https://www.stanislascollegewestplantsoen.nl/lcms2/RESIZE/w250/bestanden/Stanislas_SCW_lichtgroen_witrgb@2x.png" alt="Stanislas" style="height:28px;object-fit:contain;" onerror="this.style.display='none'">
-      Socratische Toetsapp — <span id="topbar-leraar-naam" style="color:var(--gold-light);font-weight:600;"></span>
-    </div>
-    <div class="topbar-right">
-      <button class="btn btn-ghost btn-sm" onclick="openCreateLesson()">+ Nieuwe les</button>
-      <a href="toets-agent-ui.html" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none;background:rgba(197,160,40,0.12);border-color:rgba(197,160,40,0.35);color:#C5A028;">✦ Toetsagent</a>
-      <a href="#" onclick="openMolApp()" class="btn btn-ghost btn-sm" style="text-decoration:none;background:rgba(232,92,92,0.1);border-color:rgba(232,92,92,0.3);color:#ff8585;">🕵️ Wie is de Mol</a>
-      <button class="btn btn-ghost btn-sm" onclick="logoutTeacher()">Uitloggen</button>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar(false)"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-dot"></div>
+    <div>
+      <div class="sidebar-logo-name">Stanislascollege Leerplatform</div>
+      <div class="sidebar-logo-sub">Westplantsoen</div>
     </div>
   </div>
-  <div class="content-wrap-wide">
-    <div class="page-header">
-      <div class="page-eyebrow">Dashboard</div>
-      <h2 class="page-title">Klassenoverzicht</h2>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar" id="sidebar-avatar">MV</div>
+    <div>
+      <div class="sidebar-user-name" id="sidebar-naam">Leraar</div>
+      <div class="sidebar-user-role">Economie</div>
     </div>
-
-    <div class="tab-bar">
-      <button class="tab-btn active" id="tab-overzicht" onclick="switchTab('overzicht')">Lessen & leerlingen</button>
-      <button class="tab-btn" id="tab-lessen" onclick="switchTab('lessen')">Lessen beheren</button>
-      <button class="tab-btn" id="tab-klassen" onclick="switchTab('klassen')">Klassen beheren</button>
-      <button class="tab-btn" id="tab-leerlingen" onclick="switchTab('leerlingen')" style="border-color:rgba(79,163,232,0.35);color:var(--blue);">👥 Leerlingen</button>
-      <button class="tab-btn" id="tab-analyse" onclick="switchTab('analyse')" style="border-color:rgba(197,160,40,0.35);color:var(--gold);">📊 Analyse</button>
-    </div>
-
-    <!-- TAB: LEERLINGEN -->
-    <div id="tab-content-leerlingen" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;">
-        <div>
-          <div class="page-eyebrow">Leerlingenbeheer</div>
-          <h3 class="page-title" style="font-size:1.3rem;margin:0;">Mijn leerlingen</h3>
-        </div>
-        <button class="btn btn-primary" onclick="document.getElementById('xlsx-upload-input').click()">
-          📥 XLSX importeren
-        </button>
-        <input type="file" id="xlsx-upload-input" accept=".xlsx,.xls" style="display:none"
-          onchange="handleXlsxUpload(this)">
-      </div>
-
-      <!-- Import-preview modal -->
-      <div id="import-preview" style="display:none;" class="card" style="margin-bottom:1rem;">
-        <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.65rem;color:#fff;">📋 Preview import</div>
-        <div id="import-preview-info" style="font-size:0.82rem;color:var(--text2);margin-bottom:0.75rem;"></div>
-        <div class="form-section">
-          <label>Lesperiode <span style="font-weight:400;color:var(--muted);">(bijv. 2025-2026)</span></label>
-          <input type="text" id="import-lesperiode" placeholder="2025-2026"
-            style="max-width:180px;" />
-        </div>
-        <div id="import-error" class="error-msg" style="display:none;"></div>
-        <div style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-top:0.75rem;">
-          <button class="btn btn-primary" id="import-bevestig-btn" onclick="bevestigImport()">
-            ✅ Importeren
-          </button>
-          <button class="btn btn-ghost" onclick="annuleerImport()">Annuleren</button>
-        </div>
-      </div>
-
-      <!-- Filters -->
-      <div style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end;">
-        <div>
-          <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Lesperiode</label>
-          <select id="ll-filter-periode" onchange="laadLeerlingen()" style="min-width:130px;">
-            <option value="">— Alle —</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Klas</label>
-          <select id="ll-filter-klas" onchange="laadLeerlingen()" style="min-width:120px;">
-            <option value="">— Alle klassen —</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Niveau</label>
-          <select id="ll-filter-niveau" onchange="laadLeerlingen()" style="min-width:130px;">
-            <option value="">— Alle niveaus —</option>
-            <option value="Atheneum">Atheneum</option>
-            <option value="Gymnasium">Gymnasium</option>
-            <option value="HAVO">HAVO</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Leerjaar</label>
-          <select id="ll-filter-leerjaar" onchange="laadLeerlingen()" style="min-width:100px;">
-            <option value="">— Alle jaren —</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Zoeken</label>
-          <input type="text" id="ll-zoek" placeholder="naam..." oninput="filterLeerlingenLokaal()"
-            style="min-width:160px;" />
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="verwijderPeriode()" title="Lesperiode verwijderen"
-          style="color:var(--red);border-color:rgba(232,92,92,0.3);">🗑 Periode verwijderen</button>
-      </div>
-
-      <!-- Leerlingen-tabel -->
-      <div id="ll-tabel-wrap">
-        <div class="empty-state">
-          <div class="empty-icon">👥</div>
-          <p>Importeer een XLSX-bestand om je leerlingen te laden.</p>
-        </div>
-      </div>
-      <div id="ll-count" style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;"></div>
-    </div>
-
-    <!-- TAB: OVERZICHT -->
-    <div id="tab-content-overzicht">
-      <div class="stats-row" id="dashboard-stats"></div>
-
-      <!-- Klasoverzicht -->
-      <div id="class-overview-section" style="margin-bottom:1.5rem;display:none;">
-        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:0.6rem;">Klasoverzicht</div>
-        <div id="class-overview-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.6rem;"></div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
-        <div>
-          <label>Filter op klas</label>
-          <select id="teacher-class-filter" onchange="onClassFilterChange()">
-            <option value="">— Alle klassen —</option>
-          </select>
-        </div>
-        <div>
-          <label>Filter op les</label>
-          <select id="teacher-lesson-select" onchange="loadStudentResults()">
-            <option value="">— Kies een les —</option>
-          </select>
-        </div>
-      </div>
-      <div id="student-results-area">
-        <div class="empty-state">
-          <div class="empty-icon">📋</div>
-          <p>Selecteer een les om de resultaten te zien.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: LESSEN BEHEREN -->
-    <div id="tab-content-lessen" style="display:none">
-      <div class="lessons-grid" id="teacher-lessons-grid"></div>
-      <div id="no-lessons-teacher" style="display:none" class="empty-state">
-        <div class="empty-icon">📚</div>
-        <p>Nog geen lessen aangemaakt. Klik op "+ Nieuwe les" om te beginnen.</p>
-      </div>
-    </div>
-
-
-    <!-- TAB: ANALYSE -->
-    <div id="tab-content-analyse" style="display:none">
-
-      <!-- Filters -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.65rem;margin-bottom:1.25rem;">
-        <div>
-          <label style="font-size:0.72rem;">Klas</label>
-          <select id="an-filter-klas" onchange="runAnalyse()">
-            <option value="">Alle klassen</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:0.72rem;">Les</label>
-          <select id="an-filter-les" onchange="runAnalyse()">
-            <option value="">Alle lessen</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:0.72rem;">Lesvorm</label>
-          <select id="an-filter-lesvorm" onchange="runAnalyse()">
-            <option value="">Alle lesvormen</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:0.72rem;">Leerling</label>
-          <select id="an-filter-leerling" onchange="runAnalyse()">
-            <option value="">Alle leerlingen</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Loading -->
-      <div id="an-loading" style="display:none;text-align:center;padding:2rem;color:var(--muted);font-size:0.85rem;">
-        <span class="spinner" style="display:inline-block;margin-right:0.5rem;"></span>Analyse laden...
-      </div>
-
-      <!-- Leeg -->
-      <div id="an-empty" class="empty-state" style="display:none;">
-        <div class="empty-icon">📊</div>
-        <p>Geen resultaten gevonden voor deze filters.</p>
-      </div>
-
-      <!-- Samenvattingsrijen -->
-      <div id="an-summary-row" style="display:none;">
-        <div class="stats-row" id="an-stats"></div>
-      </div>
-
-      <!-- ── A: LEERLING-VOORTGANG ── -->
-      <div id="an-section-leerling" style="display:none;margin-bottom:2rem;">
-        <div class="an-section-label">Voortgang per leerling</div>
-        <div class="an-desc">Score (0–100) per sessie, gesorteerd op tijd. Elke stip is één voltooide activiteit.</div>
-        <div id="an-leerling-chart" class="an-chart-wrap"></div>
-      </div>
-
-      <!-- ── B: KLASGEMIDDELDEN ── -->
-      <div id="an-section-klas" style="display:none;margin-bottom:2rem;">
-        <div class="an-section-label">Klasgemiddelden per les</div>
-        <div class="an-desc">Gemiddelde score per les, uitgesplitst per lesvorm.</div>
-        <div id="an-klas-chart" class="an-chart-wrap"></div>
-      </div>
-
-      <!-- ── C: HIATENKAART ── -->
-      <div id="an-section-hiaten" style="display:none;margin-bottom:2rem;">
-        <div class="an-section-label">Hiatenkaart — leerling × les</div>
-        <div class="an-desc">Kleur geeft gemiddelde score aan: <span style="color:#ef4444;">rood &lt;50</span> · <span style="color:#f59e0b;">oranje 50–70</span> · <span style="color:#22c55e;">groen &gt;70</span>. Grijs = geen resultaat.</div>
-        <div id="an-hiaten-wrap" style="overflow-x:auto;"></div>
-      </div>
-
-    </div>
-    <!-- TAB: KLASSEN BEHEREN -->
-    <div id="tab-content-klassen" style="display:none">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
-        <button class="btn btn-teacher" onclick="openCreateClass()">+ Nieuwe klas</button>
-      </div>
-      <div id="classes-grid"></div>
-      <div id="no-classes-msg" style="display:none" class="empty-state">
-        <div class="empty-icon">🏫</div>
-        <p>Nog geen klassen aangemaakt. Voeg klassen toe zodat leerlingen kunnen kiezen.</p>
-      </div>
-    </div>
+  </div>
+  <div class="sidebar-nav">
+    <button class="nav-item active" id="nav-klassen" onclick="navNaar('klassen')">
+      <span class="nav-icon">🏠</span> Mijn klassen
+    </button>
+    <button class="nav-item" id="nav-leerlingen" onclick="navNaar('leerlingen')">
+      <span class="nav-icon">👥</span> Leerlingen
+      <span class="nav-badge" id="nav-ll-badge"></span>
+    </button>
+    <button class="nav-item" id="nav-lessen" onclick="navNaar('lessen')">
+      <span class="nav-icon">📚</span> Lessen
+    </button>
+    <button class="nav-item" id="nav-analyse" onclick="navNaar('analyse')">
+      <span class="nav-icon">📊</span> Analyse
+    </button>
+    <div class="nav-section-label">Wervormen</div>
+    <button class="nav-item" id="nav-socratisch" onclick="navNaar('socratisch')">
+      <span class="nav-icon">💬</span> Socratische toets
+    </button>
+    <button class="nav-item" id="nav-mol" onclick="openMolApp()">
+      <span class="nav-icon">🕵️</span> Wie is de Mol
+    </button>
+    <button class="nav-item" id="nav-toetsagent" onclick="window.open('toets-agent-ui.html','_blank')">
+      <span class="nav-icon">✦</span> Toetsagent
+    </button>
+  </div>
+  <div class="sidebar-bottom">
+    <button class="nav-item" onclick="logoutTeacher()" style="color:rgba(255,255,255,0.4);font-size:12px;">
+      <span class="nav-icon" style="font-size:13px;">↩</span> Uitloggen
+    </button>
   </div>
 </div>
+
+<div class="main-area" id="main-area">
+  <!-- Topbar -->
+  <div class="main-topbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="hamburger-btn" onclick="toggleSidebar(true)">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="main-breadcrumb" id="main-breadcrumb">
+        <span class="bc-current">Mijn klassen</span>
+      </div>
+    </div>
+    <div class="main-actions" id="main-actions"></div>
+<span id="topbar-leraar-naam" style="display:none;"></span>
+  </div>
+
+  <!-- Klas-header (alleen zichtbaar bij klas-detail) -->
+  <div class="klas-header" id="klas-header" style="display:none;">
+    <div class="klas-title-row">
+      <div class="klas-badge" id="klas-badge-naam"></div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--navy);" id="klas-detail-titel"></div>
+        <div style="font-size:11px;color:var(--muted);" id="klas-detail-sub"></div>
+      </div>
+    </div>
+    <div class="klas-tabs" id="klas-tabs">
+      <button class="klas-tab active" onclick="switchKlasTab('activiteiten')">Lesactiviteiten</button>
+      <button class="klas-tab" onclick="switchKlasTab('leerlingen')">Leerlingen</button>
+      <button class="klas-tab" onclick="switchKlasTab('resultaten')">Resultaten</button>
+    </div>
+  </div>
+
+  <!-- Views -->
+  <div id="view-klassen" class="main-content">
+    <div class="page-eyebrow" id="dashboard-eyebrow">Dashboard</div>
+    <h2 class="page-title" id="dashboard-greeting">Mijn klassen</h2>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:1.5rem;" id="dashboard-sub"></div>
+    <div class="stats-row" id="dashboard-stats" style="margin-bottom:1.5rem;"></div>
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:10px;">Klassen</div>
+    <div class="classes-grid" id="classes-grid-new"></div>
+  </div>
+
+  <div id="view-klas-detail" style="display:none;flex-direction:column;">
+    <div class="klas-content" id="klas-tab-content"></div>
+  </div>
+
+  <div id="view-leerlingen" style="display:none;" class="main-content">
+    <div class="page-eyebrow">Leerlingenbeheer</div>
+    <h2 class="page-title" style="margin-bottom:0.25rem;">Mijn leerlingen</h2>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:1.5rem;">Importeer en beheer leerlingen per lesperiode</div>
+    <div style="display:flex;gap:0.65rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
+      <button class="btn btn-primary" onclick="document.getElementById('xlsx-upload-input').click()">📥 XLSX importeren</button>
+      <input type="file" id="xlsx-upload-input" accept=".xlsx,.xls" style="display:none" onchange="handleXlsxUpload(this)">
+    </div>
+    <div id="import-preview" style="display:none;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem;">
+      <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.65rem;color:var(--navy);">📋 Preview import</div>
+      <div id="import-preview-info" style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem;"></div>
+      <div class="form-section">
+        <label>Lesperiode <span style="font-weight:400;color:var(--muted);">(bijv. 2025-2026)</span></label>
+        <input type="text" id="import-lesperiode" placeholder="2025-2026" style="max-width:180px;" />
+      </div>
+      <div id="import-error" class="error-msg" style="display:none;"></div>
+      <div style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-top:0.75rem;">
+        <button class="btn btn-primary" id="import-bevestig-btn" onclick="bevestigImport()">✅ Importeren</button>
+        <button class="btn btn-ghost-navy" onclick="annuleerImport()">Annuleren</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end;">
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Lesperiode</label>
+        <select id="ll-filter-periode" onchange="laadLeerlingen()" style="min-width:130px;"><option value="">— Alle —</option></select>
+      </div>
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Klas</label>
+        <select id="ll-filter-klas" onchange="laadLeerlingen()" style="min-width:120px;"><option value="">— Alle klassen —</option></select>
+      </div>
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Niveau</label>
+        <select id="ll-filter-niveau" onchange="laadLeerlingen()" style="min-width:130px;">
+          <option value="">— Alle niveaus —</option>
+          <option value="Atheneum">Atheneum</option>
+          <option value="Gymnasium">Gymnasium</option>
+          <option value="HAVO">HAVO</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Leerjaar</label>
+        <select id="ll-filter-leerjaar" onchange="laadLeerlingen()" style="min-width:100px;">
+          <option value="">— Alle jaren —</option>
+          <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+          <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);display:block;margin-bottom:0.3rem;">Zoeken</label>
+        <input type="text" id="ll-zoek" placeholder="naam..." oninput="filterLeerlingenLokaal()" style="min-width:160px;" />
+      </div>
+      <button class="btn btn-ghost-navy btn-sm" onclick="verwijderPeriode()" style="color:var(--red);border-color:rgba(192,57,43,0.3);">🗑 Periode verwijderen</button>
+    </div>
+    <div id="ll-tabel-wrap"><div class="empty-state"><div class="empty-icon">👥</div><p>Importeer een XLSX-bestand om je leerlingen te laden.</p></div></div>
+    <div id="ll-count" style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;"></div>
+  </div>
+
+  <div id="view-lessen" style="display:none;" class="main-content">
+    <div class="page-eyebrow">Lessen</div>
+    <h2 class="page-title" style="margin-bottom:1.5rem;">Lessen beheren</h2>
+    <div class="lessons-grid" id="teacher-lessons-grid"></div>
+    <div id="no-lessons-teacher" style="display:none" class="empty-state">
+      <div class="empty-icon">📚</div>
+      <p>Nog geen lessen aangemaakt. Gebruik de knop "+ Nieuwe les" in de zijbalk.</p>
+    </div>
+  </div>
+
+  <div id="view-analyse" style="display:none;" class="main-content">
+    <div class="page-eyebrow">Analyse</div>
+    <h2 class="page-title" style="margin-bottom:1.5rem;">Resultaten & analyse</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.65rem;margin-bottom:1.25rem;">
+      <div><label style="font-size:0.72rem;">Klas</label>
+        <select id="an-filter-klas" onchange="runAnalyse()"><option value="">Alle klassen</option></select></div>
+      <div><label style="font-size:0.72rem;">Les</label>
+        <select id="an-filter-les" onchange="runAnalyse()"><option value="">Alle lessen</option></select></div>
+      <div><label style="font-size:0.72rem;">Lesvorm</label>
+        <select id="an-filter-lesvorm" onchange="runAnalyse()"><option value="">Alle lesvormen</option></select></div>
+      <div><label style="font-size:0.72rem;">Leerling</label>
+        <select id="an-filter-leerling" onchange="runAnalyse()"><option value="">Alle leerlingen</option></select></div>
+    </div>
+    <div id="an-loading" style="display:none;text-align:center;padding:2rem;color:var(--muted);font-size:0.85rem;"><span class="spinner" style="display:inline-block;margin-right:0.5rem;border-top-color:var(--navy);"></span>Analyse laden...</div>
+    <div id="an-empty" class="empty-state" style="display:none;"><div class="empty-icon">📊</div><p>Geen resultaten gevonden voor deze filters.</p></div>
+    <div id="an-summary-row" style="display:none;"><div class="stats-row" id="an-stats"></div></div>
+    <div id="an-section-leerling" style="display:none;margin-bottom:2rem;"><div class="an-section-label">Voortgang per leerling</div><div class="an-desc">Score (0–100) per sessie, gesorteerd op tijd.</div><div id="an-leerling-chart" class="an-chart-wrap"></div></div>
+    <div id="an-section-klas" style="display:none;margin-bottom:2rem;"><div class="an-section-label">Klasgemiddelden per les</div><div class="an-desc">Gemiddelde score per les, uitgesplitst per lesvorm.</div><div id="an-klas-chart" class="an-chart-wrap"></div></div>
+    <div id="an-section-hiaten" style="display:none;margin-bottom:2rem;"><div class="an-section-label">Hiatenkaart</div><div class="an-desc">Kleur geeft gemiddelde score: <span style="color:#ef4444;">rood &lt;50</span> · <span style="color:#f59e0b;">oranje 50–70</span> · <span style="color:#22c55e;">groen &gt;70</span></div><div id="an-hiaten-wrap" style="overflow-x:auto;"></div></div>
+  </div>
+
+  <div id="view-socratisch" style="display:none;" class="main-content">
+    <div class="page-eyebrow">Werkvorm</div>
+    <h2 class="page-title" style="margin-bottom:0.5rem;">Socratische toets</h2>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:1.5rem;">Kies een klas en les om een socratische toets te starten</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+      <div><label>Filter op klas</label>
+        <select id="teacher-class-filter" onchange="onClassFilterChange()"><option value="">— Alle klassen —</option></select></div>
+      <div><label>Filter op les</label>
+        <select id="teacher-lesson-select" onchange="loadStudentResults()"><option value="">— Kies een les —</option></select></div>
+    </div>
+    <div id="student-results-area">
+      <div class="empty-state"><div class="empty-icon">📋</div><p>Selecteer een les om de resultaten te zien.</p></div>
+    </div>
+  </div>
+
+</div><!-- /main-area -->
+</div><!-- /screen-teacher -->
+
 
 <!-- ═══════════════════════════════════════════════ -->
 <!--  MODAL: CREATE LESSON                           -->
@@ -1519,8 +1672,9 @@ async function loginTeacher() {
     leraarProfiel = data.leraar;
     localStorage.setItem('leraar_token', leraarToken);
     document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
-    loadTeacherDashboard();
+    await loadTeacherDashboard();
     showScreen('screen-teacher');
+    navNaar('klassen');
   } catch(e) {
     err.textContent = e.message || 'Inloggen mislukt.';
     err.style.display = 'block';
@@ -1548,7 +1702,7 @@ async function registreer() {
     leraarToken = data.token; leraarProfiel = data.leraar;
     localStorage.setItem('leraar_token', leraarToken);
     document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
-    loadTeacherDashboard(); showScreen('screen-teacher');
+    await loadTeacherDashboard(); showScreen('screen-teacher'); navNaar('klassen');
   } catch(e) {
     err.textContent = e.message || 'Registratie mislukt.';
     err.style.display = 'block';
@@ -1575,8 +1729,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     try {
       leraarProfiel = await apiFetch('/api/auth/mij');
       document.getElementById('topbar-leraar-naam').textContent = leraarProfiel.naam;
-      loadTeacherDashboard();
+      await loadTeacherDashboard();
       showScreen('screen-teacher');
+      navNaar('klassen');
     } catch(e) {
       leraarToken = null; localStorage.removeItem('leraar_token');
     }
@@ -2488,7 +2643,12 @@ async function createLesson() {
   btn.disabled = false; btn.textContent = 'Les aanmaken';
   closeModal('modal-create-lesson');
   showToast('✓ Les "' + name + '" aangemaakt!');
-  loadTeacherDashboard();
+  // Herlaad dashboard en navigeer terug naar de klas als die open was
+  const terugNaarKlas = huidigKlasId && classId === huidigKlasId;
+  await loadTeacherDashboard();
+  if (terugNaarKlas) {
+    openKlas(huidigKlasId);
+  }
 }
 
 
@@ -2508,6 +2668,456 @@ async function onClassFilterChange() {
     sel.appendChild(opt);
   });
   document.getElementById('student-results-area').innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>Selecteer een les om de resultaten te zien.</p></div>';
+}
+
+// ── Navigatie ─────────────────────────────────────────────
+let huidigView = 'klassen';
+let huidigKlasId = null;
+let huidigKlasTab = 'activiteiten';
+
+function navNaar(view) {
+  huidigView = view;
+  huidigKlasId = null;
+  // Sidebar active
+  ['klassen','leerlingen','lessen','analyse','socratisch'].forEach(v => {
+    const el = document.getElementById('nav-' + v);
+    if (el) el.classList.toggle('active', v === view);
+  });
+  // Klas-header verbergen
+  document.getElementById('klas-header').style.display = 'none';
+  // Views
+  const views = ['klassen','klas-detail','leerlingen','lessen','analyse','socratisch'];
+  views.forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) { el.style.display = 'none'; if (el.style.display !== undefined) el.style.removeProperty('display'); el.style.display = 'none'; }
+  });
+  const target = document.getElementById('view-' + view);
+  if (target) target.style.display = view === 'klas-detail' ? 'flex' : 'block';
+  // Breadcrumb + acties
+  setBreadcrumb([{ label: navLabel(view) }]);
+  setMainActions(view);
+  // Sluit sidebar op mobiel
+  toggleSidebar(false);
+  // Laad content
+  if (view === 'leerlingen') laadLeerlingenTab();
+  if (view === 'lessen')    laadLessenView();
+  if (view === 'analyse')   { vulAnalyseFilters(); runAnalyse(); }
+  if (view === 'socratisch') { vulClassFilter(); loadLessonsForTeacher(); }
+}
+
+function navLabel(view) {
+  const map = { klassen:'Mijn klassen', leerlingen:'Leerlingen', lessen:'Lessen', analyse:'Analyse', socratisch:'Socratische toets' };
+  return map[view] || view;
+}
+
+function setBreadcrumb(stappen) {
+  const el = document.getElementById('main-breadcrumb');
+  if (!el) return;
+  el.innerHTML = stappen.map((s, i) => {
+    if (i < stappen.length - 1) {
+      return `<button class="bc-link" onclick="${s.onclick || ''}">${s.label}</button>
+              <span class="bc-sep">›</span>`;
+    }
+    return `<span class="bc-current">${s.label}</span>`;
+  }).join('');
+}
+
+function setMainActions(view, klasId) {
+  const el = document.getElementById('main-actions');
+  if (!el) return;
+  if (view === 'klassen') {
+    el.innerHTML = `<button class="btn btn-ghost-navy btn-sm" onclick="openCreateClass()">+ Nieuwe klas</button>
+      <button class="btn btn-primary btn-sm" onclick="openCreateLesson()">+ Nieuwe les</button>`;
+  } else if (view === 'leerlingen') {
+    el.innerHTML = `<button class="btn btn-primary btn-sm" onclick="document.getElementById('xlsx-upload-input').click()">📥 XLSX importeren</button>`;
+  } else if (view === 'klas-detail') {
+    el.innerHTML = '';
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+function openKlas(klasId) {
+  huidigView = 'klas-detail';
+  huidigKlasId = klasId;
+  const klas = classesCache.find(c => c.id === klasId);
+  if (!klas) return;
+  // Sidebar
+  document.getElementById('nav-klassen').classList.add('active');
+  // Klas-header invullen
+  document.getElementById('klas-badge-naam').textContent = klas.name;
+  document.getElementById('klas-detail-titel').textContent = klas.name;
+  // Niveau + leerjaar in header
+  const niveauLbl = { atheneum:'Atheneum', gymnasium:'Gymnasium', havo:'HAVO' }[detecteerNiveau(klas.name)] || '';
+  const leerjaar  = detecteerLeerjaar(klas.name);
+  document.getElementById('klas-detail-sub').textContent = niveauLbl + (leerjaar ? ' ' + leerjaar : '') + ' · laden...';
+  apiFetch('/api/leerlingen?klas=' + encodeURIComponent(klas.name))
+    .then(ll => {
+      const el = document.getElementById('klas-detail-sub');
+      const aantalLl = Array.isArray(ll) ? ll.length : 0;
+      if (el) el.textContent = niveauLbl + (leerjaar ? ' ' + leerjaar : '') + (aantalLl ? ' · ' + aantalLl + ' leerlingen' : '');
+    }).catch(() => {
+      const el = document.getElementById('klas-detail-sub');
+      if (el) el.textContent = niveauLbl + (leerjaar ? ' ' + leerjaar : '');
+    });
+  document.getElementById('klas-header').style.display = 'block';
+  // Views wisselen
+  ['klassen','leerlingen','lessen','analyse','socratisch'].forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) el.style.display = 'none';
+  });
+  document.getElementById('view-klas-detail').style.display = 'flex';
+  // Breadcrumb
+  setBreadcrumb([
+    { label: 'Mijn klassen', onclick: "navNaar('klassen')" },
+    { label: klas.name }
+  ]);
+  setMainActions('klas-detail', klasId);
+  toggleSidebar(false);
+  switchKlasTab('activiteiten');
+}
+
+function switchKlasTab(tab) {
+  huidigKlasTab = tab;
+  document.querySelectorAll('.klas-tab').forEach((el, i) => {
+    const tabs = ['activiteiten','leerlingen','resultaten'];
+    el.classList.toggle('active', tabs[i] === tab);
+  });
+  renderKlasTabContent(tab);
+}
+
+function renderKlasTabContent(tab) {
+  const klas = classesCache.find(c => c.id === huidigKlasId);
+  const wrap = document.getElementById('klas-tab-content');
+  if (!wrap) return;
+  if (tab === 'activiteiten') renderKlasActiviteiten(klas, wrap);
+  if (tab === 'leerlingen')   renderKlasLeerlingen(klas, wrap);
+  if (tab === 'resultaten')   renderKlasResultaten(klas, wrap);
+}
+
+async function renderKlasActiviteiten(klas, wrap) {
+  // Lessen voor deze klas
+  const klasLessen = (lessonsCache || []).filter(l => l.class_id === klas?.id);
+
+  // Mol-sessies voor deze klas ophalen
+  let molSessies = [];
+  try {
+    const alle = await apiFetch('/api/mol/sessies?docent_token=' + encodeURIComponent(docentToken || 'leraar123'));
+    molSessies = (Array.isArray(alle) ? alle : []).filter(s => s.klas_id === klas?.id || s.klas_naam === klas?.name);
+  } catch(e) { /* geen mol-sessies beschikbaar */ }
+
+  // Sorteer alle activiteiten op datum (nieuwste eerst)
+  const activiteiten = [
+    ...klasLessen.map(l => ({ type: 'socratisch', id: l.id, naam: l.name, datum: l.created_at, status: 'klaar', data: l })),
+    ...molSessies.map(s => ({ type: 'mol', id: s.id, naam: s.les_naam, datum: s.created_at, status: s.status, data: s })),
+  ].sort((a, b) => (b.datum || 0) - (a.datum || 0));
+
+  let html = '';
+
+  if (activiteiten.length === 0) {
+    html += `<div class="empty-state" style="padding:2rem 0;">
+      <div class="empty-icon">📋</div>
+      <p>Nog geen lesactiviteiten. Start hieronder de eerste activiteit.</p>
+    </div>`;
+  } else {
+    html += '<div class="act-lijst">';
+    activiteiten.forEach(act => {
+      const isMol = act.type === 'mol';
+      const statusLabel = isMol
+        ? ({ 'wachten':'Wachten', 'actief':'Actief', 'klaar':'Klaar', 'reveal':'Onthulling' }[act.status] || act.status)
+        : 'Klaar';
+      const statusCls = (act.status === 'actief') ? 'status-actief' : 'status-klaar';
+      const datumStr = act.datum ? new Date(act.datum).toLocaleDateString('nl-NL', {day:'numeric',month:'short'}) : '';
+      const resultatenLink = isMol
+        ? `onclick="bekijkMolResultaten('${act.id}')" style="cursor:pointer;"`
+        : `onclick="openLesResultaten('${act.id}')" style="cursor:pointer;"`;
+      html += `<div class="act-kaart" ${resultatenLink}>
+        <div class="act-icon ${isMol ? 'act-icon-mol' : 'act-icon-socratisch'}">${isMol ? '🕵️' : '💬'}</div>
+        <div class="act-info">
+          <div class="act-naam">${act.naam || '—'}</div>
+          <div class="act-meta">${isMol ? 'Wie is de Mol' : 'Socratische toets'} · ${datumStr}</div>
+        </div>
+        <div class="act-status ${statusCls}">${statusLabel}</div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  html += `<div style="margin-top:12px;">
+    <button class="nieuwe-act-btn" onclick="toggleActDropdown()">
+      <span style="font-size:18px;color:var(--navy);">+</span>
+      Nieuwe lesactiviteit starten
+      <span style="margin-left:auto;font-size:11px;color:var(--muted);">▾</span>
+    </button>
+    <div class="act-dropdown" id="act-dropdown">
+      <div class="act-dropdown-item" onclick="openCreateLessonVoorKlas('${klas?.id}')">
+        <span class="act-dropdown-item-icon">💬</span>
+        <div><div class="act-dropdown-label">Socratische reflectie</div>
+          <div class="act-dropdown-sub">Leerling-gestuurde reflectie op een les</div></div>
+      </div>
+      <div class="act-dropdown-item" onclick="openMolAppVoorKlas('${klas?.id}','${klas?.name}')">
+        <span class="act-dropdown-item-icon">🕵️</span>
+        <div><div class="act-dropdown-label">Wie is de Mol?</div>
+          <div class="act-dropdown-sub">Groepsactiviteit met kennistoepassing</div></div>
+      </div>
+      <div class="act-dropdown-item soon">
+        <span class="act-dropdown-item-icon" style="opacity:0.4;">✦</span>
+        <div><div class="act-dropdown-label" style="color:var(--muted);">Toets aanmaken</div>
+          <div class="act-dropdown-sub">Binnenkort beschikbaar</div></div>
+      </div>
+    </div>
+  </div>`;
+  wrap.innerHTML = html;
+}
+
+function openMolAppVoorKlas(klasId, klasNaam) {
+  document.getElementById('act-dropdown')?.classList.remove('open');
+  if (!leraarToken) { alert('Log eerst in als leraar.'); return; }
+  const url = 'mol-lesvorm.html?leraar=' + encodeURIComponent(leraarToken)
+    + '&klas_id=' + encodeURIComponent(klasId || '')
+    + '&klas_naam=' + encodeURIComponent(klasNaam || '');
+  window.open(url, '_blank');
+}
+
+function openLesResultaten(lesId) {
+  // Navigeer naar Socratisch-view en laad resultaten voor deze les
+  navNaar('socratisch');
+  setTimeout(() => {
+    const sel = document.getElementById('teacher-lesson-select');
+    if (sel) { sel.value = lesId; loadStudentResults(); }
+  }, 150);
+}
+
+function bekijkMolResultaten(sessieId) {
+  // Open mol-app op het resultaten-scherm
+  if (!leraarToken) { alert('Log eerst in als leraar.'); return; }
+  window.open('mol-lesvorm.html?leraar=' + encodeURIComponent(leraarToken) + '&open_sessie=' + sessieId, '_blank');
+}
+
+async function renderKlasLeerlingen(klas, wrap) {
+  wrap.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);"><span class="spinner" style="border-top-color:var(--navy);"></span></div>`;
+  try {
+    // Probeer op klas-naam te filteren
+    const qs = new URLSearchParams({ klas: klas?.name || '' });
+    const leerlingen = await apiFetch('/api/leerlingen?' + qs);
+
+    if (!leerlingen?.length) {
+      wrap.innerHTML = `<div class="empty-state" style="padding:2rem 0;">
+        <div class="empty-icon">👥</div>
+        <p>Geen leerlingen gevonden voor ${klas?.name}.<br>
+          <button class="btn btn-ghost-navy btn-sm" style="margin-top:0.75rem;" onclick="navNaar('leerlingen')">
+            📥 Leerlingen importeren
+          </button>
+        </p>
+      </div>`;
+      return;
+    }
+
+    const rijen = leerlingen.map(l => {
+      const naam = [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ');
+      return `<tr>
+        <td style="font-size:0.78rem;color:var(--muted);padding:0.65rem 0.75rem;">${l.stamnummer || '—'}</td>
+        <td style="padding:0.65rem 0.75rem;font-weight:500;">${naam}</td>
+        <td style="padding:0.65rem 0.75rem;">
+          ${l.leerniveau ? `<span style="font-size:0.7rem;background:var(--navy-glow);color:var(--navy);padding:1px 6px;border-radius:4px;">${l.leerniveau}</span>` : ''}
+        </td>
+        <td style="padding:0.65rem 0.75rem;font-size:0.78rem;color:var(--muted);">${l.email || '—'}</td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <span style="font-size:13px;font-weight:600;color:var(--navy);">${leerlingen.length} leerlingen</span>
+        <button class="btn btn-ghost-navy btn-sm" onclick="navNaar('leerlingen')">Beheren</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+          <thead><tr style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);border-bottom:1px solid var(--border);">
+            <th style="text-align:left;padding:0.4rem 0.75rem 0.6rem;">Stamnr.</th>
+            <th style="text-align:left;padding:0.4rem 0.75rem 0.6rem;">Naam</th>
+            <th style="text-align:left;padding:0.4rem 0.75rem 0.6rem;">Niveau</th>
+            <th style="text-align:left;padding:0.4rem 0.75rem 0.6rem;">E-mail</th>
+          </tr></thead>
+          <tbody style="border-top:1px solid var(--border);">${rijen}</tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    wrap.innerHTML = `<p style="color:var(--red);font-size:0.85rem;">Laden mislukt: ${e.message}
+      <br><button class="btn btn-ghost-navy btn-sm" style="margin-top:0.5rem;" onclick="navNaar('leerlingen')">→ Naar leerlingenbeheer</button></p>`;
+  }
+}
+
+function renderKlasResultaten(klas, wrap) {
+  const klasLessen = (lessonsCache || []).filter(l => l.class_id === klas?.id);
+
+  wrap.innerHTML = `<div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end;">
+    <div style="flex:1;min-width:180px;"><label>Filter op les</label>
+      <select id="klas-res-les" onchange="laadKlasResultaten()">
+        <option value="">— Kies een les —</option>
+        ${klasLessen.map(l => `<option value="${l.id}">${l.name}</option>`).join('')}
+      </select>
+    </div>
+    <div style="flex:1;min-width:180px;"><label>Filter op leerling</label>
+      <input type="text" id="klas-res-zoek" placeholder="naam zoeken..." oninput="filterKlasResultaten()" />
+    </div>
+  </div>
+  <div id="klas-resultaten-area">
+    <div class="empty-state"><div class="empty-icon">📋</div><p>Selecteer een les om de resultaten te zien.</p></div>
+  </div>`;
+
+  // Als er maar één les is, direct laden
+  if (klasLessen.length === 1) {
+    const sel = document.getElementById('klas-res-les');
+    if (sel) { sel.value = klasLessen[0].id; laadKlasResultaten(); }
+  }
+}
+
+let _klasResultatenCache = [];
+
+async function laadKlasResultaten() {
+  const lesId = document.getElementById('klas-res-les')?.value;
+  const area  = document.getElementById('klas-resultaten-area');
+  if (!lesId || !area) return;
+  area.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);"><span class="spinner" style="border-top-color:var(--navy);"></span></div>`;
+  try {
+    const resultaten = await apiFetch('/api/results/' + lesId + '?class_id=' + (huidigKlasId || ''));
+    _klasResultatenCache = resultaten || [];
+    renderKlasResultatenTabel(_klasResultatenCache, area);
+  } catch(e) {
+    area.innerHTML = `<p style="color:var(--red);font-size:0.85rem;">Laden mislukt: ${e.message}</p>`;
+  }
+}
+
+function filterKlasResultaten() {
+  const zoek = document.getElementById('klas-res-zoek')?.value.toLowerCase() || '';
+  const gefilterd = zoek ? _klasResultatenCache.filter(r => r.student_name?.toLowerCase().includes(zoek)) : _klasResultatenCache;
+  const area = document.getElementById('klas-resultaten-area');
+  if (area) renderKlasResultatenTabel(gefilterd, area);
+}
+
+function renderKlasResultatenTabel(resultaten, area) {
+  if (!resultaten?.length) {
+    area.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>Geen resultaten gevonden.</p></div>`;
+    return;
+  }
+  // Score gemiddelde
+  const metScore = resultaten.filter(r => r.score_norm != null);
+  const gemiddelde = metScore.length ? Math.round(metScore.reduce((s, r) => s + r.score_norm, 0) / metScore.length) : null;
+
+  const rijen = resultaten.map(r => {
+    const score = r.score_norm != null ? r.score_norm : '—';
+    const scoreCls = r.score_norm >= 70 ? 'color:#1a6a40' : r.score_norm >= 50 ? 'color:#8a6200' : r.score_norm != null ? 'color:#c0392b' : 'color:var(--muted)';
+    return `<tr class="clickable" onclick="showResultDetail('${r.id}')">
+      <td style="padding:0.65rem 0.75rem;font-weight:500;">${r.student_name || '—'}</td>
+      <td style="padding:0.65rem 0.75rem;font-size:0.82rem;color:var(--muted);">
+        ${r.timestamp ? new Date(r.timestamp).toLocaleDateString('nl-NL', {day:'numeric',month:'short'}) : '—'}
+      </td>
+      <td style="padding:0.65rem 0.75rem;">
+        <span style="font-family:'DM Mono',monospace;font-weight:700;${scoreCls}">${score}${r.score_norm != null ? '/100' : ''}</span>
+      </td>
+      <td style="padding:0.65rem 0.75rem;font-size:0.78rem;color:var(--muted);">
+        ${r.understanding || '—'}
+      </td>
+    </tr>`;
+  }).join('');
+
+  area.innerHTML = `${gemiddelde !== null ? `<div style="margin-bottom:0.75rem;padding:10px 14px;background:var(--navy-glow);border-radius:8px;display:flex;gap:1.5rem;">
+    <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--navy);opacity:0.6;">Resultaten</div>
+      <div style="font-size:18px;font-weight:700;color:var(--navy);font-family:'DM Mono',monospace;">${resultaten.length}</div></div>
+    <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--navy);opacity:0.6;">Gemiddelde score</div>
+      <div style="font-size:18px;font-weight:700;color:var(--navy);font-family:'DM Mono',monospace;">${gemiddelde}/100</div></div>
+  </div>` : ''}
+  <table class="student-table">
+    <thead><tr>
+      <th>Leerling</th><th>Datum</th><th>Score</th><th>Begrip</th>
+    </tr></thead>
+    <tbody>${rijen}</tbody>
+  </table>`;
+}
+
+function toggleActDropdown() {
+  document.getElementById('act-dropdown')?.classList.toggle('open');
+}
+
+function openCreateLessonVoorKlas(klasId) {
+  document.getElementById('act-dropdown')?.classList.remove('open');
+  openCreateLesson();
+  // Selecteer klas automatisch
+  setTimeout(() => {
+    const sel = document.getElementById('new-lesson-class');
+    if (sel && klasId) sel.value = klasId;
+  }, 100);
+}
+
+function toggleSidebar(open) {
+  document.getElementById('sidebar')?.classList.toggle('open', open);
+  document.getElementById('sidebar-overlay')?.classList.toggle('open', open);
+}
+
+// ── Klassenkaarten grid ───────────────────────────────────
+function renderClassenGrid(klassen) {
+  const grid = document.getElementById('classes-grid-new');
+  if (!grid) return;
+  const niveauMap = { 'atheneum': 'niveau-atheneum', 'gymnasium': 'niveau-gymnasium', 'havo': 'niveau-havo' };
+  let html = klassen.map(k => {
+    const niveauLower = (k.name?.toLowerCase().includes('gy') ? 'gymnasium' :
+                         k.name?.toLowerCase().includes('h')  ? 'havo' : 'atheneum');
+    const niveauLabel = niveauLower.charAt(0).toUpperCase() + niveauLower.slice(1);
+    const klasLessen = lessonsCache ? lessonsCache.filter(l => l.class_id === k.id) : [];
+    return `<div class="class-card" onclick="openKlas('${k.id}')">
+      <div class="class-card-naam">${k.name}</div>
+      <div class="class-card-meta">${niveauLabel}</div>
+      <div class="class-card-stats">
+        <div class="class-card-stat"><strong>${klasLessen.length}</strong> les${klasLessen.length !== 1 ? 'sen' : ''}</div>
+        <div class="class-card-stat" id="ll-count-${k.id}"></div>
+      </div>
+      <span class="niveau-tag niveau-${niveauLower}">${niveauLabel}</span>
+    </div>`;
+  }).join('');
+  html += `<div class="class-card class-card-add" onclick="openCreateClass()">
+    <div style="font-size:22px;margin-bottom:4px;color:var(--navy);">+</div>
+    <div style="font-size:12px;font-weight:500;">Nieuwe klas</div>
+  </div>`;
+  grid.innerHTML = html;
+
+  // Vul leerlingenaantallen asynchroon per klas
+  klassen.forEach(k => {
+    apiFetch('/api/leerlingen/klassen?lesperiode=')
+      .then(meta => {
+        // meta kan array of object zijn
+        // We gebruiken een aparte call per klas
+      }).catch(() => {});
+    apiFetch('/api/leerlingen?klas=' + encodeURIComponent(k.name))
+      .then(ll => {
+        const el = document.getElementById('ll-count-' + k.id);
+        if (el && ll?.length) {
+          el.innerHTML = '<strong>' + ll.length + '</strong> leerlingen';
+          // Update ook nav-badge
+          const badge = document.getElementById('nav-ll-badge');
+          if (badge && ll.length > 0) {
+            // tel totaal over alle klassen
+            const allCounts = klassen.map(kk => {
+              const cEl = document.getElementById('ll-count-' + kk.id);
+              return cEl?.querySelector('strong') ? parseInt(cEl.querySelector('strong').textContent) || 0 : 0;
+            });
+            const totaal = allCounts.reduce((a, b) => a + b, 0);
+            if (totaal > 0) badge.textContent = totaal;
+          }
+        }
+      }).catch(() => {});
+  });
+}
+
+// ── Lessen-view ────────────────────────────────────────────
+function laadLessenView() {
+  loadTeacherLessons();
+}
+
+// ── Socratisch-view filterhulp ─────────────────────────────
+function vulClassFilter() {
+  const sel = document.getElementById('teacher-class-filter');
+  if (!sel || !classesCache) return;
+  sel.innerHTML = '<option value="">— Alle klassen —</option>';
+  classesCache.forEach(c => sel.add(new Option(c.name, c.id)));
 }
 
 async function loadTeacherDashboard() {
