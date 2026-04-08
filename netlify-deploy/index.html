@@ -4392,20 +4392,31 @@ async function _slaKlasOp(metLeerlingen) {
     const actie = editId ? 'bijgewerkt' : 'aangemaakt';
     showToast('✓ Klas "' + name + '" ' + actie + (llIds.length ? ' · ' + llIds.length + ' leerlingen gekoppeld' : ''));
 
-    // Voeg klas direct toe aan cache als fallback (zodat grid altijd werkt)
+    // Bouw de lokale klasdata
+    const klasData = { id: klasId, name, niveau: niveau||null, leerjaar: leerjaar||null, created_at: Date.now() };
+
+    // Pas cache direct aan — dit werkt ALTIJD, ongeacht server
     if (!editId) {
-      const nieuweKlasObj = { id: klasId, name, niveau: niveau||null, leerjaar: leerjaar||null, created_at: Date.now() };
-      if (!classesCache.find(c => c.id === klasId)) classesCache = [...classesCache, nieuweKlasObj];
+      // Voeg toe als hij er nog niet in zit
+      if (!classesCache.find(c => c.id === klasId)) {
+        classesCache = [...classesCache, klasData];
+      }
     } else {
-      classesCache = classesCache.map(c => c.id === editId ? { ...c, name, niveau: niveau||null, leerjaar: leerjaar||null } : c);
+      classesCache = classesCache.map(c => c.id === editId ? { ...c, ...klasData } : c);
     }
 
-    // Refresh van server (als dat lukt; als niet, werkt de cache-fallback)
+    // Probeer server-refresh — maar MERGE zodat de nieuwe klas nooit verdwijnt
     try {
       const verse = await getClasses();
-      if (verse?.length) classesCache = verse;
+      if (Array.isArray(verse)) {
+        // Zorg dat de nieuwe/gewijzigde klas altijd in het resultaat zit
+        const inServer = verse.find(c => c.id === klasId);
+        classesCache = inServer
+          ? verse                                    // server heeft 'm → gebruik server data
+          : [...verse.filter(c => c.id !== klasId), klasData]; // server mist 'm → voeg toe
+      }
     } catch(fetchErr) {
-      console.warn('getClasses na opslaan mislukt, gebruik cache:', fetchErr.message);
+      console.warn('getClasses na opslaan mislukt, gebruik lokale cache:', fetchErr.message);
     }
 
     populateStudentClassDropdown();
