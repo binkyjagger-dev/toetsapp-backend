@@ -4350,85 +4350,97 @@ function updateKlasModalTelling() {
 }
 
 async function _slaKlasOp(metLeerlingen) {
-  const name     = document.getElementById('new-class-name').value.trim();
-  const niveau   = document.getElementById('new-class-niveau').value;
-  const leerjaar = document.getElementById('new-class-leerjaar').value;
-  const editId   = document.getElementById('edit-class-id').value;
+  const name     = (document.getElementById('new-class-name')?.value || '').trim();
+  const niveau   = document.getElementById('new-class-niveau')?.value   || '';
+  const leerjaar = document.getElementById('new-class-leerjaar')?.value || '';
+  const editId   = document.getElementById('edit-class-id')?.value      || '';
   const err      = document.getElementById('create-class-error');
-  const btn      = document.getElementById(metLeerlingen ? 'klas-opslaan-btn' : 'create-class-btn');
 
-  console.log('[KlasOp] Start — name:', name, 'niveau:', niveau, 'leerjaar:', leerjaar, 'editId:', editId);
+  if (!name) {
+    if (err) { err.textContent = 'Vul een klasnaam in.'; err.style.display = 'block'; }
+    zetKlasModalStap(1);
+    return;
+  }
+  if (err) err.style.display = 'none';
 
-  if (!name) { err.textContent = 'Vul een klasnaam in.'; err.style.display = 'block'; zetKlasModalStap(1); return; }
-  err.style.display = 'none';
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" style="display:inline-block;border-top-color:#fff;"></span> Opslaan...'; }
+  const btn = document.getElementById(metLeerlingen ? 'klas-opslaan-btn' : 'create-class-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Opslaan...'; }
+
+  const klasId = editId || ('class_' + Date.now());
 
   try {
-    let klasId;
+    // ── Stap 1: Klas opslaan ──────────────────────────────
     if (editId) {
-      console.log('[KlasOp] PATCH classes/', editId);
       await apiFetch('/api/classes/' + editId, {
         method: 'PATCH',
-        body: JSON.stringify({ name, niveau: niveau || null, leerjaar: leerjaar || null }),
+        body: JSON.stringify({ name, niveau: niveau||null, leerjaar: leerjaar||null }),
       });
-      klasId = editId;
     } else {
-      klasId = 'class_' + Date.now();
-      console.log('[KlasOp] POST /api/classes, klasId:', klasId);
-      const postResult = await apiFetch('/api/classes', {
+      await apiFetch('/api/classes', {
         method: 'POST',
-        body: JSON.stringify({ id: klasId, name, niveau: niveau || null, leerjaar: leerjaar || null, created_at: Date.now() }),
+        body: JSON.stringify({ id: klasId, name, niveau: niveau||null, leerjaar: leerjaar||null, created_at: Date.now() }),
       });
-      console.log('[KlasOp] POST result:', postResult);
     }
 
-    const llIds = [...klasModalLlGeselecteerd];
+    // ── Stap 2: Leerlingen koppelen ───────────────────────
+    const llIds = [...(klasModalLlGeselecteerd || new Set())];
     if (llIds.length > 0) {
-      console.log('[KlasOp] koppel-klas — llIds:', llIds.length);
       await apiFetch('/api/leerlingen/koppel-klas', {
         method: 'POST',
         body: JSON.stringify({ leerling_ids: llIds, klas_naam: name }),
-      }).catch(e => console.warn('[KlasOp] koppel-klas fout:', e.message));
+      }).catch(() => {});
     }
 
+    // ── Stap 3: Sluit modal + toast ───────────────────────
     closeModal('modal-create-class');
-    const actie = editId ? 'bijgewerkt' : 'aangemaakt';
-    showToast('✓ Klas "' + name + '" ' + actie + (llIds.length ? ' · ' + llIds.length + ' leerlingen gekoppeld' : ''));
+    showToast('✓ Klas "' + name + '" ' + (editId ? 'bijgewerkt' : 'aangemaakt') +
+      (llIds.length ? ' · ' + llIds.length + ' leerlingen gekoppeld' : ''));
 
-    const klasData = { id: klasId, name, niveau: niveau||null, leerjaar: leerjaar||null, created_at: Date.now() };
-
-    if (!editId) {
-      if (!classesCache.find(c => c.id === klasId)) {
-        classesCache = [...classesCache, klasData];
-      }
+    // ── Stap 4: Update classesCache lokaal (geen server nodig) ──
+    const klasObj = { id: klasId, name, niveau: niveau||null, leerjaar: leerjaar||null, created_at: Date.now() };
+    if (editId) {
+      classesCache = classesCache.map(c => c.id === editId ? { ...c, ...klasObj } : c);
     } else {
-      classesCache = classesCache.map(c => c.id === editId ? { ...c, ...klasData } : c);
+      classesCache = classesCache.filter(c => c.id !== klasId).concat(klasObj);
     }
-    console.log('[KlasOp] classesCache na lokale update:', classesCache.length, 'klassen');
 
-    try {
-      console.log('[KlasOp] getClasses() aanroepen...');
-      const verse = await getClasses();
-      console.log('[KlasOp] getClasses() resultaat:', verse?.length, 'klassen:', verse);
-      if (Array.isArray(verse)) {
-        const inServer = verse.find(c => c.id === klasId);
-        console.log('[KlasOp] Nieuwe klas in serverresultaat?', !!inServer);
-        classesCache = inServer
+    // ── Stap 5: Navigeer naar klassen + render grid ───────
+    // Verberg alle views
+    ['klassen','klas-detail','leerlingen','lessen','analyse','socratisch'].forEach(v => {
+      const el = document.getElementById('view-' + v);
+      if (el) el.style.display = 'none';
+    });
+    // Toon klassen view
+    const klView = document.getElementById('view-klassen');
+    if (klView) klView.style.display = 'block';
+
+    // Update sidebar active state
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('nav-klassen')?.classList.add('active');
+
+    // Update breadcrumb
+    const bc = document.getElementById('main-breadcrumb');
+    if (bc) bc.innerHTML = '<span class="bc-current">Klassen</span>';
+
+    // Update topbar acties
+    const ma = document.getElementById('main-actions');
+    if (ma) ma.innerHTML = '<button class="btn btn-primary btn-sm" onclick="openCreateClass()">+ Nieuwe klas</button>';
+
+    // Render het grid direct
+    renderClassenGrid(classesCache);
+    huidigView = 'klassen';
+
+    // Probeer ook server te refreshen op de achtergrond (niet-blokkerend)
+    getClasses().then(verse => {
+      if (Array.isArray(verse) && verse.length >= classesCache.length) {
+        classesCache = verse.find(c => c.id === klasId)
           ? verse
-          : [...verse.filter(c => c.id !== klasId), klasData];
+          : verse.concat(klasObj);
+        renderClassenGrid(classesCache);
       }
-    } catch(fetchErr) {
-      console.warn('[KlasOp] getClasses mislukt:', fetchErr.message);
-    }
-
-    console.log('[KlasOp] classesCache final:', classesCache.length, 'klassen');
-    console.log('[KlasOp] navNaar(klassen) aanroepen...');
-    populateStudentClassDropdown();
-    navNaar('klassen');
-    console.log('[KlasOp] Klaar — grid zou nu', classesCache.length, 'klassen moeten tonen');
+    }).catch(() => {});
 
   } catch(e) {
-    console.error('[KlasOp] Fout:', e);
     if (err) { err.textContent = 'Opslaan mislukt: ' + e.message; err.style.display = 'block'; }
     zetKlasModalStap(1);
   } finally {
