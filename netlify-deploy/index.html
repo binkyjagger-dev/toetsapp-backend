@@ -2020,6 +2020,31 @@ async function getClasses() {
   return await apiFetch('/api/classes');
 }
 
+// Detecteer niveau uit klas-naam (Stanislascollege conventie)
+function detecteerNiveau(naam) {
+  if (!naam) return 'atheneum';
+  const n = naam.toLowerCase();
+  if (/^w[va]/.test(n) || n.includes('atheneum') || n.includes('vwo')) return 'atheneum';
+  if (/^wh/.test(n) || n.includes('havo'))    return 'havo';
+  if (/^wg/.test(n) || n.includes('gym'))     return 'gymnasium';
+  return 'atheneum';
+}
+
+// Haal eerste getal uit klas-naam als leerjaar
+function detecteerLeerjaar(naam) {
+  const m = (naam || '').match(/\d/);
+  return m ? m[0] : '';
+}
+
+// Laad klassen voor leerling-dropdown op landingspagina
+async function loadClasses() {
+  try {
+    const klassen = await apiFetch('/api/classes');
+    classesCache = klassen || [];
+    populateStudentClassDropdown();
+  } catch(e) { console.warn('loadClasses fout:', e.message); }
+}
+
 function populateStudentClassDropdown() {
   const sel = document.getElementById('student-class');
   if (classesCache.length === 0) {
