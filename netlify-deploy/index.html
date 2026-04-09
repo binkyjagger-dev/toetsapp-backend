@@ -910,10 +910,49 @@ async function laadLeerdoelenTab() {
   if (wrap) wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);"><span class="spinner" style="border-top-color:var(--navy);display:inline-block;margin-right:8px;"></span>Leerdoelen laden...</div>';
   try {
     alleLeerdoelen = await apiFetch('/api/leerdoelen');
+    vulLdFilterDropdowns(alleLeerdoelen);
     renderLeerdoelenTabel(alleLeerdoelen);
   } catch(e) {
     if (wrap) wrap.innerHTML = '<p style="color:var(--red);font-size:0.85rem;">Laden mislukt: ' + e.message + '</p>';
   }
+}
+
+function vulLdFilterDropdowns(ld) {
+  // Lesbrief dropdown
+  const lesbrieven = [...new Set(ld.map(l => l.lesbrief).filter(Boolean))].sort();
+  const lbSel = document.getElementById('ld-filter-lesbrief');
+  if (lbSel) {
+    const huidig = lbSel.value;
+    lbSel.innerHTML = '<option value="">— Alle lesbrieven —</option>'
+      + lesbrieven.map(lb => `<option value="${lb}" ${lb === huidig ? 'selected' : ''}>${lb}</option>`).join('');
+  }
+  // Hoofdstuk dropdown (leeg — wordt gevuld na lesbrief-keuze)
+  vulHoofdstukDropdown(lbSel?.value || '');
+}
+
+function vulHoofdstukDropdown(lesbrief) {
+  const bron = lesbrief
+    ? alleLeerdoelen.filter(l => l.lesbrief === lesbrief)
+    : alleLeerdoelen;
+  const hoofdstukken = [...new Set(bron.map(l => l.hoofdstuk).filter(Boolean))].sort((a, b) => {
+    // Sorteer: H1, H2, ... voor leesbaar overzicht
+    const n1 = parseInt(a.replace(/\D/g, '')) || 0;
+    const n2 = parseInt(b.replace(/\D/g, '')) || 0;
+    return n1 !== n2 ? n1 - n2 : a.localeCompare(b);
+  });
+  const hfstSel = document.getElementById('ld-filter-hoofdstuk');
+  if (hfstSel) {
+    const huidig = hfstSel.value;
+    hfstSel.innerHTML = '<option value="">— Alle hfst. —</option>'
+      + hoofdstukken.map(h => `<option value="${h}" ${h === huidig ? 'selected' : ''}>${h}</option>`).join('');
+  }
+}
+
+function onLdLesbriefFilter() {
+  // Herlaad hoofdstuk-dropdown op basis van gekozen lesbrief, dan filter
+  const lb = document.getElementById('ld-filter-lesbrief')?.value || '';
+  vulHoofdstukDropdown(lb);
+  filterLeerdoelen();
 }
 
 // ── Renderen ───────────────────────────────────────────────
@@ -952,15 +991,21 @@ function renderLeerdoelenTabel(ld) {
 
 // ── Filteren ───────────────────────────────────────────────
 function filterLeerdoelen() {
-  const zoek   = (document.getElementById('ld-zoek')?.value || '').toLowerCase();
-  const niveau = document.getElementById('ld-filter-niveau')?.value || '';
-  const type   = document.getElementById('ld-filter-type')?.value   || '';
+  const zoek      = (document.getElementById('ld-zoek')?.value || '').toLowerCase();
+  const niveau    = document.getElementById('ld-filter-niveau')?.value    || '';
+  const lesbrief  = document.getElementById('ld-filter-lesbrief')?.value  || '';
+  const hoofdstuk = document.getElementById('ld-filter-hoofdstuk')?.value || '';
+  const type      = document.getElementById('ld-filter-type')?.value      || '';
   const gefilterd = alleLeerdoelen.filter(l => {
-    const matchZoek   = !zoek   || (l.lesdoel + ' ' + l.lesbrief + ' ' + l.hoofdstuk).toLowerCase().includes(zoek);
-    const matchNiveau = !niveau || (l.niveau || '') === niveau;
-    const matchType   = !type   || (l.type   || '') === type;
-    return matchZoek && matchNiveau && matchType;
+    const matchZoek      = !zoek      || (l.lesdoel + ' ' + l.lesbrief + ' ' + l.hoofdstuk).toLowerCase().includes(zoek);
+    const matchNiveau    = !niveau    || (l.niveau    || '') === niveau;
+    const matchLesbrief  = !lesbrief  || (l.lesbrief  || '') === lesbrief;
+    const matchHoofdstuk = !hoofdstuk || (l.hoofdstuk || '') === hoofdstuk;
+    const matchType      = !type      || (l.type      || '') === type;
+    return matchZoek && matchNiveau && matchLesbrief && matchHoofdstuk && matchType;
   });
+  const count = document.getElementById('ld-count');
+  if (count) count.textContent = gefilterd.length + ' leerdoelen';
   renderLeerdoelenTabel(gefilterd);
 }
 
@@ -1753,7 +1798,7 @@ function annuleerLdImport() {
       <button class="btn btn-ghost-navy" onclick="openLdModal(null)">
         + Handmatig toevoegen
       </button>
-      <div style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;">
+      <div style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
         <input type="text" id="ld-zoek" placeholder="zoeken..." oninput="filterLeerdoelen()"
           style="min-width:180px;" />
         <select id="ld-filter-niveau" onchange="filterLeerdoelen()" style="min-width:130px;">
@@ -1762,6 +1807,12 @@ function annuleerLdImport() {
           <option value="Atheneum">Atheneum</option>
           <option value="Gymnasium">Gymnasium</option>
           <option value="VWO">VWO</option>
+        </select>
+        <select id="ld-filter-lesbrief" onchange="onLdLesbriefFilter()" style="min-width:160px;">
+          <option value="">— Alle lesbrieven —</option>
+        </select>
+        <select id="ld-filter-hoofdstuk" onchange="filterLeerdoelen()" style="min-width:110px;">
+          <option value="">— Alle hfst. —</option>
         </select>
         <select id="ld-filter-type" onchange="filterLeerdoelen()" style="min-width:110px;">
           <option value="">— Kennen + Kunnen —</option>
