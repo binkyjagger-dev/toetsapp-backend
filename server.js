@@ -382,15 +382,16 @@ app.post('/api/lessons', optionalToken, async (req, res) => {
   const { id, name, content, leerdoelen, chapter_val, created_at, class_id,
           toegestane_lesvormen, lesvorm_mode } = req.body;
   if (!id || !name || !content) return res.status(400).json({ error: 'Velden ontbreken' });
+  // SQL MIGRATIE (optioneel, voor later):
+  // alter table lessons add column if not exists leerdoelen jsonb;
+  // alter table lessons add column if not exists chapter_val text;
   const record = {
     id, name, content, created_at,
-    leerdoelen:           leerdoelen   || null,
-    chapter_val:          chapter_val  || null,
-    class_id:             class_id     || null,
-    // Fase 2: lesvorminstellingen
+    chapter_val: chapter_val || null,
+    class_id:    class_id    || null,
     toegestane_lesvormen: toegestane_lesvormen || ['socratisch'],
-    lesvorm_mode:         lesvorm_mode || 'locked',
-    leraar_id:            req.leraar?.id || null,
+    lesvorm_mode:         lesvorm_mode         || 'locked',
+    leraar_id:            req.leraar?.id        || null,
   };
   const { data, error } = await supabase.from('lessons').insert([record]).select();
   if (error) return res.status(500).json({ error: error.message });

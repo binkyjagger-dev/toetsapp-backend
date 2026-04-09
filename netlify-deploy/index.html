@@ -1891,19 +1891,13 @@ function annuleerLdImport() {
     <button class="modal-close" onclick="closeModal('modal-create-lesson')">×</button>
     <div class="modal-title">Nieuwe les aanmaken</div>
 
-    <!-- Naam + klas -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
-      <div class="form-section" style="margin:0;">
-        <label>Naam van de les *</label>
-        <input type="text" id="new-lesson-name" placeholder="bijv. H2 — Elasticiteit" maxlength="80" />
-      </div>
-      <div class="form-section" style="margin:0;">
-        <label>Koppel aan klas (optioneel)</label>
-        <select id="new-lesson-class">
-          <option value="">— Geen koppeling —</option>
-        </select>
-      </div>
+    <!-- Naam -->
+    <div class="form-section">
+      <label>Naam van de les *</label>
+      <input type="text" id="new-lesson-name" placeholder="bijv. H2 — Elasticiteit" maxlength="80" />
     </div>
+    <!-- Hidden veld voor klas (voor later) -->
+    <select id="new-lesson-class" style="display:none;"></select>
 
     <!-- Leerdoelen sectie -->
     <div style="border:1.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:0.75rem;">
@@ -1954,31 +1948,17 @@ function annuleerLdImport() {
       </div>
     </div>
 
-    <!-- Handmatig aanpassen -->
-    <div class="form-section" id="manual-edit-section" style="display:none;">
-      <label>Kernstof handmatig aanpassen</label>
-      <textarea id="new-lesson-content" rows="5" style="font-size:0.82rem;line-height:1.55;"></textarea>
-    </div>
+    <!-- Verborgen content voor AI (gevuld vanuit geselecteerde leerdoelen) -->
+    <textarea id="new-lesson-content" style="display:none;"></textarea>
     <textarea id="new-lesson-content-auto" style="display:none;"></textarea>
-    <button class="btn btn-ghost-navy btn-sm" style="font-size:0.75rem;margin-bottom:0.75rem;"
-      onclick="toggleLeerdoelenEdit()">✏ Kernstof handmatig aanpassen</button>
-
-    <!-- Lesvormen -->
-    <div class="form-section" id="lesvormen-section">
-      <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
-        Beschikbare lesvormen
-        <span style="font-size:0.68rem;font-weight:400;color:var(--muted);">(kies welke lesvormen leerlingen mogen doen)</span>
-      </label>
-      <div id="lesvormen-checkboxes" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.75rem;"></div>
-      <label style="font-size:0.78rem;color:var(--text2);margin-bottom:0.35rem;display:block;">Leerling mag zelf kiezen?</label>
-      <div style="display:flex;gap:0.5rem;">
-        <button type="button" id="mode-btn-locked" class="lesvorm-mode-btn active"
-          onclick="setLesvormMode('locked')">🔒 Vergrendeld</button>
-        <button type="button" id="mode-btn-free" class="lesvorm-mode-btn"
-          onclick="setLesvormMode('free')">🔓 Leerling kiest</button>
-      </div>
-      <div id="mode-hint" style="font-size:0.73rem;color:var(--muted);margin-top:0.4rem;"></div>
+    <!-- Verborgen lesvormen state (altijd socratisch als default) -->
+    <div id="lesvormen-section" style="display:none;">
+      <div id="lesvormen-checkboxes"></div>
+      <div id="mode-hint"></div>
+      <button type="button" id="mode-btn-locked" style="display:none;"></button>
+      <button type="button" id="mode-btn-free" style="display:none;"></button>
     </div>
+    <div id="manual-edit-section" style="display:none;"></div>
 
     <div id="create-lesson-error" class="error-msg" style="display:none"></div>
     <div style="display:flex;gap:0.75rem;margin-top:1rem;">
@@ -3237,19 +3217,9 @@ async function openCreateLesson() {
   document.getElementById('new-lesson-content').value = '';
   document.getElementById('new-lesson-content-auto').value = '';
   document.getElementById('create-lesson-error').style.display = 'none';
-  document.getElementById('manual-edit-section').style.display = 'none';
   lesLdGeselecteerd = new Set();
   selectedLesvormen = ['socratisch'];
   lesvormMode = 'locked';
-
-  // Klas-dropdown
-  const sel = document.getElementById('new-lesson-class');
-  sel.innerHTML = '<option value="">— Geen koppeling —</option>';
-  classesCache.forEach(c => sel.add(new Option(c.name, c.id)));
-
-  // Lesvormen
-  renderLesvormCheckboxes();
-  updateModeBtns();
 
   openModal('modal-create-lesson');
 
@@ -3420,36 +3390,35 @@ function toggleLeerdoelenEdit() {
 }
 
 async function createLesson() {
-  const name    = document.getElementById('new-lesson-name').value.trim();
-  const content = document.getElementById('new-lesson-content').value.trim()
-                || document.getElementById('new-lesson-content-auto').value.trim();
-  const err     = document.getElementById('create-lesson-error');
-  const btn     = document.getElementById('create-lesson-btn');
+  const name = document.getElementById('new-lesson-name').value.trim();
+  const err  = document.getElementById('create-lesson-error');
+  const btn  = document.getElementById('create-lesson-btn');
 
   if (!name) { err.textContent = 'Vul een lesnaam in.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
   btn.disabled = true; btn.textContent = 'Aanmaken...';
 
-  const classId = document.getElementById('new-lesson-class').value || null;
-
-  // Bouw leerdoelen-object uit geselecteerde items
+  // Bouw content-string uit geselecteerde leerdoelen
   const geselecteerd = lesLdAlle.filter(l => lesLdGeselecteerd.has(l.id));
-  const leerdoelen = geselecteerd.length ? {
-    kennen: geselecteerd.filter(l => l.type === 'kennen').map(l => l.lesdoel),
-    kunnen: geselecteerd.filter(l => l.type === 'kunnen').map(l => l.lesdoel),
-    ids:    [...lesLdGeselecteerd],
-  } : null;
+  const kennen = geselecteerd.filter(l => l.type === 'kennen').map(l => l.lesdoel);
+  const kunnen = geselecteerd.filter(l => l.type === 'kunnen').map(l => l.lesdoel);
+  const lb  = document.getElementById('les-ld-lesbrief')?.value  || '';
+  const hf  = document.getElementById('les-ld-hoofdstuk')?.value || '';
+  let content = '';
+  if (lb) content += 'Lesbrief: ' + lb + '\n';
+  if (hf) content += 'Hoofdstuk: ' + hf + '\n';
+  if (kennen.length) content += '\nKennen:\n' + kennen.map(k => '- ' + k).join('\n');
+  if (kunnen.length) content += '\n\nKunnen:\n' + kunnen.map(k => '- ' + k).join('\n');
+  if (!content) content = name;
 
   const id = 'lesson_' + Date.now();
   const lesson = {
     id, name,
-    content:      content || name,
-    leerdoelen,
-    chapter_val:  document.getElementById('les-ld-hoofdstuk')?.value || null,
-    created_at:   Date.now(),
-    class_id:     classId,
-    toegestane_lesvormen: selectedLesvormen.length > 0 ? selectedLesvormen : ['socratisch'],
-    lesvorm_mode: lesvormMode || 'locked',
+    content,
+    chapter_val:          hf || null,
+    created_at:           Date.now(),
+    toegestane_lesvormen: ['socratisch'],
+    lesvorm_mode:         'locked',
   };
 
   try {
@@ -3461,9 +3430,7 @@ async function createLesson() {
   btn.disabled = false; btn.textContent = 'Les aanmaken';
   closeModal('modal-create-lesson');
   showToast('✓ Les "' + name + '" aangemaakt!');
-  const terugNaarKlas = huidigKlasId && classId === huidigKlasId;
   await loadTeacherDashboard();
-  if (terugNaarKlas) openKlas(huidigKlasId);
 }
 
 
