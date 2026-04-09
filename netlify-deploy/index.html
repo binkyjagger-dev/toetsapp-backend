@@ -1887,62 +1887,84 @@ function annuleerLdImport() {
 <!--  MODAL: CREATE LESSON                           -->
 <!-- ═══════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-create-lesson">
-  <div class="modal" style="max-width:560px;">
+  <div class="modal" style="max-width:640px;">
     <button class="modal-close" onclick="closeModal('modal-create-lesson')">×</button>
     <div class="modal-title">Nieuwe les aanmaken</div>
 
-    <!-- STAP 1: Lesbrief kiezen -->
-    <div class="form-section">
-      <label>Lesbrief *</label>
-      <select id="new-lesson-lesbrief" onchange="onLesbriefChange()">
-        <option value="">— Kies een lesbrief —</option>
-      </select>
-    </div>
-
-    <!-- STAP 2: Hoofdstuk kiezen -->
-    <div class="form-section" id="hfst-section" style="display:none;">
-      <label>Hoofdstuk *</label>
-      <select id="new-lesson-hoofdstuk" onchange="onHoofdstukChange()">
-        <option value="">— Kies een hoofdstuk —</option>
-      </select>
-    </div>
-
-    <!-- STAP 3: Naam (auto-ingevuld, aanpasbaar) -->
-    <div class="form-section" id="naam-section" style="display:none;">
-      <label>Naam van de les *</label>
-      <input type="text" id="new-lesson-name" placeholder="bijv. H2 — Elasticiteit" maxlength="80" />
-    </div>
-
-    <!-- Leerdoelen preview -->
-    <div id="leerdoelen-preview" style="display:none;margin-bottom:1rem;">
-      <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.13em;color:var(--muted);margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem;">
-        Leerdoelen ingeladen
-        <span id="leerdoel-count" style="background:rgba(46,107,62,0.15);color:var(--teacher);border:1px solid rgba(46,107,62,0.3);font-size:0.65rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:99px;"></span>
+    <!-- Naam + klas -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+      <div class="form-section" style="margin:0;">
+        <label>Naam van de les *</label>
+        <input type="text" id="new-lesson-name" placeholder="bijv. H2 — Elasticiteit" maxlength="80" />
       </div>
-      <div id="leerdoelen-kennen" style="margin-bottom:0.5rem;"></div>
-      <div id="leerdoelen-kunnen"></div>
-      <div style="margin-top:0.5rem;">
-        <button class="btn btn-page-ghost" style="font-size:0.75rem;padding:0.3rem 0.7rem;" onclick="toggleLeerdoelenEdit()">✏️ Handmatig aanpassen</button>
+      <div class="form-section" style="margin:0;">
+        <label>Koppel aan klas (optioneel)</label>
+        <select id="new-lesson-class">
+          <option value="">— Geen koppeling —</option>
+        </select>
       </div>
     </div>
 
-    <!-- Handmatig bewerken (verborgen) -->
+    <!-- Leerdoelen sectie -->
+    <div style="border:1.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:0.75rem;">
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;
+        color:var(--muted);margin-bottom:10px;">Leerdoelen selecteren</div>
+
+      <!-- Filters -->
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:8px;">
+        <select id="les-ld-niveau" onchange="onLesLdFilter()" style="min-width:120px;">
+          <option value="">— Niveau —</option>
+        </select>
+        <select id="les-ld-lesbrief" onchange="onLesLdLesbriefChange()" style="flex:1;min-width:150px;">
+          <option value="">— Lesbrief —</option>
+        </select>
+        <select id="les-ld-hoofdstuk" onchange="onLesLdFilter()" style="min-width:100px;">
+          <option value="">— Hfst. —</option>
+        </select>
+        <select id="les-ld-type" onchange="onLesLdFilter()" style="min-width:105px;">
+          <option value="">— Type —</option>
+          <option value="kennen">Kennen</option>
+          <option value="kunnen">Kunnen</option>
+        </select>
+      </div>
+
+      <!-- Selecteer alles -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost-navy btn-sm" onclick="selecteerAlleLesLd()" style="font-size:0.7rem;">Alles selecteren</button>
+          <button class="btn btn-ghost-navy btn-sm" onclick="deselecteerAlleLesLd()" style="font-size:0.7rem;">Deselecteren</button>
+        </div>
+        <span id="les-ld-telling" style="font-size:0.75rem;color:var(--muted);"></span>
+      </div>
+
+      <!-- Lijst -->
+      <div id="les-ld-lijst" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);
+        border-radius:8px;padding:4px;background:#fafbfd;margin-bottom:8px;">
+        <div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">
+          Kies een niveau of lesbrief om leerdoelen te tonen.
+          <br><span id="les-ld-leeg-hint" style="font-size:0.78rem;"></span>
+        </div>
+      </div>
+
+      <!-- Geselecteerde preview -->
+      <div id="les-ld-preview" style="display:none;">
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
+          color:var(--muted);margin-bottom:6px;">Geselecteerde leerdoelen</div>
+        <div id="les-ld-preview-tags" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+      </div>
+    </div>
+
+    <!-- Handmatig aanpassen -->
     <div class="form-section" id="manual-edit-section" style="display:none;">
-      <label>Kernstof bewerken</label>
-      <textarea id="new-lesson-content" rows="6" style="font-size:0.82rem;line-height:1.55;"></textarea>
+      <label>Kernstof handmatig aanpassen</label>
+      <textarea id="new-lesson-content" rows="5" style="font-size:0.82rem;line-height:1.55;"></textarea>
     </div>
-    <!-- Verborgen veld voor automatisch gegenereerde content -->
     <textarea id="new-lesson-content-auto" style="display:none;"></textarea>
+    <button class="btn btn-ghost-navy btn-sm" style="font-size:0.75rem;margin-bottom:0.75rem;"
+      onclick="toggleLeerdoelenEdit()">✏ Kernstof handmatig aanpassen</button>
 
-    <div class="form-section" id="klas-section" style="display:none;">
-      <label>Koppel aan klas (optioneel)</label>
-      <select id="new-lesson-class">
-        <option value="">— Alle klassen (geen koppeling) —</option>
-      </select>
-    </div>
-
-    <!-- LESVORMEN-INSTELLINGEN -->
-    <div class="form-section" id="lesvormen-section" style="display:none;">
+    <!-- Lesvormen -->
+    <div class="form-section" id="lesvormen-section">
       <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
         Beschikbare lesvormen
         <span style="font-size:0.68rem;font-weight:400;color:var(--muted);">(kies welke lesvormen leerlingen mogen doen)</span>
@@ -1951,24 +1973,21 @@ function annuleerLdImport() {
       <label style="font-size:0.78rem;color:var(--text2);margin-bottom:0.35rem;display:block;">Leerling mag zelf kiezen?</label>
       <div style="display:flex;gap:0.5rem;">
         <button type="button" id="mode-btn-locked" class="lesvorm-mode-btn active"
-          onclick="setLesvormMode('locked')" title="Leerling ziet geen kiezer — wordt direct doorgestuurd">
-          🔒 Vergrendeld
-        </button>
+          onclick="setLesvormMode('locked')">🔒 Vergrendeld</button>
         <button type="button" id="mode-btn-free" class="lesvorm-mode-btn"
-          onclick="setLesvormMode('free')" title="Leerling kiest zelf uit de aangevinkte lesvormen">
-          🔓 Leerling kiest
-        </button>
+          onclick="setLesvormMode('free')">🔓 Leerling kiest</button>
       </div>
       <div id="mode-hint" style="font-size:0.73rem;color:var(--muted);margin-top:0.4rem;"></div>
     </div>
 
     <div id="create-lesson-error" class="error-msg" style="display:none"></div>
-    <div style="display:flex; gap:0.75rem; margin-top:1rem;">
+    <div style="display:flex;gap:0.75rem;margin-top:1rem;">
       <button class="btn btn-page-ghost" onclick="closeModal('modal-create-lesson')">Annuleren</button>
-      <button class="btn btn-teacher" id="create-lesson-btn" onclick="createLesson()" disabled>Les aanmaken</button>
+      <button class="btn btn-teacher" id="create-lesson-btn" onclick="createLesson()">Les aanmaken</button>
     </div>
   </div>
 </div>
+
 
 <!-- ═══════════════════════════════════════════════ -->
 <!--  MODAL: STUDENT DETAIL                          -->
@@ -2582,7 +2601,7 @@ async function submitExplanation() {
   if (selectedLesson && selectedLesson.leerdoelen) {
     currentLeerdoelen = selectedLesson.leerdoelen;
   } else if (selectedLesson && selectedLesson.chapter_val) {
-    currentLeerdoelen = LEERDOELEN_DB[selectedLesson.chapter_val] || null;
+    currentLeerdoelen = selectedLesson.leerdoelen || null;
   } else {
     currentLeerdoelen = null;
   }
@@ -3136,11 +3155,8 @@ async function saveUniformResult({ lesvorm, scoreNorm, lesvormData, extraFields 
 }
 
 // ═══════════════════════════════════════════════════════════
-//  LEERDOELEN DATABASE (gegenereerd uit leerdoelen_v2.xlsx)
 // ═══════════════════════════════════════════════════════════
-const LEERDOELEN_DB = {"ar-h1": {"kennen": ["werknemer", "zelfstandigen", "flexibilisering van de arbeidsmarkt", "aanbod van arbeid (= beroepsbevolking)", "werklozen", "beroepsbevolking (= aanbod van arbeid)", "vraag naar arbeid", "werkgelegenheid", "vacatures", "loon", "krappe arbeidsmarkt", "ruime arbeidsmarkt"], "kunnen": ["de beroepsbevolking indelen in werknemers, zelfstandigen met en zonder pers0neel en werklozen.", "voors en tegens noemen van vaste en flexibele contracten voor de werkgever en de werknemer.", "de vraag op de arbeidsmarkt indelen in werkgelegenheid en vacatures.", "noemen door wie de vraag naar arbeid wordt uitgeoefend.", "het aanbod op de arbeidsmarkt indelen in werkzame beroepsbevolking en werklozen.", "de begrippen krapte en ruimte toepassen op de arbeidsmarkt.", "oorzaken en gevolgen van een verkrappende arbeidsmarkt uitleggen.", "oplossingen voor krapte op de arbeidsmarkt noemen.", "het gelijktijdig bestaan van werkloosheid en vacatures verklaren.", "beschrijven wat de invloed is van de conjunctuur op de vraag naar arbeid."]}, "ar-h2": {"kennen": ["niet-beroepsbevolking", "aanzuigeffect", "ontmoedigingseffect", "deeltijdfactor", "arbeidsjaar", "p/a-ratio", "potentiële beroepsbevolking (beroeps¬geschikte bevolking)", "bruto participatiegraad", "netto participatiegraad", "i/a-ratio", "inactieven", "actieven"], "kunnen": ["beschrijven door welke factoren de omvang en samenstelling van de potentiële beroeps¬bevolking wordt beïnvloed.", "de arbeidsparticipatiegraad berekenen en veranderingen ervan verklaren.", "de verschillen in arbeidsparticipatie tussen groepen op de arbeidsmarkt verklaren.", "maatregelen noemen om de arbeidsparticipatie te laten stijgen.", "de p/a-ratio berekenen en veranderingen ervan verklaren.", "de i/a-ratio berekenen en veranderingen ervan verklaren.", "de relatie tussen i/a-ratio en de betaalbaarheid van de sociale zekerheid verklaren.", "de keuze tussen inkomen en vrije tijd verklaren."]}, "ar-h3": {"kennen": ["publieke sector", "arbeidsproductiviteit", "arbeidsintensief", "diepte-investering", "kapitaalintensiever", "breedte-investering", "innovaties", "concurrentiepositie", "menselijk kapitaal", "creatie en destructie van werkgelegenheid", "bedrijfstak", "primaire sector"], "kunnen": ["de betekenis van arbeidsproductiviteit voor de concurrentiepositie van het bedrijfsleven van een land verklaren.", "verklaren welke factoren de omvang van de werkgelegenheid bepalen.", "de invloed van breedte-investeringen en van diepte-investeringen op de arbeidsproductiviteit en de werkgelegenheid verklaren.", "veranderingen in de arbeidsproductiviteit verklaren.", "uitleggen waarom de werkgelegenheid in de primaire en de secundaire sector in de afgelopen eeuw is gedaald en die in de tertiaire en quartaire sector is gestegen.", "de relatie tussen productie, arbeidsproductiviteit en werkgelegenheid verklaren en er berekeningen mee uitvoeren.", "verschillende oorzaken van het verdwijnen van banen noemen.", "uitleggen dat het verdwijnen van banen samen kan gaan met het scheppen van banen (creatie en destructie van werkgelegenheid)."]}, "ar-h4": {"kennen": ["collectieve arbeidsovereenkomst (cao)", "primaire arbeidsvoorwaarden", "secundaire arbeidsvoorwaarden", "vakbond", "organisatiegraad", "free ridergedrag (meeliftersgedrag)", "ondernemersvereniging", "centraal akkoord", "sociale partners", "algemeen verbindend verklaren", "toegevoegde waarde = productiewaarde", "prijscompensatie"], "kunnen": ["afspraken noemen die worden vastgelegd in een collectieve arbeidsovereenkomst.", "voordelen en nadelen noemen voor de werkgevers en de werknemers van een collectieve arbeids¬overeenkomst vergeleken met een individuele arbeidsovereenkomst.", "arbeidsvoorwaarden onderscheiden in primaire en secundaire voorwaarden.", "de activiteiten noemen van de organisaties van werknemers en werkgevers.", "het belang van de organisatiegraad van werknemers uitleggen voor de vakbonden.", "uitleggen dat bij het lid worden van een vakbond sprake kan zijn van free ridergedrag (mee¬lifters¬gedrag).", "de betekenis uitleggen van het algemeen verbindend verklaren van cao's voor de sociale partners.", "loonstijgingen onderscheiden in prijscompensatie, reële loonstijging en incidentele loon¬stijging en deze beschrijven.", "uitleggen wat de betekenis is van de loonruimte.", "de loonruimte berekenen op basis van de ontwikkeling van de arbeidsproductiviteit en de prijzen.", "analyseren wat bij een gegeven loonruimte de invloed van een loonstijging is op het loonaandeel en het winstaandeel in de productiewaarde.", "uitleggen hoe de loonontwikkeling in de marksector invloed heeft op de loonontwikkeling in de collectieve sector."]}, "eb-h1": {"kennen": ["geld", "maatschappelijke geldhoeveelheid", "chartaal geld", "giraal geld", "geldschepping", "geldvernietiging", "debiteurenrisico", "inflatierisico", "rentemarge", "bankrun", "depositogarantiestelsel", "lener in laatste instantie"], "kunnen": ["omschrijven welke rol het geld speelt in onze economie.", "reële waarde kunnen berekenen als nominale waarde gedeeld door prijspeil.", "uitleggen hoe de maatschappelijke geldhoeveelheid is samengesteld.", "beschrijven dat de maatschappelijke geldhoeveelheid verandert door geldschepping en geldvernietiging.", "drie redenen omschrijven waarom spaarders en beleggers een rentevergoeding eisen als zij geld uitlenen.", "omschrijven op welke manieren een centrale bank een bankrun probeert te voorkomen.", "uitleggen waarom prijsstabiliteit het doel is van het monetaire beleid van een centrale bank.", "de rol van geldillussie bij de loononderhandelingen beschrijven.", "onderscheid maken tussen bestedingsinflatie en (loon)kosteninflatie.", "loonkosten per product kunnen berekenen als loonkosten per werknemer gedeeld door arbeidsproductiviteit.", "de samenhang van de output gap, de bezettingsgraad en de bestedingsinflatie beschrijven.", "uitleggen hoe een centrale bank de omvang van de maatschappelijke geldhoeveelheid kan sturen."]}, "eb-h2": {"kennen": ["animal spirits", "totale factorproductiviteit", "structuurbeleid", "potentiële bbp", "output gap", "bestedingsevenwicht", "natuurlijke werkloosheid", "structurele werkloosheid", "laagconjunctuur", "onderbesteding", "conjuncturele werkloosheid", "ruime arbeidsmarkt"], "kunnen": ["beschrijven dat conjunctuurschommelingen veroorzaakt worden door schommelingen in de bestedingen waardoor het bbp afwijkt van het potentiële bbp.", "beschrijven van het positieve verband tussen hoeveelheid en productiviteit van de productiefactoren en de omvang van het potentiële bbp.", "beschrijven van het verband tussen output gap, ruimte op de arbeidsmarkt en inflatie.", "het begrotingsbeleid beschrijven als onderdeel van het conjunctuurbeleid.", "het verschil beschrijven tussen een enkelvoudig mandaat en een duaal mandaat van de centrale bank.", "beschrijven van de werking van de automatische conjunctuurstabilisatoren.", "beschrijven van de werking van het multipliereffect.", "uitleggen dat het importlek de multiplierwerking vermindert.", "beschrijven van de manieren waarop de overheid anticyclisch begrotingsbeleid kan voeren.", "beschrijven wanneer het begrotingsbeleid procyclisch werkt.", "beschrijven wanneer begrotingsbeleid inverdieneffecten voor de overheid met zich meebrengt.", "beschrijven wanneer begrotingsbeleid uitverdieneffecten voor de overheid met zich meebrengt."]}, "eb-h3": {"kennen": ["welvaartsverliezen", "prijsrigiditeit", "economisch model", "effectieve vraag", "inkomensidentiteit", "particuliere consumptie", "marginale consumptiequote", "autonome consumptie", "consumentenvertrouwen", "particuliere investeringen", "autonome investeringen", "overheidsbestedingen"], "kunnen": ["uitleggen dat conjunctuurschommelingen door prijsrigiditeit welvaartsverliezen veroorzaken.", "beredeneren hoe bepaalde variabelen een rol spelen bij de hoogte van de bestedingen.", "werken met het keynesiaanse kruis (aflezen, lijnen evenwijdig/niet-evenwijdig verschuiven).", "beredeneren wat de gevolgen zijn voor de bestedingen en het inkomen als de autonome consumptie/inves-teringen/overheidsbestedingen/belastingen veranderen.", "beredeneren wat de gevolgen zijn voor de bestedingen en het inkomen als de marginale consumptie¬¬-quote/spaarquote/belastingquote veranderen.", "berekenen van conjuncturele- en natuurlijke (= structurele) werkloosheid.", "redeneren en rekenen met de multiplier.", "beredeneren wat de invloed is van het spaarlek en het belastinglek op de waarde van de multiplier.", "de samenhang uitleggen tussen het keynesiaanse kruis en de IS-curve.", "uitleggen waarom de IS-curve dalend loopt.", "onderscheid maken tussen een verschuiving langs de IS-curve en van de IS-curve.", "uitleggen waarom de MB-curve horizontaal loopt."]}, "eb-h4": {"kennen": ["GA-curve", "prijsflexibiliteit", "vraagschok", "monetaire schok", "keynesianen", "monetaristen", "neo-klassieken (nieuw-klassieken)", "neutraliteit van geld"], "kunnen": ["uitleggen dat prijsrigiditeit ervoor zorgt dat de GA-curve stijgend loopt.", "uitleggen dat de steilheid van de GA-curve toeneemt naarmate de prijsflexibiliteit groter is.", "verklaren wanneer en waarom er in de huidige periode een verschuiving langs de GA-curve ontstaat.", "de GA-curve op de juiste wijze verschuiven in de volgende periode.", "onderscheid maken tussen vraagschokken en monetaire schokken.", "bepalen welke gebeurtenissen een vraagschok veroorzaken.", "bepalen welke gebeurtenissen een monetaire schok veroorzaken.", "met behulp van het keynesiaanse kruis beredeneren welke invloed een schok heeft op de bestedingen en het inkomen.", "de bestedingslijn in het keynesiaanse kruis op de juiste wijze verschuiven na een schok.", "de IS-curve op de juiste wijze verschuiven in geval van een vraagschok.", "de MB-curve op de juiste wijze verschuiven in geval van een monetaire schok.", "de GA-curve op de juiste wijze verschuiven bij veranderde inflatieverwachtingen."]}, "em-h1": {"kennen": ["marktmechanisme", "economisch model", "bestedingen", "particuliere sector", "nationaal product", "nationaal inkomen", "consumeren", "sparen", "overheidsbestedingen", "investeren", "kapitaalgoederen", "potentiële productie"], "kunnen": ["bepalen hoe een model gebruikt wordt: om te analyseren, om beleid voor te bereiden of om te voorspellen.", "het onderscheid tussen de korte en de lange termijn verklaren.", "de vergelijkingen van een model omschrijven en benoemen of er sprake is van een definitie-vergelijking, een gedragsvergelijking, een evenwichtsvoorwaarde, een identiteit of een institutionele vergelijking.", "beschrijven hoe een onevenwichtige situatie tendeert naar inkomensevenwicht.", "de grootheden en variabelen in modellen benoemen en daarbij onderscheid maken tussen endogeen en exogeen.", "de componenten van de effectieve vraag beschrijven.", "een keynesiaans model oplossen (het evenwichtsinkomen berekenen/bepalen).", "berekenen van het particulier spaarsaldo en het overheidssaldo bij inkomensevenwicht en bepalen of het saldo een vraagvergrotend of een vraagverkleinend effect heeft.", "in een model de totale werkloosheid splitsen in conjuncturele en natuurlijke werkloosheid.", "de output gap berekenen.", "grafisch het evenwichtsinkomen bepalen."]}, "em-h2": {"kennen": ["bezettingsgraad", "productiecapaciteit", "laagconjunctuur (= onderbesteding)", "langetermijnevenwicht (= bestedingsevenwicht)", "hoogconjunctuur (= overbesteding)", "inflatie", "bestedingsinflatie", "anticyclisch begrotingsbeleid", "multiplier", "spaarlek", "belastinglek", "inverdieneffect"], "kunnen": ["verklaren wanneer er sprake is van laagconjunctuur (onderbesteding), langetermijnevenwicht (= bestedingsevenwicht) of hoogconjunctuur (overbesteding).", "de fasen van de conjunctuurcyclus beschrijven en aan de hand van teksten en/of grafieken bepalen in welke fase de conjunctuur van een land zich bevindt.", "uitleggen hoe de overheid volgens de keynesiaanse visie moet ingrijpen bij een economische crisis.", "verklaren hoe anticyclisch conjunctuurbeleid werkt in een bepaalde conjuncturele situatie.", "een keynesiaans model oplossen (het evenwichtsinkomen berekenen/bepalen).", "berekenen van het particulier spaarsaldo en het overheidssaldo bij inkomensevenwicht en bepalen of het saldo een vraagvergrotend of een vraagverkleinend effect heeft.", "in een model de totale werkloosheid splitsen in conjuncturele en natuurlijke werkloosheid.", "de werking van de multiplier uitleggen.", "gegeven multipliers in een bepaald model analytisch toepassen.", "uitleggen hoe spaarlek en belastinglek kunnen leiden tot een kleinere multiplier.", "uitleggen waarom in bepaalde modellen de ene multiplier groter is dan de andere.", "uitleggen hoe vanuit een situatie van laag- of hoogconjunctuur het langetermijnevenwicht kan worden bereikt en dit onderbouwen met behulp van berekeningen en grafieken."]}, "em-h3": {"kennen": ["open economie", "export", "primair inkomen", "import", "lopende rekening", "importlek", "financiële rekening"], "kunnen": ["een keynesiaans model voor een open economie oplossen (het evenwichtsinkomen berekenen/bepalen).", "berekenen van het particulier spaarsaldo, het overheidssaldo en het saldo op de lopende rekening bij inkomensevenwicht en bepalen of het saldo een vraagvergrotend of een vraagverkleinend effect heeft.", "in een model de totale werkloosheid splitsen in conjuncturele en natuurlijke werkloosheid.", "de werking van de multiplier verklaren.", "gegeven multipliers in een bepaald model analytisch toepassen.", "uitleggen hoe spaarlek, belastinglek en importlek kunnen leiden tot een kleinere multiplier.", "uitleggen waarom in bepaalde modellen de ene multiplier groter is dan de andere.", "uitleggen hoe vanuit een situatie van laag- of hoogconjunctuur bestedingsevenwicht kan worden bereikt en dit onderbouwen met behulp van berekeningen en grafieken.", "aan de hand van een model en de oplossingsvergelijking bepalen wat het gevolg is van bepaalde maatregelen voor het particulier spaarsaldo en/of het overheidssaldo en/of het saldo op de lopende rekening en daarbij verklaren of er sprake is van een vraagverkleinend of een vraag­vergrotend effect.", "aan de hand van een oplossingsvergelijking de multiplier van een autonome grootheid bepalen en daarmee berekeningen uitvoeren.", "aan de hand van een model en de oplossingsvergelijking bepalen wat en hoe groot het inverdien­effect (of uitverdieneffect) is van een bepaalde maatregel.", "het verband tussen het saldo op de lopende rekening en het saldo op de financiële rekening kunnen verklaren."]}, "ge-h1": {"kennen": ["volledige rationaliteit", "ultimatumspel", "begrensde rationaliteit", "objectief", "subjectief", "homo economicus", "gedragseconomie", "automatische piloot", "heuristiek", "systematische fouten", "nudgen"], "kunnen": []}, "ge-h2": {"kennen": ["denkfout", "relatieve opofferingskosten", "lokvogel", "inkomensvergelijking", "status", "absolute voorkeuren", "arbitraire coherentie", "ankereffect", "productdifferentiatie", "gratis", "bereidheid tot ontvangen en betalen", "choice bracketing"], "kunnen": []}, "ge-h3": {"kennen": ["demerit goederen", "merit goederen", "stimuleringsmaatregelen", "ontmoedigingsmaatregelen", "gewoontegedrag", "zelfbinding", "anti-prikkel", "Behavior Design Model", "framing", "sociale norm", "naming & faming", "salience"], "kunnen": []}, "ll-h1": {"kennen": ["vrije goederen", "schaarse goederen", "schaarste", "alternatief aanwendbaar", "schaarste", "opofferingskosten", "consumptie", "stroomgrootheid", "voorraadgrootheid", "intertemporele ruil", "ruilen over de tijd", "tijdsvoorkeur"], "kunnen": ["onderscheid maken tussen vrije en schaarse goederen.", "verklaren hoe schaarste dwingt tot het maken van keuzes.", "uitleggen wat opofferingskosten zijn en deze bij een keuzeprobleem bepalen.", "uitleggen dat geld het keuzeprobleem vergemakkelijkt met behulp van de drie functies van geld.", "onderscheid maken tussen stroom- en voorraadgrootheden en daar economische voorbeelden bij geven.", "het begrip ruilen over de tijd uitleggen in relatie tot de financiële levensloop en tijdsvoorkeur.", "de keuze om door te leren uitleggen als het vergroten van het menselijk kapitaal en de verdiencapaciteit van een persoon.", "een budgetvergelijking opstellen en de gevolgen analyseren van veranderingen in het budget en de prijzen.", "een budgetlijn tekenen en interpreteren.", "een intertemporele budgetlijn interpreteren.", "uit een vergelijking tussen de individuele prijs van tijd en de marktprijs van tijd kunnen afleiden of iemand zal sparen of zal lenen.", "informatie uit een pay-off matrix interpreteren."]}, "ll-h2": {"kennen": ["loon", "winst eigen zaak", "arbeidsinkomen", "overdrachtsinkomen", "inkomensheffing", "inkomstenbelasting", "premies volksverzekeringen", "bruto-inkomen", "fiscale bijtellingen", "eigenwoningforfait", "te belasten inkomen", "belastingvoordeel"], "kunnen": ["verschillende belastingstelsels beschrijven en de gevolgen voor de inkomensverdeling concreet verklaren.", "de vlaktaks beschrijven.", "het gemiddeld heffingstarief of de gemiddelde heffingsdruk bepalen.", "het marginaal heffingstarief bepalen.", "box 1 herkennen en toepassen en zo de inkomensheffing berekenen met een gegeven systeem.", "effecten analyseren van overheidsmaatregelen (veranderingen op het gebied van tarieven van inkomstenbelasting en indirecte belastingen, bijtellingen, aftrekposten, uitkeringen, toeslagen) op de inkomensverdeling van huishoudens.", "onderscheid maken tussen primair inkomen, bruto-inkomen (totaal inkomen) en secundair inkomen en van elk voorbeelden noemen.", "met behulp van de Gini-coëfficiënt of een ratio de mate van ongelijke verdeling van het primaire inkomen, het bruto-inkomen (totaal inkomen) en het secundaire inkomen concretiseren.", "effecten analyseren van overheidsmaatregelen op de primaire en secundaire inkomensverdeling.", "sociale uitkeringen en toeslagen herkennen als instrumenten voor herverdeling.", "herkennen dat er een afruil (uitwisseling) tussen doelmatigheid en rechtvaardigheid bestaat als herverdeling van inkomen leidt tot minder prikkels voor economische activiteit zoals werk, sparen en scholing, en meer prikkels om te emigreren of belasting te ontwijken.", "herkennen dat door bepaalde herverdelingsinstrumenten van de overheid zoals onderwijs, kinderopvang en sociale zekerheid, de afruil tussen doelmatigheid en rechtvaardigheid niet hoeft plaats te vinden."]}, "ll-h3": {"kennen": ["asymmetrische informatie", "risicoavers", "transactiekosten", "solidariteit", "particuliere verzekeringen", "eigen risico", "goede risico's", "slechte risico's", "averechtse selectie", "premiedifferentiatie", "bonus-malusregeling", "collectieve dwang"], "kunnen": ["aantonen in welke situaties er sprake is van asymmetrische informatie.", "verklaren hoe asymmetrische informatie kan leiden tot transactiekosten.", "aantonen of iemand risicoavers gedrag vertoont en uitleggen wat dat voor zijn keuze betekent bij het afsluiten van een verzekering.", "uitleggen dat er bij particuliere verzekeringen sprake is van solidariteit tussen de goede en de slechte risico's.", "aantonen welke afweging een verzekerde maakt tussen kosten en risico bij het afsluiten van een verzekering.", "de premie uitrekenen met behulp van het gemiddeld schadebedrag en de schadekans.", "onderscheid maken tussen positieve en negatieve verbanden.", "uitleggen wat het verband is tussen de hoogte van het eigen risico en de verzekeringspremie.", "verklaren hoe asymmetrische informatie kan leiden tot averechtse selectie.", "analyseren hoe verzekeraars averechtse selectie trachten te beperken door premiedifferentiatie, bijvoorbeeld met een bonus-malusregeling.", "uitleggen dat door collectieve dwang averechtse selectie voorkomen kan worden.", "de voorwaarden analyseren die kunnen leiden tot moral hazard."]}, "ll-h4": {"kennen": ["sparen", "vermogen", "rendement", "beleggen", "aandeel", "dividend", "obligatie", "inflatie", "deflatie", "nominale waarde", "reële waarde (= koopkracht)", "consumentenprijsindex (CPI)"], "kunnen": ["de hoogte van het vermogen uitrekenen.", "verschillende vormen van inkomen uit vermogen of het kapitaalinkomen benoemen en uitrekenen.", "verschillende vormen van beleggen benoemen en het rendement ervan uitrekenen.", "de relatie tussen de hoogte van het risico en het te verwachten rendement bij beleggen in aandelen en/of obligaties uitleggen.", "de nominale en reële waarde onderscheiden en hun verband uitleggen.", "de invloed van inflatie op de reële waarde uitleggen.", "berekeningen maken met de inflatie, nominale en reële waarde van het vermogen.", "de consumentenprijsindex (CPI) uitrekenen en interpreteren.", "onderscheid maken tussen soorten inkomens voor de belastingaangifte in box 1, 2 en 3.", "de vermogensrendementsheffing berekenen.", "met behulp van een ratio, lorenzcurve en een Gini-coëfficiënt de vermogensongelijkheid beschrijven."]}, "ll-h5": {"kennen": ["Algemene Ouderdomswet (AOW)", "omslagstelsel", "waardevast", "welvaartsvast", "pensioenfonds", "kapitaaldekkingsstelsel", "dekkingsgraad", "contante waarde", "netto profijt van de overheid", "belastingspreiding over de tijd"], "kunnen": ["uitleggen dat de oudedagsvoorzieningen uit drie onderdelen bestaat: AOW, (bedrijfs)pensioen en eigen middelen.", "berekeningen uitvoeren met de hoogte van de AOW-uitkering.", "het verschil uitleggen tussen de begrippen waardevast en welvaartsvast en er berekeningen mee uitvoeren.", "het verschil uitleggen tussen een kapitaaldekkingsstelsel en een omslagstelsel.", "de contante waarde kunnen uitrekenen.", "kunnen uitleggen welke rol de beleggingsopbrengst en de dekkingsgraad spelen bij een (bedrijfs)pensioenfonds.", "het netto profijt van de overheid in de verschillende levensfasen analyseren.", "de invloed analyseren van vergrijzing op lastenverdeling tussen generaties.", "oplossingen zoals belastingspreiding over de tijd voor de toenemende vergrijzing analyseren."]}, "mg-h1": {"kennen": ["marktmechanisme (prijsmechanisme)", "evenwichtsprijs (marktprijs)", "evenwichtshoeveelheid", "volkomen concurrentie (volledige mededinging)", "marktvorm", "homogeen product", "vrije toe- uittreding", "transparant (doorzichtig)", "hoeveelheidsaanpasser", "individuele aanbodfunctie", "individuele aanbodlijn", "prijselasticiteit van de vraag"], "kunnen": ["voorbeelden noemen van markten van volkomen concurrentie / volledige mededinging.", "aantonen dat marktevenwicht (prijs en hoeveelheid) ontstaat wanneer vraag en aanbod aan elkaar gelijk zijn en dit zowel grafisch als rekenkundig onderbouwen.", "de kenmerken, het gedrag en het marktresultaat van de marktvorm volkomen concurrentie beschrijven.", "aantonen op welke wijze producenten streven naar maximale winst in een situatie van volkomen concurrentie en dit grafisch en rekenkundig onderbouwen.", "de marginale kostenfunctie afleiden uit de totale kostenfunctie.", "de individuele aanbodfunctie opstellen vanuit de marginale kostenfunctie.", "de dynamiek op de markt bij het toetreden van nieuwe aanbieders beschrijven.", "onderscheid maken tussen de verschillende ceteris paribusfactoren die van invloed zijn op de vraag- en aanbodfunctie.", "een kostenstijging of -verlaging rekenkundig verwerken in de individuele en collectieve aanbodfunctie.", "De prijselasticiteit van de vraag berekenen en de uitkomst interpreteren."]}, "mg-h2": {"kennen": ["productdifferentiatie", "monopolistische concurrentie", "heterogeen product", "prijszetter", "prijsafzetfunctie", "marktmacht"], "kunnen": ["voorbeelden noemen van markten van monopolistische concurrentie.", "voorbeelden noemen van productdifferentiatie.", "de kenmerken, het gedrag en het marktresultaat van de markt van monopolistische concurrentie beschrijven.", "de marginale opbrengstenfunctie afleiden uit de totale opbrengstenfunctie via de prijsafzetfunctie.", "aantonen op welke wijze producenten streven naar maximale winst bij monopolistische concurrentie en dit grafisch en rekenkundig onderbouwen."]}, "mg-h3": {"kennen": ["marktaandeel", "oligopolie", "duopolie", "schaalvoordelen", "prijzenoorlog", "marketing", "gevangenendilemma", "zelfbinding", "sequentieel spel", "(herhaald) simultaan spel", "spelboom (beslisboom)", "best response methode"], "kunnen": ["voorbeelden noemen van markten van oligopolie.", "onderscheid maken tussen een homogeen en een heterogeen oligopolie.", "de kenmerken, het gedrag en het marktresultaat van de marktvorm oligopolie/duopolie beschrijven.", "aantonen op welke wijze producenten streven naar maximale winst bij oligopolie en dit grafisch en rekenkundig onder-bouwen.", "het herkennen en beschrijven van een gevangenendilemma.", "met behulp van de speltheorie bepalen of zelfbinding geloofwaardig is.", "een Nash-evenwicht in een speltheoretische situatie achterhalen met de best response methode.", "een (herhaald) simultaan spel onderscheiden van een sequentieel spel.", "met behulp van een spelboom vaststellen welke keuze de spelers maken.", "de afruil tussen binding en flexibiliteit beschrijven bij kartelvorming.", "beredeneren hoe kartelvorming door markttoezicht en boetes kan worden voorkomen."]}, "mg-h4": {"kennen": ["octrooi (patent)", "monopolie", "wettelijk monopolie", "natuurlijk monopolie", "verzonken kosten"], "kunnen": ["voorbeelden noemen van markten van monopolie.", "wettelijke en natuurlijke monopolies onderscheiden.", "effecten beschrijven van octrooien (patenten) als tijdelijk, wettelijk monopolie.", "de kenmerken, het gedrag en het marktresultaat van de marktvorm monopolie beschrijven.", "de collectieve vraaglijn omschrijven tot de prijsafzetfunctie van een monopolist.", "beschrijven hoe een monopolist door productdifferentiatie zijn resultaat kan verbeteren.", "beredeneren dat het streven naar maximale winst als doelstelling van een onderneming niet altijd de meest gewenste doelstelling is."]}, "mr-h1": {"kennen": ["betalingsbereidheid", "maatschappelijke kosten-batenanalyse (MKBA)", "consumentensurplus", "leveringsbereidheid", "producentensurplus", "(economisch) doelmatig", "totale surplus", "Pareto-efficiënt (Pareto-optimaal)", "octrooi (patent)", "wettelijk monopolie"], "kunnen": ["met een kosten-batenanalyse uitleggen wat het effect van een ruiltransactie is op de maatschappij.", "met behulp van het begrip betalingsbereidheid het consumentensurplus bepalen bij een ruiltrans­actie.", "het verband uitleggen tussen de betalingsbereidheid en de vraagfunctie.", "het consumentensurplus in een grafiek met een vraaglijn en aanbodlijn aangeven en berekenen.", "met behulp van het begrip leveringsbereidheid het producentensurplus bepalen bij een ruiltrans­actie.", "de verbanden uitleggen tussen leveringsbereidheid, marginale kosten en aanbodfunctie.", "het producentensurplus in een grafiek met een vraaglijn en aanbodlijn aangeven en berekenen.", "veranderingen van het consumentensurplus en het producentensurplus als gevolg van prijs­wijzigingen berekenen en arceren in een grafiek.", "verklaren dat het totale surplus de maatstaf is om economische doelmatigheid van de economische uitkomst te meten.", "uitleggen dat er sprake is van een Pareto-efficiënte situatie als het totale surplus (de som van consumenten­surplus en producentensurplus) maximaal is.", "aantonen dat marktevenwicht bij volkomen concurrentie gelijk is aan het Pareto-optimum.", "uitleggen dat een Pareto-optimum niet gelijk is aan de maatschappelijke welvaart."]}, "mr-h2": {"kennen": ["verloren surplus (deadweight loss)", "maximumprijs", "Harberger-driehoek", "minimumprijs", "productiequotum", "minimumloon", "indirecte belastingen", "indirecte subsidie", "afwentelingspercentage"], "kunnen": ["een motief noemen voor het instellen van een maximumprijs.", "grafisch en algebraïsch de gevolgen op de gevraagde en aangeboden hoeveelheid analyseren van de instelling van een maximumprijs.", "het effect analyseren van een maximumprijs op het marktresultaat en daardoor op de omvang en verdeling van het totale surplus en dit grafisch en rekenkundig onderbouwen.", "motieven noemen voor het instellen van een minimumprijs en een minimumloon.", "grafisch en algebraïsch de gevolgen voor de gevraagde en aangeboden hoeveelheid analyseren van de instelling van een minimumprijs en een minimumloon.", "met behulp van een Harberger-driehoek herkennen hoe surplusverliezen ontstaan en dit grafisch en rekenkundig onderbouwen.", "het kenmerk noemen van een indirecte belasting of subsidie en er voorbeelden van geven.", "het opstellen van een nieuwe aanbodlijn als gevolg van het instellen van een indirecte belasting of subsidie.", "uitleggen welke invloed indirecte belastingen en subsidies hebben op de verdeling van het surplus en dit grafisch en rekenkundig onderbouwen.", "uitleggen dat indirecte belastingen en subsidies invloed hebben op het marktresultaat en daar­door op de omvang en de verdeling van het totale surplus en dit grafisch en rekenkundig onder­bouwen.", "het afwentelingspercentage als gevolg van het instellen van een indirecte belasting berekenen.", "uitleggen hoe het verloop van de vraag- en aanbodlijn van invloed is op het afwentelings­percentage."]}, "mr-h3": {"kennen": ["marktmacht", "prijsdiscriminatie", "nationalisatie", "verzonken kosten", "privatisering", "liberaliseren", "allocatie", "principaal-agentprobleem", "berovingsprobleem", "kartel", "fusie", "overname"], "kunnen": ["de gevolgen van machtsvorming bij de aanbieders voor het marktresultaat (totale surplus en de surplusverdeling) grafisch analyseren.", "de gevolgen van prijsdiscriminatie voor de prijs, het totale surplus en de surplusverdeling grafisch analyseren.", "met voorbeelden uitleggen wanneer, waarom en op welke wijze het voor producenten voordelig is prijsdiscriminatie toe te passen en dit grafisch onderbouwen.", "uitleggen welke afweging de overheid moet maken om wel of niet in te grijpen bij machts­vorming op de markt.", "motieven noemen voor nationalisering.", "motieven noemen voor privatisering.", "uitleggen dat de overheid door liberalisering de marktwerking stimuleert.", "een relatie tussen een opdrachtgever en een uitvoerder met de principaal-agenttheorie analyseren.", "uitleggen dat een principaal-agentprobleem tot transactiekosten leidt waardoor de kosten van grote projecten toenemen.", "uitleggen dat er bij principaal-agentrelaties risico is op averechtse selectie en moral hazard.", "uitleggen hoe er bij een principaal-agentrelatie contracten en prikkels worden ingezet.", "uitleggen dat een berovingsprobleem ontstaat vanuit verschuivende machtsverhoudingen als een van beide partijen verzonken kosten heeft gemaakt."]}, "mr-h4": {"kennen": ["asymmetrische informatie", "averechtse selectie", "rivaliserend", "collectieve goederen", "uitsluitbaar", "individuele goederen", "meeliftersgedrag", "bindingsprobleem", "zelfbinding", "vrije goederen", "externe effecten (negatief of positief)", "internaliseren van externe effecten"], "kunnen": ["aantonen in welke situaties er sprake is van asymmetrische informatie en bepalen hoe partijen daarop inspelen.", "aantonen in welke situaties er sprake is van averechtse selectie.", "goederen indelen in individuele en collectieve goederen.", "met behulp van het gevangenendilemma de problemen analyseren bij de productie van collec­tieve goederen.", "uitleggen dat meeliftersgedrag kan optreden als er sprake is van een dominante strategie van niet bijdragen aan een collectief goed.", "uitleggen dat sociale normen invloed kunnen hebben op de uitkomst van een gevangenen­dilemma.", "uitleggen dat er bij contracten een afruil tussen transactiekosten en bindingsproblemen optreedt.", "uitleggen dat zelfbinding invloed kan hebben op de uitkomst van een gevangenendilemma en daarbij de rol van de geloofwaardigheid en de reputatie betrekken.", "uitleggen dat het toekennen van eigendomsrechten een oplossing kan zijn voor het uitputten van vrije goederen (natuurlijke hulpbronnen).", "uitleggen wanneer er sprake is van positieve en van negatieve externe effecten.", "grafisch de invloed analyseren van het optreden van externe effecten.", "analyseren hoe heffingen kunnen worden ingezet als instrument van internalisering."]}, "mz-h1": {"kennen": ["chartaal geld", "ruilmiddel", "rekenmiddel", "giraal geld", "betaalrekening", "rekening-courant", "substitutie", "sparen", "spaarmiddel", "oppotten", "ontpotten", "tijdsvoorkeur"], "kunnen": ["voordelen en nadelen noemen van verschillende betalingsvormen.", "de verschillende functies van geld beschrijven: ruilmiddel, rekenmiddel en spaarmiddel.", "het verschil tussen sparen, beleggen en oppotten kunnen duiden.", "hoogte van de rente beredeneren vanuit tijdsvoorkeur, risico en inflatie."]}, "mz-h2": {"kennen": ["arbeidsdeling", "directe ruil (= ruil in natura)", "transactiekosten", "indirecte ruil", "intrinsieke waarde", "nominale waarde (= extrinsieke waarde)", "activa", "passiva", "eigen vermogen", "fiduciair geld", "liquide", "centrale bank"], "kunnen": ["toelichten dat het ontstaan van geld te maken heeft met toenemende arbeidsdeling en ruil.", "het onderscheid aangegeven tussen directe en indirecte ruil.", "technische vereisten beschrijven waaraan geld als ruilmiddel moet voldoen.", "toelichten waarom edele metalen geschikt zijn als ruilmiddel.", "voordelen noemen van geld als ruilmiddel boven ruil in natura.", "de ontstaansgeschiedenis van bankbiljetten en giraal geld beschrijven en analyseren aan de hand van balansen.", "de wet van Gresham beschrijven.", "verklaren waarom de nominale waarde (extrinsieke waarde) van geld groter is dan de intrinsieke waarde.", "aangeven waarom bankbiljetten en giraal geld niet volledig gedekt hoeven te zijn.", "uitleggen hoe banken geld kunnen scheppen.", "uitleggen hoe het depositogarantiestelsel bijdraagt aan het vertrouwen in de banken."]}, "mz-h3": {"kennen": ["maatschappelijke geldhoeveelheid", "publiek", "primaire liquiditeitenmassa", "substitutie", "wederzijdse schuldaanvaarding", "geldschepping", "geldvernietiging", "solvabiliteitsratio", "liquiditeitsratio", "primaire liquiditeiten", "secundaire liquiditeiten", "binnenlandse liquiditeitenmassa"], "kunnen": ["noemen welke posten op de balans van een bank behoren tot de maatschappelijke geld­hoeveelheid.", "de omvang van de maatschappelijke geldhoeveelheid, de secundaire liquiditeiten en de binnen­landse liquiditeitenmassa berekenen.", "verklaren wanneer er sprake is van wederzijdse schuldaanvaarding of geldcreatie door de centrale bank.", "voorbeelden noemen van substitutie en transformatie.", "liquiditeitsratio en solvabiliteitsratio berekenen.", "met behulp van de solvabiliteit berekenen hoeveel geld een bank nog mag scheppen.", "veranderingen in de omvang en de samenstelling van de primaire en secundaire liquiditeiten­massa analyseren aan de hand van (mutatie)balansen.", "de invloed van banken, overheid en buitenland op de liquiditeitenmassa analyseren."]}, "mz-h4": {"kennen": ["koopkracht", "inflatie", "geldontwaarding", "deflatie", "reële waardevermindering", "consumentenprijsindex (CPI)", "budgetonderzoek", "geïndexeerd", "waardevast", "welvaartsvast", "dekkingsgraad", "reële rente"], "kunnen": ["een prijsindexcijfer berekenen.", "het inflatiepercentage en de vermindering van de koopkracht berekenen.", "de gevolgen van inflatie en deflatie analyseren voor de koopkracht, het spaargedrag en het bestedings­gedrag.", "toelichten wat de gevolgen van inflatie en deflatie zijn voor het reële inkomen en het reële vermogen (o.a. pensioenen).", "de oorzaken van bestedingsinflatie en kosteninflatie noemen en toelichten.", "voorbeelden geven van kosteninflatie.", "verklaren hoe inflatie/deflatie veroorzaakt kan worden door het buitenland.", "de begrippen nominaal en reëel toepassen op vermogen, inkomen en rente."]}, "mz-h5": {"kennen": ["systeembank", "prijsstabiliteit", "monetair beleid", "bedrijfseconomisch toezicht", "leverage ratio", "geldmarkt in enge zin", "geldmarktrente", "refirente", "verkrappend monetair beleid", "verruimend monetair beleid", "inflation targeting", "open-markttransacties"], "kunnen": ["de belangrijkste taken van de centrale bank beschrijven: het stabiliseren van de prijzen, het bedrijfs­economisch toezicht op de financiële instellingen en de zorg voor een soepel en betrouwbaar betalingsverkeer.", "het hoofddoel van de ECB noemen.", "de noodzaak van de internationale afspraken in de bankenwereld beschrijven.", "uitleggen waar de Basel Akkoorden over gaan.", "aangeven en beredeneren hoe de verschillende instrumenten van de monetaire politiek uitwerken in een situatie van onderbesteding en overbesteding.", "aangeven en beredeneren hoe de verschillende instrumenten van de monetaire politiek ingezet kunnen worden in een crisissituatie.", "beredeneren waarom monetair beleid anders uitpakt bij een liquiditeitsval.", "de werking van helikoptergeld beschrijven."]}, "on-h0": {"kennen": [], "kunnen": ["verschillende inkomensbegrippen toelichten.", "uitleggen op welke manieren je inkomens- en vermogensverschillen kunt meten.", "uitleggen welke voor-en nadelen de meetmethoden hebben."]}, "on-h2": {"kennen": [], "kunnen": ["verschillende statistieken over (de ontwikkeling van) inkomens- en vermogensverschillen interpreteren.", "de invloed van progressieve belastingen op de inkomensverdeling toelichten.", "verschil aangeven tussen inkomensverschillen tussen landen en inkomensverschillen binnen landen.", "uitleggen wat het uitmaakt of je bij de mondiale inkomensverdeling wel of niet de bevolkings­aantallen per land meeweegt.", "een lorenzcurve tekenen van de vermogensverdeling."]}, "on-h3": {"kennen": [], "kunnen": ["de oorzaken van inkomens- en vermogensverschillen beschrijven.", "de gevolgen van inkomens- en vermogensverschillen beschrijven.", "uitleggen hoe instituties de economische groei beïnvloeden."]}, "on-h4": {"kennen": ["α (kapitaalinkomensquote)", "β (verhouding kapitaal/nationaal inkomen)", "α = r × β"], "kunnen": ["uitleggen dat volgens Piketty een hogere β leidt tot een hogere α.", "uitleggen dat besparingen leiden tot meer kapitaal.", "uitleggen dat een hoger rendement op kapitaal en een lagere economische groei leiden tot een hogere β.", "uitleggen dat een toenemende rol van kapitaal kan leiden tot meer inkomens- en vermogens­ongelijkheid."]}, "va-h1": {"kennen": ["individuele vraagfunctie", "betalingsbereidheid", "vraaglijn", "collectieve vraagfunctie", "collectieve vraaglijn", "individuele aanbodfunctie", "aanbodlijn", "leveringsbereidheid (verkoopbereidheid)", "winstmarge", "collectieve aanbodfunctie", "collectieve aanbodlijn", "homogene goederen"], "kunnen": ["de samenhang analyseren tussen prijs en vraag.", "werken met een lineaire individuele en collectieve vraagfunctie en deze interpreteren.", "uit individuele vraaglijnen grafisch de collectieve vraaglijn afleiden.", "uit individuele vraagfuncties rekenkundig de collectieve vraagfunctie afleiden.", "de samenhang analyseren tussen prijs en aanbod.", "werken met een lineaire individuele en collectieve aanbodfunctie en deze interpreteren.", "uit individuele aanbodlijnen grafisch de collectieve aanbodlijn afleiden.", "beredeneren wat er met de prijs gebeurt bij een vraagoverschot of een aanbodoverschot.", "de werking van het marktmechanisme uitleggen.", "bij een gegeven vraagfunctie en aanbodfunctie de evenwichtsprijs (marktprijs) en evenwichts-hoeveelheid berekenen.", "bij een gegeven prijs het vraagoverschot of aanbodoverschot berekenen.", "de verbanden leggen tussen omzet, prijs en afzet en er berekeningen mee kunnen maken."]}, "va-h2": {"kennen": ["prijselasticiteit van de vraag", "prijselastische vraag", "prijsinelastische vraag", "kruislingse prijselasticiteit van de vraag", "inkomenselasticiteit van de vraag", "primaire goederen", "luxe goederen", "drempelinkomen", "inferieure goederen"], "kunnen": ["het vraaggedrag van consumenten bij prijsveranderingen aantonen en dit met een berekening van de prijselasticiteit van de vraag onderbouwen.", "de prijselasticiteit van de vraag berekenen en interpreteren.", "uit de prijselasticiteit van de vraag afleiden of er sprake is van een prijselastische vraag of een prijsinelastische vraag.", "het verband analyseren tussen prijsveranderingen, de hoogte van de prijselasticiteit van de vraag en de omzet.", "verbanden leggen tussen procentuele veranderingen van omzet, prijs en afzet en er mee kunnen rekenen met behulp van indexcijfers.", "uitleggen dat de mate waarin de vraag reageert op prijsveranderingen bepaald wordt door de mate waarin er substitutiegoederen beschikbaar zijn, de termijn waarnaar je kijkt en het soort goed.", "het verband uitleggen tussen de steilheid van de vraaglijn en de hoogte van de prijselasticiteit van de vraag.", "de kruislingse prijselasticiteit van de vraag berekenen en interpreteren.", "uitleggen dat het teken van de kruislingse prijselasticiteit van de vraag bij substitutiegoederen positief is en bij complementaire goederen negatief is.", "de inkomenselasticiteit van de vraag berekenen en interpreteren.", "voorbeelden geven van normale goederen (luxe goederen en primaire goederen) en inferieure goederen en de relatie aantonen tussen de aard van deze goederen en de hoogte van de inkomenselasticiteit."]}, "va-h3": {"kennen": ["vaste kapitaalgoederen", "afschrijven", "productiecapaciteit", "constante kosten (vaste kosten)", "totale constante kosten", "variabele kosten", "totale variabele kosten", "totale kosten", "gemiddelde totale kosten", "kostprijs", "gemiddelde constante kosten", "schaalvoordelen"], "kunnen": ["voorbeelden geven van constante (vaste) en variabele kosten.", "aan de hand van gegevens de vergelijkingen van de totale constante kosten (TCK), de totale variabele kosten (TVK) en de totale kosten (TK) opstellen.", "de vergelijkingen van de totale constante kosten (TCK), de totale variabele kosten (TVK) en de totale kosten (TK) grafisch weergeven.", "aan de hand van gegevens de vergelijkingen van de gemiddelde constante kosten (GCK), de gemiddelde variabele kosten (GVK) en de gemiddelde totale kosten (GTK) opstellen.", "de invloed analyseren van de productieomvang op de gemiddelde constante kosten.", "het verschil uitleggen tussen progressief, degressief en proportioneel variabele kosten en de invloed daarvan op het verloop van de gemiddelde variabele kosten beschrijven.", "aan de hand van gegevens de vergelijking van de totale opbrengst (TO) en de gemiddelde opbrengst (GO) opstellen.", "met behulp van de vergelijkingen van de totale opbrengst (TO) en de totale kosten (TK) de vergelijking van de totale winst (TW) opstellen.", "de vergelijking van de gemiddelde winst (GW) opstellen.", "verklaren dat een producent winst maakt als de opbrengst hoger is dan de kosten en dit zowel grafisch als rekenkundig onderbouwen.", "de samenhangen aangeven tussen de omzet, de totale kosten en de totale winst en daarmee algebraïsch en grafisch bewerkingen uitvoeren.", "de betekenis uitleggen van het break-evenpunt, de break-evenafzet en de break-evenomzet en deze grafisch en rekenkundig bepalen."]}, "va-h4": {"kennen": ["externe effecten", "negatieve externe effecten", "private kosten", "maatschappelijke kosten", "positieve externe effecten", "maatschappelijke baten", "private baten", "maatschappelijk verantwoord ondernemen (mvo)", "people planet profit", "duurzaam produceren", "circulaire economie", "internaliseren van externe effecten"], "kunnen": ["voorbeelden geven van negatieve en positieve externe effecten.", "het verband uitleggen tussen negatieve externe effecten en maatschappelijke kosten.", "het verband uitleggen tussen positieve externe effecten en maatschappelijke baten.", "uitleggen dat maatschappelijk verantwoord ondernemen (mvo) kan bijdragen aan het verminderen van sommige negatieve externe effecten.", "uitleggen hoe bedrijven bij maatschappelijk verantwoord ondernemen rekening houden met people, planet en profit.", "uitleggen wat duurzaam produceren inhoudt.", "uitleggen hoe een circulaire economie tot een duurzamere productie leidt.", "uitleggen dat heffingen en subsidies een bijdrage kunnen leveren aan het internaliseren van externe effecten.", "de aanbodfunctie herschrijven in geval van heffingen en subsidies die aan de aanbieders worden opgelegd of verstrekt.", "berekenen van het nieuwe marktevenwicht na het instellen van een heffing of subsidie.", "berekenen hoeveel procent van de heffing/subsidie wordt afgewenteld op/doorgegeven aan de vragers.", "berekenen van de opbrengst/kosten voor de overheid van het instellen van een heffing/subsidie en deze grafisch weergeven."]}, "wv-h1": {"kennen": ["bruto binnenlands product (bbp)", "nominale bbp", "welvaart", "economische groei", "reële bbp", "consumentenprijsindex", "inflatie", "productiefactoren", "primair inkomen", "arbeid", "arbeidsinkomen", "kapitaal"], "kunnen": ["berekeningen uitvoeren met veranderingen in reële waarde, nominale waarde en prijspeil.", "berekenen van het bbp via de objectieve methode en de subjectieve methode.", "berekenen van de toegevoegde waarde in een bedrijfskolom.", "beschrijven op welke wijze de toegevoegde waarde bij de overheid en andere niet-commerciële instellingen wordt bepaald.", "berekenen van het bbp als de som van de bruto toegevoegde waarden van bedrijven en overheid.", "berekenen van het netto binnenlands product (nbp) door de afschrijvingen van het bbp af te trekken.", "berekeningen uitvoeren met de arbeidsinkomensquote (AIQ) en de kapitaalinkomensquote (KIQ).", "beschrijven welke factoren invloed uitoefenen op de hoogte van de AIQ.", "uitleggen dat de hoogte van de AIQ een aanwijzing vormt over hoe arbeidsintensief de productie in een bepaalde bedrijfstak is.", "beschrijven welke factoren een rol spelen bij de daling van de arbeidsinkomensquote.", "beschrijven welke nadelen een daling van de arbeidsinkomensquote met zich mee kan brengen."]}, "wv-h2": {"kennen": ["potentiële productie", "klassieke theorie", "structurele kant van de economie", "marktmechanisme", "totale factorproductiviteit", "economisch kapitaal", "menselijk kapitaal", "natuurlijk kapitaal", "productiefunctie", "arbeidsproductiviteit", "kapitaalproductiviteit", "schaalopbrengsten"], "kunnen": ["omschrijven wat de uitgangspunten zijn van de klassieke economische theorie.", "beschrijven van de werking van het marktmechanisme op verschillende markten.", "beschrijven van de visie van de klassieke economen op de rol van de overheid in de economie.", "beschrijven door welke factoren de potentiële productie wordt bepaald.", "beschrijven door welke zaken de totale factorproductiviteit wordt bepaald.", "beschrijven hoe een productiefunctie is samengesteld.", "berekeningen uitvoeren met een eenvoudige productiefunctie.", "berekeningen uitvoeren met arbeidsproductiviteit en kapitaalproductiviteit.", "beschrijven en herkennen van constante schaalopbrengsten.", "uitleggen dat er sprake is van afnemende meeropbrengsten van arbeid als aan een vaste hoeveel­heid arbeid steeds meer eenheden kapitaal worden toegevoegd.", "uitleggen dat er sprake is van afnemende meeropbrengsten van kapitaal als aan een vaste hoeveelheid kapitaal steeds meer eenheden arbeid worden toegevoegd.", "uitleggen dat afnemende meeropbrengsten van arbeid / kapitaal tot gevolg hebben dat de produc­tiviteit van arbeid / kapitaal afneemt."]}, "wv-h3": {"kennen": ["economische kringloop", "particuliere sector", "nationaal inkomen", "overheidsbestedingen", "overheidssaldo", "saldo lopende rekening", "saldo financiële rekening", "identiteit", "inkomensidentiteit", "effectieve vraag", "bestedingsmethode", "spaaridentiteit"], "kunnen": ["berekenen van het bruto binnenlands product als de som van de consumptie, investeringen, overheidsbestedingen en export minus import (= de bestedingsmethode).", "beschrijven van de verbanden tussen de verschillende sectoren in de economische kringloop.", "uitvoeren van berekeningen voortvloeiend uit de economische kringloop.", "beschrijven van het verband tussen het saldo op de lopende rekening en het saldo op de financiële rekening.", "beschrijven welke identiteiten er uit de economische kringloop voortvloeien.", "berekenen van het particuliere spaarsaldo.", "berekenen van het overheidssaldo.", "berekenen van het saldo op de lopende rekening.", "berekenen van het nationaal spaarsaldo op twee manieren.", "beschrijven van de keynesiaanse visie op het tot stand komen van het macro-economische evenwicht.", "beschrijven welke rol de overheid bij macro-economische onevenwichtigheden volgens Keynes zou moeten vervullen.", "beschrijven van de conjunctuurcyclus en de bijbehorende begrippen."]}, "wv-h4": {"kennen": ["aanbod van arbeid (= beroepsbevolking)", "werkzame beroepsbevolking", "werklozen", "werkloosheidspercentage", "vraag naar arbeid", "werkgelegenheid", "vacatures", "krappe arbeidsmarkt", "ruime arbeidsmarkt", "structurele werkloosheid (= natuurlijke werkloosheid)", "frictiewerkloosheid", "loonmatiging"], "kunnen": ["beschrijven van het aanbod van arbeid en de vraag naar arbeid en hier berekeningen mee kunnen uitvoeren.", "beschrijven van het verband tussen werkgelegenheid, bruto binnenlands product en arbeids­productiviteit en hier berekeningen mee kunnen uitvoeren.", "uitleggen waarom de werkgelegenheid vertraagd reageert op ontwikkelingen van het bbp.", "onderscheid maken tussen conjuncturele werkloosheid en structurele werkloosheid.", "beschrijven van de oorzaak van conjuncturele werkloosheid.", "beschrijven van de oorzaken van structurele werkloosheid.", "het verband beschrijven tussen loonkosten per eenheid product, loonkosten per werknemer en arbeids­productiviteit en hier berekeningen mee kunnen uitvoeren.", "herkennen wanneer er sprake is van loonmatiging.", "herkennen van voorbeelden van flexibele arbeidsinzet.", "beschrijven van de voordelen en de nadelen van de toegenomen flexibilisering van de arbeidsmarkt.", "beschrijven dat werkgevers bij de keuze tussen een vaste of een flexibele arbeidsrelatie een afruil maken tussen binding en flexibiliteit.", "beschrijven dat er een gevangenendilemma kan ontstaan rondom de vraag hoeveel werkgevers gaan investeren in de scholing van flexwerkers."]}, "wv-h5": {"kennen": ["brede maatschappelijke welvaart", "markttransacties", "informele sector", "ruil in natura", "externe effecten", "overheidspaternalisme", "risicoavers", "duurzame economische groei", "groen bbp", "welzijn"], "kunnen": ["maatschappelijke brede welvaart beschrijven als de behoeftebevrediging die alle gezinnen samen ontlenen aan de consumptie van schaarse goederen en diensten.", "voorbeelden noemen van schaarse goederen en diensten die onder de brede welvaart vallen.", "uitleggen dat bedrijven indirect bijdragen aan de brede maatschappelijke welvaart.", "uitleggen dat het bbp een beperkte maatstaf voor welvaart is.", "uitleggen dat bij brede maatschappelijke welvaart politieke waardeoordelen meespelen over de verdeling van de welvaartstoename.", "beschrijven hoe ongelijkheid, risico, overheidspaternalisme en het milieu de welvaartsbeleving beïnvloeden.", "uitleggen hoe het groene bbp het bbp corrigeert voor schade aan het milieu.", "het verschil beschrijven tussen welvaart en welzijn."]}, "we-h1": {"kennen": ["globalisering", "importeren (invoeren)", "exporteren (uitvoeren)", "comparatief kostenvoordeel", "absoluut kostenvoordeel", "opofferingskosten", "internationale arbeidsverdeling", "arbeidsproductiviteit", "menselijk kapitaal", "schaalvoordelen", "verzonken kosten", "multinationals (mno's)"], "kunnen": ["uitleggen dat comparatieve kostenverschillen ervoor zorgen dat internationale handel voordelig is voor alle deelnemende landen.", "berekeningen uitvoeren met comparatieve kostenverschillen en opofferingskosten.", "uitleggen dat vrijhandel nodig is om te komen tot een internationale arbeidsverdeling waarbij alle deelnemende landen profiteren.", "beschrijven welke oorzaken er zijn voor het ontstaan van comparatieve kostenvoordelen.", "beschrijven welke voor- en nadelen multinationals voor een samenleving met zich meebrengen.", "beschrijven van verschillende soorten protectionistische maatregelen.", "beschrijven van situaties waarbij de voorstanders van vrijhandel protectionistische maatregelen (tijdelijk) gedogen.", "beschrijven van het nut van internationale samenwerking bij grensoverschrijdende problemen.", "beschrijven van het belang van internationale organisaties en handelsverdragen.", "beschrijven van de verschillende vormen van economische integratie."]}, "we-h2": {"kennen": ["exportquote", "importquote", "gesloten economie", "open economie", "betalingsbalans", "lopende rekening van de betalingsbalans", "internationale concurrentiepositie", "exportvolume", "importvolume", "financiële rekening van de betalings­balans", "internationale vermogenspositie", "vermogensrendement"], "kunnen": ["aan de hand van importquote en exportquote onderscheid maken tussen een open en een gesloten economie.", "aan de hand van gegevens de betalingsbalans opstellen, verdeeld in lopende rekening en financiële rekening.", "het saldo van de lopende rekening van een betalingsbalans berekenen.", "het verband uitleggen tussen de ontwikkeling van de internationale concurrentiepositie, de wissel­koers en het saldo op de lopende rekening.", "het verband uitleggen tussen de mate van economische groei en het saldo op de lopende rekening.", "het saldo van de financiële rekening van een betalingsbalans berekenen.", "het verband uitleggen tussen de ontwikkeling van het vermogensrendement ten opzichte van het buitenland en het saldo op de financiële rekening.", "het verband uitleggen tussen het saldo op de lopende rekening en het saldo op de financiële rekening.", "het materieel saldo van een betalingsbalans berekenen.", "het verband uitleggen tussen het materieel saldo van de betalingsbalans en de verandering van de valutareserve/officiële reserves."]}, "we-h3": {"kennen": ["wisselkoers", "valutamarkt", "appreciatie", "depreciatie", "valutaspeculatie", "bestedingsinflatie", "kosteninflatie", "zwevende wisselkoersen", "valutarisico (wisselkoersrisico)", "spilkoers", "bandbreedte", "vaste wisselkoersen"], "kunnen": ["de wisselkoers beschrijven als de prijs van de ene valuta uitgedrukt in een andere.", "uitleggen dat veranderingen in aanbod van en vraag naar een valuta een verandering van de wissel­koers tot gevolg heeft.", "uitleggen hoe valutaspeculatie werkt.", "het verband uitleggen tussen appreciatie / depreciatie van de wissel­koers en veranderingen op de lopende en de financiële rekening van de betalingsbalans.", "het verband uitleggen tussen veranderingen van de internationale concurrentiepositie / de rente / de binnenlandse bestedingen en de wisselkoers.", "het verband tussen inflatie, de wisselkoers en de internationale concurrentiepositie uitleggen.", "de oorzaak van inflatie uitleggen als kosteninflatie of bestedingsinflatie.", "uitleggen wat de gevolgen zijn van een wisselkoersverandering voor de binnenlandse economie: bestedingen, inflatie en werkgelegenheid.", "noemen en toelichten wat de voordelen en nadelen van zwevende wisselkoersen zijn.", "noemen en toelichten wat de voordelen en nadelen van vaste wisselkoersen zijn.", "beschrijven en uitleggen hoe het systeem van vaste wisselkoersen (met bandbreedte) en valuta-interventies / rentebeleid werkt.", "de afruil tussen binding en flexibiliteit bij internationale handel beschrijven."]}, "we-h4": {"kennen": ["optimaal valutagebied", "loonmatiging", "arbeidsmigratie", "inkomensoverdrachten (transfers)", "stabiliteits- en groeipact", "begrotingssaldo", "staatsschuldquote", "staatsschuld", "staatsobligatie", "uitgestelde belastingheffing"], "kunnen": ["beschrijven wat een optimaal valutagebied is en aan welke voorwaarden voldaan moet zijn om een optimaal valutagebied te kunnen vormen.", "uitleggen dat vanwege de langdurige handelsrelaties voor landen die toetreden tot een muntunie binding belangrijker is dan flexibiliteit.", "uitleggen dat een tekort op de lopende rekening conjuncturele verschillen kan versterken als een land het wisselkoersinstrument heeft opgegeven.", "uitleggen dat de arbeidsmarkt in een muntunie economische onevenwichtigheden moet opvangen door loonmatiging of arbeidsmigratie.", "uitleggen dat bij gebrek aan een goed functionerende arbeidsmarkt een muntunie in stand gehouden kan worden met (inkomens)overdrachten.", "uitleggen wat de redenen zijn om in de EMU het stabiliteits- en groeipact te sluiten.", "de belangrijkste afspraken uit het stabiliteits- en groeipact noemen: het begrotingstekort mag maximaal 3% van het bbp bedragen en de staatsschuld maximaal 60% van het bbp.", "het verband uitleggen tussen de omvang van het begrotingstekort en de staatsschuld.", "uitleggen dat het laten oplopen van de staatsschuld gezien kan worden als uitgestelde belasting­heffing.", "uitleggen welke nadelige gevolgen een oplopend overheidstekort / oplopende staatsschuld kan hebben.", "verklaren waarom landen met een hoge staatsschuldquote een hoger rentepercentage moeten betalen over hun schulden / staatsobligaties dan landen met een lage staatsschuldquote."]}};
 
-const CHAPTERS_DATA = [{"lesbrief": "Levensloop 6e druk", "val": "ll-h1", "label": "H1 — Schaarste & keuzes"}, {"lesbrief": "Levensloop 6e druk", "val": "ll-h2", "label": "H2 — Inkomen & arbeid"}, {"lesbrief": "Levensloop 6e druk", "val": "ll-h3", "label": "H3 — Risico & informatie"}, {"lesbrief": "Levensloop 6e druk", "val": "ll-h4", "label": "H4 — Sparen & beleggen"}, {"lesbrief": "Levensloop 6e druk", "val": "ll-h5", "label": "H5 — Pensioen & levensloop"}, {"lesbrief": "Vraag en Aanbod 4e druk", "val": "va-h1", "label": "H1 — Vraag & betalingsbereidheid"}, {"lesbrief": "Vraag en Aanbod 4e druk", "val": "va-h2", "label": "H2 — Elasticiteit"}, {"lesbrief": "Vraag en Aanbod 4e druk", "val": "va-h3", "label": "H3 — Aanbod & kosten"}, {"lesbrief": "Vraag en Aanbod 4e druk", "val": "va-h4", "label": "H4 — Externe effecten & overheid"}, {"lesbrief": "Marktgedrag 2e druk", "val": "mg-h1", "label": "H1 — Marktevenwicht"}, {"lesbrief": "Marktgedrag 2e druk", "val": "mg-h2", "label": "H2 — Monopolistische concurrentie"}, {"lesbrief": "Marktgedrag 2e druk", "val": "mg-h3", "label": "H3 — Oligopolie & speltheorie"}, {"lesbrief": "Marktgedrag 2e druk", "val": "mg-h4", "label": "H4 — Monopolie"}, {"lesbrief": "Marktresultaat en Overheidsinvloed 1e druk", "val": "mr-h1", "label": "H1 — Surplus & doelmatigheid"}, {"lesbrief": "Marktresultaat en Overheidsinvloed 1e druk", "val": "mr-h2", "label": "H2 — Overheidsingrijpen & surplus"}, {"lesbrief": "Marktresultaat en Overheidsinvloed 1e druk", "val": "mr-h3", "label": "H3 — Marktmacht & prijsdiscriminatie"}, {"lesbrief": "Marktresultaat en Overheidsinvloed 1e druk", "val": "mr-h4", "label": "H4 — Informatieproblemen"}, {"lesbrief": "Welvaart 1e druk", "val": "wv-h1", "label": "H1 — BBP & welvaartsmeting"}, {"lesbrief": "Welvaart 1e druk", "val": "wv-h2", "label": "H2 — Structurele groei"}, {"lesbrief": "Welvaart 1e druk", "val": "wv-h3", "label": "H3 — Kringloop & bestedingen"}, {"lesbrief": "Welvaart 1e druk", "val": "wv-h4", "label": "H4 — Arbeidsmarkt & werkloosheid"}, {"lesbrief": "Welvaart 1e druk", "val": "wv-h5", "label": "H5 — Brede welvaart"}, {"lesbrief": "Economisch Beleid 2e druk", "val": "eb-h1", "label": "H1 — Geld & geldschepping"}, {"lesbrief": "Economisch Beleid 2e druk", "val": "eb-h2", "label": "H2 — Groei & conjunctuur"}, {"lesbrief": "Economisch Beleid 2e druk", "val": "eb-h3", "label": "H3 — Conjunctuurbeleid"}, {"lesbrief": "Economisch Beleid 2e druk", "val": "eb-h4", "label": "H4 — IS-MB-GA model"}, {"lesbrief": "Economische Modellen 2e druk", "val": "em-h1", "label": "H1 — Economisch model & kringloop"}, {"lesbrief": "Economische Modellen 2e druk", "val": "em-h2", "label": "H2 — Conjunctuur & bestedingen"}, {"lesbrief": "Economische Modellen 2e druk", "val": "em-h3", "label": "H3 — Open economie"}, {"lesbrief": "Monetaire Zaken 2e druk", "val": "mz-h1", "label": "H1 — Functies van geld"}, {"lesbrief": "Monetaire Zaken 2e druk", "val": "mz-h2", "label": "H2 — Ruil & arbeidsdeling"}, {"lesbrief": "Monetaire Zaken 2e druk", "val": "mz-h3", "label": "H3 — Geldhoeveelheid"}, {"lesbrief": "Monetaire Zaken 2e druk", "val": "mz-h4", "label": "H4 — Inflatie & koopkracht"}, {"lesbrief": "Monetaire Zaken 2e druk", "val": "mz-h5", "label": "H5 — Monetair beleid & ECB"}, {"lesbrief": "Arbeid 2e druk", "val": "ar-h1", "label": "H1 — Arbeidsmarkt & beroepsbevolking"}, {"lesbrief": "Arbeid 2e druk", "val": "ar-h2", "label": "H2 — Arbeidsaanbod & -vraag"}, {"lesbrief": "Arbeid 2e druk", "val": "ar-h3", "label": "H3 — Arbeidsproductiviteit"}, {"lesbrief": "Arbeid 2e druk", "val": "ar-h4", "label": "H4 — CAO & arbeidsvoorwaarden"}, {"lesbrief": "Gedragseconomie 2e druk", "val": "ge-h1", "label": "H1 — Rationaliteit & keuzegedrag"}, {"lesbrief": "Gedragseconomie 2e druk", "val": "ge-h2", "label": "H2 — Denkfouten & biases"}, {"lesbrief": "Gedragseconomie 2e druk", "val": "ge-h3", "label": "H3 — Overheidsbeleid & nudging"}, {"lesbrief": "Wereldeconomie 3e druk", "val": "we-h1", "label": "H1 — Globalisering & handel"}, {"lesbrief": "Wereldeconomie 3e druk", "val": "we-h2", "label": "H2 — Buitenlandse handel"}, {"lesbrief": "Wereldeconomie 3e druk", "val": "we-h3", "label": "H3 — Wisselkoersen"}, {"lesbrief": "Wereldeconomie 3e druk", "val": "we-h4", "label": "H4 — EMU & muntunie"}, {"lesbrief": "Ongelijkheid 2e druk", "val": "on-h1", "label": "H1 — Inkomensverdeling"}, {"lesbrief": "Ongelijkheid 2e druk", "val": "on-h2", "label": "H2 — Statistieken ongelijkheid"}, {"lesbrief": "Ongelijkheid 2e druk", "val": "on-h3", "label": "H3 — Oorzaken & gevolgen"}, {"lesbrief": "Ongelijkheid 2e druk", "val": "on-h4", "label": "H4 — Vermogen & kapitaal"}];
 
 
 // ── State voor lesvorminstellingen ──────────────────────────────────────────
@@ -3204,136 +3220,198 @@ function updateModeBtns() {
 // ═══════════════════════════════════════════════════════════
 //  TEACHER: CREATE LESSON — leerdoelen-gestuurde flow
 // ═══════════════════════════════════════════════════════════
-function openCreateLesson() {
+
+
+
+
+
+
+// ── Leerdoelen voor les-aanmaken ──────────────────────────────
+let lesLdAlle       = [];   // alle leerdoelen uit DB
+let lesLdGefilterd  = [];   // na filter
+let lesLdGeselecteerd = new Set();
+
+async function openCreateLesson() {
   // Reset
   document.getElementById('new-lesson-name').value = '';
   document.getElementById('new-lesson-content').value = '';
   document.getElementById('new-lesson-content-auto').value = '';
   document.getElementById('create-lesson-error').style.display = 'none';
-  document.getElementById('create-lesson-btn').disabled = true;
-  document.getElementById('hfst-section').style.display = 'none';
-  document.getElementById('naam-section').style.display = 'none';
-  document.getElementById('klas-section').style.display = 'none';
-  document.getElementById('leerdoelen-preview').style.display = 'none';
   document.getElementById('manual-edit-section').style.display = 'none';
-  document.getElementById('lesvormen-section').style.display = 'none';
-  // Reset lesvormen state
+  lesLdGeselecteerd = new Set();
   selectedLesvormen = ['socratisch'];
-  lesvormMode       = 'locked';
+  lesvormMode = 'locked';
 
-  // Populeer lesbrief dropdown (unieke lesbrieven)
-  const lesbrieven = [...new Set(CHAPTERS_DATA.map(c => c.lesbrief))];
-  const lbSel = document.getElementById('new-lesson-lesbrief');
-  lbSel.innerHTML = '<option value="">— Kies een lesbrief —</option>';
-  lesbrieven.forEach(lb => {
-    const opt = document.createElement('option');
-    opt.value = lb; opt.textContent = lb;
-    lbSel.appendChild(opt);
-  });
-
-  // Populeer klassendropdown
+  // Klas-dropdown
   const sel = document.getElementById('new-lesson-class');
-  sel.innerHTML = '<option value="">— Alle klassen (geen koppeling) —</option>';
-  classesCache.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id; opt.textContent = c.name;
-    sel.appendChild(opt);
-  });
+  sel.innerHTML = '<option value="">— Geen koppeling —</option>';
+  classesCache.forEach(c => sel.add(new Option(c.name, c.id)));
 
-  openModal('modal-create-lesson');
-}
-
-function onLesbriefChange() {
-  const lb = document.getElementById('new-lesson-lesbrief').value;
-  const hfstSel = document.getElementById('new-lesson-hoofdstuk');
-  hfstSel.innerHTML = '<option value="">— Kies een hoofdstuk —</option>';
-
-  if (!lb) {
-    document.getElementById('hfst-section').style.display = 'none';
-    document.getElementById('naam-section').style.display = 'none';
-    document.getElementById('klas-section').style.display = 'none';
-    document.getElementById('leerdoelen-preview').style.display = 'none';
-    document.getElementById('create-lesson-btn').disabled = true;
-    return;
-  }
-
-  const chapters = CHAPTERS_DATA.filter(c => c.lesbrief === lb);
-  chapters.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.val; opt.textContent = c.label;
-    hfstSel.appendChild(opt);
-  });
-  document.getElementById('hfst-section').style.display = 'block';
-  document.getElementById('naam-section').style.display = 'none';
-  document.getElementById('klas-section').style.display = 'none';
-  document.getElementById('leerdoelen-preview').style.display = 'none';
-  document.getElementById('create-lesson-btn').disabled = true;
-}
-
-function onHoofdstukChange() {
-  const val = document.getElementById('new-lesson-hoofdstuk').value;
-  if (!val) {
-    document.getElementById('naam-section').style.display = 'none';
-    document.getElementById('leerdoelen-preview').style.display = 'none';
-    document.getElementById('klas-section').style.display = 'none';
-    document.getElementById('create-lesson-btn').disabled = true;
-    return;
-  }
-
-  const chapter = CHAPTERS_DATA.find(c => c.val === val);
-  const lb = document.getElementById('new-lesson-lesbrief').value;
-
-  // Auto-vul naam
-  const autoNaam = lb + ' — ' + chapter.label;
-  document.getElementById('new-lesson-name').value = autoNaam;
-  document.getElementById('naam-section').style.display = 'block';
-  document.getElementById('klas-section').style.display = 'block';
-
-  // Laad leerdoelen
-  const ld = LEERDOELEN_DB[val];
-  if (ld) {
-    renderLeerdoelenPreview(ld, val, chapter.label, lb);
-  } else {
-    document.getElementById('leerdoelen-preview').style.display = 'none';
-  }
-
-  document.getElementById('create-lesson-btn').disabled = false;
-  // Toon lesvormen-sectie en render checkboxes
-  document.getElementById('lesvormen-section').style.display = 'block';
+  // Lesvormen
   renderLesvormCheckboxes();
   updateModeBtns();
+
+  openModal('modal-create-lesson');
+
+  // Laad leerdoelen uit DB
+  const leegHint = document.getElementById('les-ld-leeg-hint');
+  try {
+    lesLdAlle = await apiFetch('/api/leerdoelen');
+    if (!lesLdAlle.length) {
+      if (leegHint) leegHint.textContent = 'Geen leerdoelen gevonden. Upload eerst leerdoelen via het Leerdoelen-menu.';
+    } else {
+      if (leegHint) leegHint.textContent = lesLdAlle.length + ' leerdoelen beschikbaar. Kies filters hieronder.';
+      vulLesLdFilterDropdowns();
+    }
+  } catch(e) {
+    if (leegHint) leegHint.textContent = 'Laden mislukt: ' + e.message;
+  }
 }
 
-function renderLeerdoelenPreview(ld, val, hfstLabel, lb) {
-  const total = (ld.kennen || []).length + (ld.kunnen || []).length;
-  document.getElementById('leerdoel-count').textContent = total + ' leerdoelen';
+function vulLesLdFilterDropdowns() {
+  // Niveau
+  const niveaus = [...new Set(lesLdAlle.map(l => l.niveau).filter(Boolean))].sort();
+  const nvSel = document.getElementById('les-ld-niveau');
+  nvSel.innerHTML = '<option value="">— Niveau —</option>'
+    + niveaus.map(n => `<option value="${n}">${n}</option>`).join('');
 
-  // Kennen-tags
-  const kennenEl = document.getElementById('leerdoelen-kennen');
-  if (ld.kennen && ld.kennen.length > 0) {
-    kennenEl.innerHTML = '<div class="ld-group-label kennen">Kennen</div><div class="ld-tags">' +
-      ld.kennen.map(k => `<span class="ld-tag kennen">${k}</span>`).join('') +
-      '</div>';
-  } else kennenEl.innerHTML = '';
+  // Lesbrief
+  const lesbrieven = [...new Set(lesLdAlle.map(l => l.lesbrief).filter(Boolean))].sort();
+  const lbSel = document.getElementById('les-ld-lesbrief');
+  lbSel.innerHTML = '<option value="">— Lesbrief —</option>'
+    + lesbrieven.map(lb => `<option value="${lb}">${lb}</option>`).join('');
 
-  // Kunnen-items
-  const kunnenEl = document.getElementById('leerdoelen-kunnen');
-  if (ld.kunnen && ld.kunnen.length > 0) {
-    kunnenEl.innerHTML = '<div class="ld-group-label kunnen">Kunnen</div><div class="ld-tags">' +
-      ld.kunnen.map(k => `<span class="ld-tag kunnen">${k.length > 80 ? k.substring(0,80) + '…' : k}</span>`).join('') +
-      '</div>';
-  } else kunnenEl.innerHTML = '';
-
-  // Bouw gestructureerde content-string voor de AI
-  let contentStr = `Lesbrief: ${lb}\nHoofdstuk: ${hfstLabel}\n`;
-  if (ld.kennen && ld.kennen.length) contentStr += `\nKennen:\n` + ld.kennen.map(k => `- ${k}`).join('\n');
-  if (ld.kunnen && ld.kunnen.length) contentStr += `\n\nKunnen:\n` + ld.kunnen.map(k => `- ${k}`).join('\n');
-  document.getElementById('new-lesson-content-auto').value = contentStr;
-  document.getElementById('new-lesson-content').value = contentStr;
-
-  document.getElementById('leerdoelen-preview').style.display = 'block';
-  document.getElementById('manual-edit-section').style.display = 'none';
+  // Hoofdstuk leeg (wordt gevuld na lesbrief-keuze)
+  document.getElementById('les-ld-hoofdstuk').innerHTML = '<option value="">— Hfst. —</option>';
 }
+
+function onLesLdLesbriefChange() {
+  const lb = document.getElementById('les-ld-lesbrief').value;
+  // Vul hoofdstuk-dropdown afhankelijk van lesbrief
+  const bron = lb ? lesLdAlle.filter(l => l.lesbrief === lb) : lesLdAlle;
+  const hoofdstukken = [...new Set(bron.map(l => l.hoofdstuk).filter(Boolean))].sort((a,b) => {
+    const n1 = parseInt(a.replace(/\D/g,'')) || 0, n2 = parseInt(b.replace(/\D/g,'')) || 0;
+    return n1 !== n2 ? n1 - n2 : a.localeCompare(b);
+  });
+  const hfstSel = document.getElementById('les-ld-hoofdstuk');
+  hfstSel.innerHTML = '<option value="">— Hfst. —</option>'
+    + hoofdstukken.map(h => `<option value="${h}">${h}</option>`).join('');
+
+  // Auto-vul naam als lesbrief + hoofdstuk bekend
+  const hfst = hfstSel.value;
+  if (lb && hfst) {
+    const autoNaam = document.getElementById('new-lesson-name');
+    if (!autoNaam.value) autoNaam.value = lb + ' — ' + hfst;
+  }
+  onLesLdFilter();
+}
+
+function onLesLdFilter() {
+  const niveau    = document.getElementById('les-ld-niveau')?.value    || '';
+  const lesbrief  = document.getElementById('les-ld-lesbrief')?.value  || '';
+  const hoofdstuk = document.getElementById('les-ld-hoofdstuk')?.value || '';
+  const type      = document.getElementById('les-ld-type')?.value      || '';
+
+  lesLdGefilterd = lesLdAlle.filter(l => {
+    return (!niveau    || l.niveau    === niveau)
+        && (!lesbrief  || l.lesbrief  === lesbrief)
+        && (!hoofdstuk || l.hoofdstuk === hoofdstuk)
+        && (!type      || l.type      === type);
+  });
+
+  // Auto-vul lesnaam als lesbrief + hoofdstuk gekozen
+  if (lesbrief && hoofdstuk) {
+    const autoNaam = document.getElementById('new-lesson-name');
+    if (!autoNaam.value) autoNaam.value = lesbrief + ' — ' + hoofdstuk;
+  }
+
+  renderLesLdLijst();
+}
+
+function renderLesLdLijst() {
+  const lijst = document.getElementById('les-ld-lijst');
+  if (!lijst) return;
+
+  if (!lesLdGefilterd.length) {
+    lijst.innerHTML = '<div style="padding:0.75rem;text-align:center;color:var(--muted);font-size:0.82rem;">'
+      + (lesLdAlle.length ? 'Geen leerdoelen voor deze filters.' : 'Geen leerdoelen beschikbaar.') + '</div>';
+    updateLesLdTelling();
+    return;
+  }
+
+  // Groepeer per type voor leesbaarheid
+  const kennen = lesLdGefilterd.filter(l => l.type === 'kennen');
+  const kunnen = lesLdGefilterd.filter(l => l.type === 'kunnen');
+
+  const renderGroep = (groep, label) => {
+    if (!groep.length) return '';
+    return `<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
+        color:var(--muted);padding:6px 8px 3px;">${label}</div>`
+      + groep.map(l => {
+          const sel = lesLdGeselecteerd.has(l.id);
+          return `<div class="ll-picker-rij ${sel?'geselecteerd':''}"
+            onclick="toggleLesLd('${l.id}')" data-les-ld-id="${l.id}">
+            <div class="ll-picker-check">${sel?'✓':''}</div>
+            <span class="ll-picker-naam" style="font-size:0.82rem;font-weight:400;">${l.lesdoel}</span>
+          </div>`;
+        }).join('');
+  };
+
+  lijst.innerHTML = renderGroep(kennen, 'Kennen') + renderGroep(kunnen, 'Kunnen');
+  updateLesLdTelling();
+}
+
+function toggleLesLd(id) {
+  if (lesLdGeselecteerd.has(id)) lesLdGeselecteerd.delete(id);
+  else lesLdGeselecteerd.add(id);
+  const el = document.querySelector(`[data-les-ld-id="${id}"]`);
+  if (el) {
+    const sel = lesLdGeselecteerd.has(id);
+    el.classList.toggle('geselecteerd', sel);
+    el.querySelector('.ll-picker-check').textContent = sel ? '✓' : '';
+  }
+  updateLesLdTelling();
+  updateLesLdPreview();
+}
+
+function selecteerAlleLesLd()  { lesLdGefilterd.forEach(l => lesLdGeselecteerd.add(l.id));    renderLesLdLijst(); updateLesLdPreview(); }
+function deselecteerAlleLesLd(){ lesLdGefilterd.forEach(l => lesLdGeselecteerd.delete(l.id)); renderLesLdLijst(); updateLesLdPreview(); }
+
+function updateLesLdTelling() {
+  const el = document.getElementById('les-ld-telling');
+  if (el) el.textContent = lesLdGeselecteerd.size
+    ? lesLdGeselecteerd.size + ' geselecteerd'
+    : lesLdGefilterd.length + ' gevonden';
+}
+
+function updateLesLdPreview() {
+  const prev = document.getElementById('les-ld-preview');
+  const tags = document.getElementById('les-ld-preview-tags');
+  const geselecteerd = lesLdAlle.filter(l => lesLdGeselecteerd.has(l.id));
+  if (!geselecteerd.length) { if (prev) prev.style.display = 'none'; return; }
+  if (prev) prev.style.display = 'block';
+  if (tags) tags.innerHTML = geselecteerd.map(l =>
+    `<span class="ld-badge ld-badge-${l.type||'kennen'}" style="max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+      title="${l.lesdoel}">${l.lesdoel.length>60?l.lesdoel.slice(0,60)+'…':l.lesdoel}</span>`
+  ).join('');
+  // Bouw content-string voor AI
+  const kennen = geselecteerd.filter(l => l.type==='kennen').map(l => l.lesdoel);
+  const kunnen = geselecteerd.filter(l => l.type==='kunnen').map(l => l.lesdoel);
+  const lb = document.getElementById('les-ld-lesbrief')?.value || '';
+  const hf = document.getElementById('les-ld-hoofdstuk')?.value || '';
+  let content = '';
+  if (lb) content += 'Lesbrief: ' + lb + '\n';
+  if (hf) content += 'Hoofdstuk: ' + hf + '\n';
+  if (kennen.length) content += '\nKennen:\n' + kennen.map(k => '- ' + k).join('\n');
+  if (kunnen.length) content += '\n\nKunnen:\n' + kunnen.map(k => '- ' + k).join('\n');
+  document.getElementById('new-lesson-content-auto').value = content;
+  document.getElementById('new-lesson-content').value = content;
+}
+
+// Legacy stubs (niet meer nodig maar voorkomen JS-errors)
+function onLesbriefChange() { onLesLdLesbriefChange(); }
+function onHoofdstukChange() { onLesLdFilter(); }
+function renderLeerdoelenPreview() {}
 
 function toggleLeerdoelenEdit() {
   const sec = document.getElementById('manual-edit-section');
@@ -3343,25 +3421,37 @@ function toggleLeerdoelenEdit() {
 
 async function createLesson() {
   const name    = document.getElementById('new-lesson-name').value.trim();
-  const content = document.getElementById('new-lesson-content').value.trim();
+  const content = document.getElementById('new-lesson-content').value.trim()
+                || document.getElementById('new-lesson-content-auto').value.trim();
   const err     = document.getElementById('create-lesson-error');
   const btn     = document.getElementById('create-lesson-btn');
 
   if (!name) { err.textContent = 'Vul een lesnaam in.'; err.style.display = 'block'; return; }
-  if (!content || content.length < 10) { err.textContent = 'Selecteer een hoofdstuk om leerdoelen in te laden.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
   btn.disabled = true; btn.textContent = 'Aanmaken...';
 
-  const classId    = document.getElementById('new-lesson-class').value || null;
-  const chapterVal = document.getElementById('new-lesson-hoofdstuk').value || null;
-  const leerdoelen = chapterVal && LEERDOELEN_DB[chapterVal] ? LEERDOELEN_DB[chapterVal] : null;
-  const id         = 'lesson_' + Date.now();
-  const lesson     = {
-    id, name, content, leerdoelen, chapter_val: chapterVal,
-    created_at: Date.now(), class_id: classId,
+  const classId = document.getElementById('new-lesson-class').value || null;
+
+  // Bouw leerdoelen-object uit geselecteerde items
+  const geselecteerd = lesLdAlle.filter(l => lesLdGeselecteerd.has(l.id));
+  const leerdoelen = geselecteerd.length ? {
+    kennen: geselecteerd.filter(l => l.type === 'kennen').map(l => l.lesdoel),
+    kunnen: geselecteerd.filter(l => l.type === 'kunnen').map(l => l.lesdoel),
+    ids:    [...lesLdGeselecteerd],
+  } : null;
+
+  const id = 'lesson_' + Date.now();
+  const lesson = {
+    id, name,
+    content:      content || name,
+    leerdoelen,
+    chapter_val:  document.getElementById('les-ld-hoofdstuk')?.value || null,
+    created_at:   Date.now(),
+    class_id:     classId,
     toegestane_lesvormen: selectedLesvormen.length > 0 ? selectedLesvormen : ['socratisch'],
-    lesvorm_mode:         lesvormMode || 'locked',
+    lesvorm_mode: lesvormMode || 'locked',
   };
+
   try {
     await apiFetch('/api/lessons', { method: 'POST', body: JSON.stringify(lesson) });
   } catch(e) {
@@ -3371,12 +3461,9 @@ async function createLesson() {
   btn.disabled = false; btn.textContent = 'Les aanmaken';
   closeModal('modal-create-lesson');
   showToast('✓ Les "' + name + '" aangemaakt!');
-  // Herlaad dashboard en navigeer terug naar de klas als die open was
   const terugNaarKlas = huidigKlasId && classId === huidigKlasId;
   await loadTeacherDashboard();
-  if (terugNaarKlas) {
-    openKlas(huidigKlasId);
-  }
+  if (terugNaarKlas) openKlas(huidigKlasId);
 }
 
 
