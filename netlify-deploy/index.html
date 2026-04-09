@@ -4773,30 +4773,59 @@ function renderLeerlingenTabel(leerlingen) {
   }
   const rijen = leerlingen.map(l => {
     const naam = [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ');
+    const safeId = (l.id || '').replace(/'/g, "\'");
+    const safeNaam = naam.replace(/'/g, "\'");
     return `<tr>
-      <td style="font-size:0.78rem;color:var(--muted);">${l.stamnummer || '—'}</td>
-      <td style="font-weight:600;">${naam}</td>
-      <td><span style="font-size:0.75rem;background:rgba(79,163,232,0.12);color:var(--blue);
-        padding:0.1rem 0.4rem;border-radius:4px;">${l.klas || '—'}</span></td>
-      <td style="font-size:0.75rem;">
-        ${l.leerniveau ? `<span style="font-size:0.7rem;background:rgba(27,58,107,0.1);color:var(--navy);
+      <td style="font-size:0.78rem;color:var(--muted);padding:0.55rem 0.5rem;">${l.stamnummer || '—'}</td>
+      <td style="font-weight:600;padding:0.55rem 0.5rem;">${naam}</td>
+      <td style="padding:0.55rem 0.5rem;">
+        <span style="font-size:0.75rem;background:rgba(79,163,232,0.12);color:var(--blue);
+          padding:0.1rem 0.4rem;border-radius:4px;">${l.klas || '—'}</span>
+      </td>
+      <td style="font-size:0.75rem;padding:0.55rem 0.5rem;">
+        ${l.leerniveau ? `<span style="font-size:0.7rem;background:var(--navy-glow);color:var(--navy);
           padding:0.1rem 0.4rem;border-radius:4px;">${l.leerniveau}</span>` : '—'}
       </td>
-      <td style="font-size:0.78rem;color:var(--muted);">${l.leerjaar || '—'}</td>
-      <td style="font-size:0.78rem;color:var(--muted);">${l.lesperiode}</td>
+      <td style="font-size:0.78rem;color:var(--muted);padding:0.55rem 0.5rem;">${l.leerjaar || '—'}</td>
+      <td style="font-size:0.78rem;color:var(--muted);padding:0.55rem 0.5rem;">${l.lesperiode || '—'}</td>
+      <td style="padding:0.55rem 0.5rem;text-align:right;">
+        <button onclick="verwijderLeerling('${safeId}','${safeNaam}')"
+          style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;
+            padding:3px 6px;border-radius:4px;transition:all 0.12s;"
+          onmouseover="this.style.color='var(--red)';this.style.background='rgba(192,57,43,0.08)'"
+          onmouseout="this.style.color='var(--muted)';this.style.background='none'"
+          title="Leerling verwijderen">✕</button>
+      </td>
     </tr>`;
   }).join('');
   wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:0.83rem;">
-    <thead><tr style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);">
-      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Stamnr.</th>
-      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Naam</th>
-      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Klas</th>
-      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Niveau</th>
-      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Leerjaar</th>
-      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;">Periode</th>
+    <thead><tr style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);
+      border-bottom:1.5px solid var(--border);">
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;font-weight:600;">Stamnr.</th>
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;font-weight:600;">Naam</th>
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;font-weight:600;">Klas</th>
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;font-weight:600;">Niveau</th>
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;font-weight:600;">Leerjaar</th>
+      <th style="text-align:left;padding:0.4rem 0.5rem 0.6rem;font-weight:600;">Periode</th>
+      <th style="padding:0.4rem 0.5rem 0.6rem;"></th>
     </tr></thead>
     <tbody>${rijen}</tbody>
   </table>`;
+}
+
+async function verwijderLeerling(id, naam) {
+  if (!confirm('Leerling "' + naam + '" verwijderen uit het systeem? Dit kan niet ongedaan worden gemaakt.')) return;
+  try {
+    await apiFetch('/api/leerlingen/' + encodeURIComponent(id), { method: 'DELETE' });
+    showToast('✓ ' + naam + ' verwijderd.');
+    // Verwijder uit lokale array en herrender
+    alleLeerlingen = alleLeerlingen.filter(l => l.id !== id);
+    renderLeerlingenTabel(alleLeerlingen);
+    const count = document.getElementById('ll-count');
+    if (count) count.textContent = alleLeerlingen.length + ' leerlingen';
+  } catch(e) {
+    showToast('Verwijderen mislukt: ' + e.message);
+  }
 }
 
 // ── XLSX Upload ───────────────────────────────────────────────

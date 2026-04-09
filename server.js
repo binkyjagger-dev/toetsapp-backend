@@ -186,6 +186,19 @@ app.post('/api/leerlingen/koppel-klas', verifyToken, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// ── DELETE /api/leerlingen/:id — verwijder één leerling ──────
+app.delete('/api/leerlingen/:id', verifyToken, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('leerlingen_import')
+      .delete()
+      .eq('id', req.params.id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.delete('/api/leerlingen/periode/:lesperiode', verifyToken, async (req, res) => {
   try {
     await supabase.from('leerlingen_import')
