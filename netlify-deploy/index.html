@@ -4279,15 +4279,16 @@ async function openEditClass(id) {
   document.getElementById('edit-class-id').value      = id;
   document.getElementById('klas-modal-titel').textContent = 'Klas bewerken';
 
-  // Bij bewerken: verberg "volgende stap" en toon direct opslaan
+  // Herstel knoppen: toon beide stappen ook bij bewerken
   const volgendeBtn = document.getElementById('klas-stap1-volgende-btn');
   const directBtn   = document.getElementById('klas-stap1-direct-btn');
-  if (volgendeBtn) volgendeBtn.style.display = 'none';
-  if (directBtn) {
-    directBtn.textContent = 'Wijzigingen opslaan';
-    directBtn.style.color = '';
-    directBtn.style.cssText = 'font-size:0.9rem;font-weight:600;';
-  }
+  if (volgendeBtn) { volgendeBtn.style.display = ''; volgendeBtn.textContent = 'Leerlingen bekijken / bewerken →'; }
+  if (directBtn)   { directBtn.textContent = 'Opslaan zonder leerlingen te wijzigen'; directBtn.style.cssText = 'font-size:0.78rem;color:var(--muted);'; }
+
+  // Reset pill filters
+  document.querySelectorAll('#klas-modal-niveau-pills .pill-filter, #klas-modal-leerjaar-pills .pill-filter')
+    .forEach(el => el.classList.remove('actief'));
+
   zetKlasModalStap(1);
   openModal('modal-create-class');
 }
@@ -4307,23 +4308,50 @@ async function klasNaarStap2() {
   err.style.display = 'none';
   document.getElementById('klas-stap2-naam').textContent = naam;
   zetKlasModalStap(2);
+
+  const lijst = document.getElementById('klas-modal-ll-lijst');
+
   // Laad periodes voor picker
   try {
     const periodes = await apiFetch('/api/leerlingen/periodes');
     const sel = document.getElementById('klas-modal-periode');
     sel.innerHTML = '<option value="">— Alle periodes —</option>'
       + periodes.map(p => `<option value="${p}">${p}</option>`).join('');
-    if (periodes.length >= 1) { sel.value = periodes[0]; laadKlasModalLl(); }
+    if (periodes.length >= 1) sel.value = periodes[0];
   } catch(e) {}
-  // Als bewerken: pre-select huidige leerlingen
+
   if (klasModalEditId) {
+    // ── BEWERKEN: laad huidige leerlingen van de klas ──────
     const klas = classesCache.find(c => c.id === klasModalEditId);
-    if (klas) {
-      try {
-        const ll = await apiFetch('/api/leerlingen?klas=' + encodeURIComponent(klas.name));
-        ll.forEach(l => klasModalLlGeselecteerd.add(l.id));
-      } catch(e) {}
+    if (lijst) lijst.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;"><span class="spinner" style="display:inline-block;border-top-color:var(--navy);"></span> Huidige leerlingen laden...</div>';
+
+    try {
+      // Haal eerst alle leerlingen van de klas op (de geselecteerde groep)
+      const klasLl = await apiFetch('/api/leerlingen?klas=' + encodeURIComponent(klas?.name || ''));
+      klasLl.forEach(l => klasModalLlGeselecteerd.add(l.id));
+
+      // Haal ook alle leerlingen op voor de gekozen periode
+      const periode = document.getElementById('klas-modal-periode')?.value || '';
+      const qs = periode ? '?lesperiode=' + encodeURIComponent(periode) : '';
+      const alleLl = await apiFetch('/api/leerlingen' + qs);
+
+      // Combineer: klas-leerlingen + alle andere (voor toevoegen/verwijderen)
+      // Dedup op id
+      const map = new Map();
+      alleLl.forEach(l => map.set(l.id, l));
+      klasLl.forEach(l => map.set(l.id, l)); // klas-leerlingen overschrijven
+      klasModalLlAlle = [...map.values()].sort((a, b) =>
+        (a.achternaam || '').localeCompare(b.achternaam || ''));
+
+      renderKlasModalLlLijst();
+    } catch(e) {
+      if (lijst) lijst.innerHTML = `<div style="padding:1rem;text-align:center;color:var(--red);font-size:0.82rem;">Laden mislukt: ${e.message}</div>`;
     }
+  } else {
+    // ── NIEUW: laad op basis van geselecteerde filters ─────
+    const periode = document.getElementById('klas-modal-periode')?.value || '';
+    if (periode) laadKlasModalLl();
+    else if (lijst) lijst.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Selecteer een periode of kies niveau/leerjaar om leerlingen te zien</div>';
   }
 }
 
