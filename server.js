@@ -273,6 +273,102 @@ app.delete('/api/classes/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+
+// ════════════════════════════════════════════════════════════
+//  LEERDOELEN ENDPOINTS
+// ════════════════════════════════════════════════════════════
+// SQL MIGRATIE (éénmalig in Supabase):
+// create table if not exists leerdoelen (
+//   id uuid primary key default gen_random_uuid(),
+//   leraar_id uuid references leraren(id),
+//   niveau text, lesbrief text, hoofdstuk text,
+//   type text, lesdoel text,
+//   created_at bigint default extract(epoch from now())*1000
+// );
+
+// GET alle leerdoelen van ingelogde leraar
+app.get('/api/leerdoelen', verifyToken, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('leerdoelen')
+      .select('*')
+      .eq('leraar_id', req.leraar.id)
+      .order('niveau').order('lesbrief').order('type').order('lesdoel');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST één leerdoel aanmaken
+app.post('/api/leerdoelen', verifyToken, async (req, res) => {
+  try {
+    const { niveau, lesbrief, hoofdstuk, type, lesdoel } = req.body;
+    if (!lesdoel) return res.status(400).json({ error: 'lesdoel verplicht' });
+    const { data, error } = await supabase
+      .from('leerdoelen')
+      .insert([{ niveau, lesbrief, hoofdstuk, type, lesdoel,
+                 leraar_id: req.leraar.id,
+                 created_at: Date.now() }])
+      .select();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data[0]);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST bulk import leerdoelen
+app.post('/api/leerdoelen/import', verifyToken, async (req, res) => {
+  try {
+    const { leerdoelen } = req.body;
+    if (!leerdoelen?.length) return res.status(400).json({ error: 'leerdoelen array verplicht' });
+    const rijen = leerdoelen.map(l => ({
+      niveau:     l.niveau    || null,
+      lesbrief:   l.lesbrief  || null,
+      hoofdstuk:  l.hoofdstuk || null,
+      type:       l.type      || 'kennen',
+      lesdoel:    l.lesdoel,
+      leraar_id:  req.leraar.id,
+      created_at: Date.now(),
+    })).filter(l => l.lesdoel);
+    // Splits in batches van 200
+    let aangemaakt = 0;
+    for (let i = 0; i < rijen.length; i += 200) {
+      const batch = rijen.slice(i, i + 200);
+      const { error } = await supabase.from('leerdoelen').insert(batch);
+      if (error) return res.status(500).json({ error: error.message });
+      aangemaakt += batch.length;
+    }
+    res.json({ ok: true, aangemaakt });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH één leerdoel bewerken
+app.patch('/api/leerdoelen/:id', verifyToken, async (req, res) => {
+  try {
+    const { niveau, lesbrief, hoofdstuk, type, lesdoel } = req.body;
+    const { data, error } = await supabase
+      .from('leerdoelen')
+      .update({ niveau, lesbrief, hoofdstuk, type, lesdoel })
+      .eq('id', req.params.id)
+      .eq('leraar_id', req.leraar.id)
+      .select();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data?.[0] || {});
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE één leerdoel
+app.delete('/api/leerdoelen/:id', verifyToken, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('leerdoelen')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('leraar_id', req.leraar.id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // LESSEN
 app.get('/api/lessons', optionalToken, async (req, res) => {
   let query = supabase.from('lessons').select('*').order('created_at', { ascending: false });

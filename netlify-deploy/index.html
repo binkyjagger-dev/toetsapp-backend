@@ -867,6 +867,27 @@
   .ll-picker-naam { font-weight: 500; flex: 1; color: var(--text); }
   .ll-picker-klas { font-size: 11px; color: var(--muted); white-space: nowrap; }
 
+
+  /* ── Leerdoelen ─────────────────────────────────────────── */
+  .ld-tabel { width:100%; border-collapse:collapse; font-size:0.83rem; }
+  .ld-tabel th { text-align:left; padding:0.4rem 0.65rem 0.6rem;
+    font-size:0.68rem; text-transform:uppercase; letter-spacing:0.1em;
+    color:var(--muted); font-weight:600; border-bottom:1.5px solid var(--border); }
+  .ld-tabel td { padding:0.55rem 0.65rem; border-bottom:1px solid var(--border);
+    vertical-align:top; }
+  .ld-tabel tr:last-child td { border-bottom:none; }
+  .ld-tabel tr:hover td { background:var(--navy-glow); }
+  .ld-badge { display:inline-block; font-size:0.68rem; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.06em; padding:1px 7px;
+    border-radius:4px; }
+  .ld-badge-kennen { background:rgba(59,130,246,0.1); color:#3b82f6; }
+  .ld-badge-kunnen { background:rgba(27,107,62,0.1);  color:#1a6a40; }
+  .ld-badge-niveau { background:var(--navy-glow); color:var(--navy); }
+  .ld-actie-btn { background:none; border:none; cursor:pointer; padding:3px 6px;
+    border-radius:4px; font-size:0.8rem; color:var(--muted); transition:all 0.1s; }
+  .ld-actie-btn:hover { background:var(--navy-glow); color:var(--navy); }
+  .ld-actie-btn.del:hover { background:rgba(192,57,43,0.08); color:var(--red); }
+
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
 // (verificatie verwijderd)
@@ -874,6 +895,203 @@
 // Bereken korte lescode uit les-ID
 function getLesCode(lesId) {
   return lesId ? lesId.slice(0, 4).toUpperCase() : '—';
+}
+
+
+// ════════════════════════════════════════════════════════════
+//  LEERDOELEN MODULE
+// ════════════════════════════════════════════════════════════
+let alleLeerdoelen = [];
+let ldImportBuffer = [];
+
+// ── Laden ──────────────────────────────────────────────────
+async function laadLeerdoelenTab() {
+  const wrap = document.getElementById('ld-tabel-wrap');
+  if (wrap) wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);"><span class="spinner" style="border-top-color:var(--navy);display:inline-block;margin-right:8px;"></span>Leerdoelen laden...</div>';
+  try {
+    alleLeerdoelen = await apiFetch('/api/leerdoelen');
+    renderLeerdoelenTabel(alleLeerdoelen);
+  } catch(e) {
+    if (wrap) wrap.innerHTML = '<p style="color:var(--red);font-size:0.85rem;">Laden mislukt: ' + e.message + '</p>';
+  }
+}
+
+// ── Renderen ───────────────────────────────────────────────
+function renderLeerdoelenTabel(ld) {
+  const wrap  = document.getElementById('ld-tabel-wrap');
+  const count = document.getElementById('ld-count');
+  if (count) count.textContent = ld.length + ' leerdoelen';
+  if (!ld.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🎯</div><p>Geen leerdoelen gevonden.</p></div>';
+    return;
+  }
+  const rijen = ld.map(l => {
+    const safeId = (l.id || '').replace(/'/g, "\'");
+    return `<tr>
+      <td><span class="ld-badge ld-badge-niveau">${l.niveau || '—'}</span></td>
+      <td style="font-size:0.78rem;color:var(--muted);">${l.lesbrief || '—'}</td>
+      <td style="font-size:0.78rem;color:var(--muted);">${l.hoofdstuk || '—'}</td>
+      <td><span class="ld-badge ld-badge-${l.type || 'kennen'}">${l.type || '—'}</span></td>
+      <td style="max-width:340px;line-height:1.4;">${l.lesdoel || '—'}</td>
+      <td style="white-space:nowrap;">
+        <button class="ld-actie-btn" onclick="openLdModal('${safeId}')" title="Bewerken">✏</button>
+        <button class="ld-actie-btn del" onclick="verwijderLeerdoel('${safeId}')" title="Verwijderen">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<div style="overflow-x:auto;">
+    <table class="ld-tabel">
+      <thead><tr>
+        <th>Niveau</th><th>Lesbrief</th><th>Hoofdstuk</th><th>Type</th>
+        <th>Lesdoel</th><th></th>
+      </tr></thead>
+      <tbody>${rijen}</tbody>
+    </table>
+  </div>`;
+}
+
+// ── Filteren ───────────────────────────────────────────────
+function filterLeerdoelen() {
+  const zoek   = (document.getElementById('ld-zoek')?.value || '').toLowerCase();
+  const niveau = document.getElementById('ld-filter-niveau')?.value || '';
+  const type   = document.getElementById('ld-filter-type')?.value   || '';
+  const gefilterd = alleLeerdoelen.filter(l => {
+    const matchZoek   = !zoek   || (l.lesdoel + ' ' + l.lesbrief + ' ' + l.hoofdstuk).toLowerCase().includes(zoek);
+    const matchNiveau = !niveau || (l.niveau || '') === niveau;
+    const matchType   = !type   || (l.type   || '') === type;
+    return matchZoek && matchNiveau && matchType;
+  });
+  renderLeerdoelenTabel(gefilterd);
+}
+
+// ── Modal: open / opslaan ──────────────────────────────────
+function openLdModal(id) {
+  const ld = id ? alleLeerdoelen.find(l => l.id === id) : null;
+  document.getElementById('ld-modal-titel').textContent = ld ? 'Leerdoel bewerken' : 'Leerdoel toevoegen';
+  document.getElementById('ld-edit-id').value   = ld?.id    || '';
+  document.getElementById('ld-niveau').value    = ld?.niveau || '';
+  document.getElementById('ld-type').value      = ld?.type  || '';
+  document.getElementById('ld-lesbrief').value  = ld?.lesbrief  || '';
+  document.getElementById('ld-hoofdstuk').value = ld?.hoofdstuk || '';
+  document.getElementById('ld-lesdoel').value   = ld?.lesdoel   || '';
+  document.getElementById('ld-modal-error').style.display = 'none';
+  openModal('modal-leerdoel');
+}
+
+async function slaLeerdoelOp() {
+  const id       = document.getElementById('ld-edit-id').value;
+  const niveau   = document.getElementById('ld-niveau').value;
+  const type     = document.getElementById('ld-type').value;
+  const lesbrief = document.getElementById('ld-lesbrief').value.trim();
+  const hoofdstuk= document.getElementById('ld-hoofdstuk').value.trim();
+  const lesdoel  = document.getElementById('ld-lesdoel').value.trim();
+  const errEl    = document.getElementById('ld-modal-error');
+  if (!niveau || !type || !lesdoel) {
+    errEl.textContent = 'Niveau, type en lesdoel zijn verplicht.';
+    errEl.style.display = 'block'; return;
+  }
+  errEl.style.display = 'none';
+  const body = { niveau, type, lesbrief, hoofdstuk, lesdoel };
+  try {
+    if (id) {
+      await apiFetch('/api/leerdoelen/' + id, { method: 'PATCH', body: JSON.stringify(body) });
+      alleLeerdoelen = alleLeerdoelen.map(l => l.id === id ? { ...l, ...body } : l);
+    } else {
+      const nieuw = await apiFetch('/api/leerdoelen', { method: 'POST', body: JSON.stringify(body) });
+      alleLeerdoelen = [...alleLeerdoelen, nieuw];
+    }
+    closeModal('modal-leerdoel');
+    renderLeerdoelenTabel(alleLeerdoelen);
+    showToast('✓ Leerdoel ' + (id ? 'bijgewerkt' : 'toegevoegd') + '.');
+  } catch(e) { errEl.textContent = 'Opslaan mislukt: ' + e.message; errEl.style.display = 'block'; }
+}
+
+// ── Verwijderen ────────────────────────────────────────────
+async function verwijderLeerdoel(id) {
+  const ld = alleLeerdoelen.find(l => l.id === id);
+  if (!confirm('Leerdoel "' + (ld?.lesdoel?.slice(0, 60) || id) + '..." verwijderen?')) return;
+  try {
+    await apiFetch('/api/leerdoelen/' + id, { method: 'DELETE' });
+    alleLeerdoelen = alleLeerdoelen.filter(l => l.id !== id);
+    renderLeerdoelenTabel(alleLeerdoelen);
+    showToast('Leerdoel verwijderd.');
+  } catch(e) { showToast('Verwijderen mislukt: ' + e.message); }
+}
+
+// ── Excel import ───────────────────────────────────────────
+function importeerLeerdoelenXlsx(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb  = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const ws  = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      // Verwacht kolommen: Niveau, Lesbrief, Hoofdstuk, Type (Kennen/Kunnen), Lesdoel
+      // Flexibel: zoek op kolomnamen (case-insensitive, ook varianten)
+      const normKey = k => String(k).toLowerCase().trim()
+        .replace(/kennen.*kunnen|type/,'type')
+        .replace(/lesbrief/,'lesbrief')
+        .replace(/hoofdstuk/,'hoofdstuk')
+        .replace(/niveau/,'niveau')
+        .replace(/lesdoel|omschrijving|doel/,'lesdoel')
+        .replace(/kennen/,'type_kennen')
+        .replace(/kunnen/,'type_kunnen');
+
+      const rijen = raw.map(row => {
+        const r = {};
+        Object.keys(row).forEach(k => { r[normKey(k)] = row[k]; });
+        // Detecteer type uit kolomnaam als er aparte Kennen/Kunnen kolommen zijn
+        let type = r.type || '';
+        if (!type && (r.type_kennen || r.type_kunnen)) {
+          type = r.type_kennen ? 'kennen' : 'kunnen';
+        }
+        type = type.toLowerCase().includes('kunnen') ? 'kunnen' : 'kennen';
+        return {
+          niveau:    String(r.niveau || '').trim(),
+          lesbrief:  String(r.lesbrief || '').trim(),
+          hoofdstuk: String(r.hoofdstuk || '').trim(),
+          type,
+          lesdoel:   String(r.lesdoel || '').trim(),
+        };
+      }).filter(r => r.lesdoel);
+
+      if (!rijen.length) { showToast('Geen geldige leerdoelen gevonden in het bestand.'); return; }
+      ldImportBuffer = rijen;
+      document.getElementById('ld-import-info').textContent =
+        rijen.length + ' leerdoelen gevonden. Klik op Importeren om te bevestigen.';
+      document.getElementById('ld-import-error').style.display = 'none';
+      document.getElementById('ld-import-preview').style.display = 'block';
+    } catch(err) { showToast('Fout bij lezen bestand: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function bevestigLdImport() {
+  if (!ldImportBuffer.length) return;
+  const btn = document.querySelector('#ld-import-preview .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Importeren...'; }
+  try {
+    const result = await apiFetch('/api/leerdoelen/import', {
+      method: 'POST',
+      body: JSON.stringify({ leerdoelen: ldImportBuffer }),
+    });
+    annuleerLdImport();
+    showToast('✓ ' + (result.aangemaakt || ldImportBuffer.length) + ' leerdoelen geïmporteerd.');
+    ldImportBuffer = [];
+    await laadLeerdoelenTab();
+  } catch(e) {
+    document.getElementById('ld-import-error').textContent = 'Import mislukt: ' + e.message;
+    document.getElementById('ld-import-error').style.display = 'block';
+    if (btn) { btn.disabled = false; btn.textContent = '✅ Importeren'; }
+  }
+}
+
+function annuleerLdImport() {
+  ldImportBuffer = [];
+  document.getElementById('ld-import-preview').style.display = 'none';
 }
 
 </script>
@@ -1325,6 +1543,9 @@ function getLesCode(lesId) {
     <button class="nav-item" id="nav-klassen" onclick="navNaar('klassen')">
       <span class="nav-icon">🏫</span> Klassen
     </button>
+    <button class="nav-item" id="nav-leerdoelen" onclick="navNaar('leerdoelen')">
+      <span class="nav-icon">🎯</span> Leerdoelen
+    </button>
     <button class="nav-item" id="nav-lessen" onclick="navNaar('lessen')">
       <span class="nav-icon">📚</span> Lessen
     </button>
@@ -1465,6 +1686,62 @@ function getLesCode(lesId) {
       <div class="empty-icon">📚</div>
       <p>Nog geen lessen aangemaakt. Gebruik de knop "+ Nieuwe les" in de zijbalk.</p>
     </div>
+  </div>
+
+  <div id="view-leerdoelen" style="display:none;" class="main-content">
+    <div class="page-eyebrow">Leerdoelen</div>
+    <h2 class="page-title" style="margin-bottom:0.25rem;">Mijn leerdoelen</h2>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:1.5rem;">
+      Upload leerdoelen via Excel of voeg ze handmatig toe. Gekoppeld aan jouw account.
+    </div>
+
+    <!-- Actiebalk -->
+    <div style="display:flex;gap:0.65rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
+      <button class="btn btn-primary" onclick="document.getElementById('ld-xlsx-input').click()">
+        📥 Excel importeren
+      </button>
+      <input type="file" id="ld-xlsx-input" accept=".xlsx,.xls" style="display:none"
+        onchange="importeerLeerdoelenXlsx(this)">
+      <button class="btn btn-ghost-navy" onclick="openLdModal(null)">
+        + Handmatig toevoegen
+      </button>
+      <div style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;">
+        <input type="text" id="ld-zoek" placeholder="zoeken..." oninput="filterLeerdoelen()"
+          style="min-width:180px;" />
+        <select id="ld-filter-niveau" onchange="filterLeerdoelen()" style="min-width:130px;">
+          <option value="">— Alle niveaus —</option>
+          <option value="HAVO">HAVO</option>
+          <option value="Atheneum">Atheneum</option>
+          <option value="Gymnasium">Gymnasium</option>
+          <option value="VWO">VWO</option>
+        </select>
+        <select id="ld-filter-type" onchange="filterLeerdoelen()" style="min-width:110px;">
+          <option value="">— Kennen + Kunnen —</option>
+          <option value="kennen">Kennen</option>
+          <option value="kunnen">Kunnen</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Import preview -->
+    <div id="ld-import-preview" style="display:none;background:#fff;border:1.5px solid var(--border);
+      border-radius:12px;padding:1.25rem;margin-bottom:1rem;">
+      <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.65rem;color:var(--navy);">📋 Preview import</div>
+      <div id="ld-import-info" style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem;"></div>
+      <div id="ld-import-error" class="error-msg" style="display:none;"></div>
+      <div style="display:flex;gap:0.65rem;margin-top:0.75rem;">
+        <button class="btn btn-primary" onclick="bevestigLdImport()">✅ Importeren</button>
+        <button class="btn btn-ghost-navy" onclick="annuleerLdImport()">Annuleren</button>
+      </div>
+    </div>
+
+    <!-- Tabel -->
+    <div id="ld-tabel-wrap">
+      <div class="empty-state"><div class="empty-icon">🎯</div>
+        <p>Nog geen leerdoelen. Upload een Excel-bestand of voeg ze handmatig toe.</p>
+      </div>
+    </div>
+    <div id="ld-count" style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;"></div>
   </div>
 
   <div id="view-analyse" style="display:none;" class="main-content">
@@ -1770,6 +2047,54 @@ function getLesCode(lesId) {
           Klas opslaan
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!--  MODAL: LEERDOEL AANMAKEN / BEWERKEN           -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-leerdoel">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('modal-leerdoel')">×</button>
+    <div class="modal-title" id="ld-modal-titel">Leerdoel toevoegen</div>
+    <input type="hidden" id="ld-edit-id" value="">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div class="form-section">
+        <label>Niveau *</label>
+        <select id="ld-niveau">
+          <option value="">— Kies niveau —</option>
+          <option value="HAVO">HAVO</option>
+          <option value="Atheneum">Atheneum</option>
+          <option value="Gymnasium">Gymnasium</option>
+          <option value="VWO">VWO</option>
+        </select>
+      </div>
+      <div class="form-section">
+        <label>Type *</label>
+        <select id="ld-type">
+          <option value="">— Kennen / Kunnen —</option>
+          <option value="kennen">Kennen</option>
+          <option value="kunnen">Kunnen</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-section">
+      <label>Lesbrief *</label>
+      <input type="text" id="ld-lesbrief" placeholder="bijv. Markt & Prijzen" />
+    </div>
+    <div class="form-section">
+      <label>Hoofdstuk</label>
+      <input type="text" id="ld-hoofdstuk" placeholder="bijv. H2" />
+    </div>
+    <div class="form-section">
+      <label>Lesdoel *</label>
+      <textarea id="ld-lesdoel" rows="3" placeholder="Beschrijf het leerdoel..."></textarea>
+    </div>
+    <div id="ld-modal-error" class="error-msg" style="display:none;"></div>
+    <div style="display:flex;gap:0.65rem;margin-top:1rem;">
+      <button class="btn btn-ghost-navy" onclick="closeModal('modal-leerdoel')">Annuleren</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="slaLeerdoelOp()">Opslaan</button>
     </div>
   </div>
 </div>
@@ -2983,7 +3308,7 @@ function navNaar(view) {
   huidigView = view;
   huidigKlasId = null;
   // Sidebar active
-  ['klassen','leerlingen','lessen','analyse','socratisch'].forEach(v => {
+  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch'].forEach(v => {
     const el = document.getElementById('nav-' + v);
     if (el) el.classList.toggle('active', v === view);
   });
@@ -2991,7 +3316,7 @@ function navNaar(view) {
   const klasHeader = document.getElementById('klas-header');
   if (klasHeader) klasHeader.style.display = 'none';
   // Views
-  const views = ['klassen','klas-detail','leerlingen','lessen','analyse','socratisch'];
+  const views = ['klassen','klas-detail','leerlingen','leerdoelen','lessen','analyse','socratisch'];
   views.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.style.display = 'none';
@@ -3006,6 +3331,7 @@ function navNaar(view) {
   // Laad content
   if (view === 'leerlingen') laadLeerlingenTab();
   if (view === 'klassen')   renderClassenGrid(classesCache);
+  if (view === 'leerdoelen') laadLeerdoelenTab();
   if (view === 'lessen')    laadLessenView();
   if (view === 'analyse')   { vulAnalyseFilters(); runAnalyse(); }
   if (view === 'socratisch') { vulClassFilter(); loadLessonsForTeacher(); }
@@ -3035,6 +3361,9 @@ function setMainActions(view, klasId) {
     el.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openCreateClass()">+ Nieuwe klas</button>`;
   } else if (view === 'leerlingen') {
     el.innerHTML = `<button class="btn btn-primary btn-sm" onclick="document.getElementById('xlsx-upload-input').click()">📥 XLSX importeren</button>`;
+  } else if (view === 'leerdoelen') {
+    el.innerHTML = `<button class="btn btn-ghost-navy btn-sm" onclick="document.getElementById('ld-xlsx-input').click()">📥 Excel importeren</button>
+      <button class="btn btn-primary btn-sm" onclick="openLdModal(null)">+ Toevoegen</button>`;
   } else if (view === 'lessen') {
     el.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openCreateLesson()">+ Nieuwe les</button>`;
   } else if (view === 'klas-detail') {
@@ -3072,7 +3401,7 @@ function openKlas(klasId) {
     });
   const kh2 = document.getElementById('klas-header'); if(kh2) kh2.style.display = 'block';
   // Views wisselen
-  ['klassen','leerlingen','lessen','analyse','socratisch'].forEach(v => {
+  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch'].forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.style.display = 'none';
   });
