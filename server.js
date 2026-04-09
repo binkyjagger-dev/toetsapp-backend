@@ -164,12 +164,24 @@ app.post('/api/leerlingen/koppel-klas', verifyToken, async (req, res) => {
   try {
     const { leerling_ids, klas_naam } = req.body;
     if (!leerling_ids?.length) return res.status(400).json({ error: 'leerling_ids verplicht' });
-    // Update klas-veld van alle geselecteerde leerlingen
-    // Update klas-veld — filter NIET op leraar_id want leerlingen hebben dat niet altijd
-    const { error } = await supabase.from('leerlingen_import')
+
+    // Stap 1: verwijder alle bestaande koppelingen aan deze klas_naam
+    // (zodat de nieuwe selectie de exacte en enige groep is)
+    if (klas_naam) {
+      const { error: clearError } = await supabase
+        .from('leerlingen_import')
+        .update({ klas: null })
+        .eq('klas', klas_naam);
+      if (clearError) console.warn('koppel-klas clear fout:', clearError.message);
+    }
+
+    // Stap 2: koppel de geselecteerde leerlingen aan de klas
+    const { error } = await supabase
+      .from('leerlingen_import')
       .update({ klas: klas_naam })
       .in('id', leerling_ids);
     if (error) return res.status(500).json({ error: error.message });
+
     res.json({ ok: true, bijgewerkt: leerling_ids.length });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
