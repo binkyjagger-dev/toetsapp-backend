@@ -1028,43 +1028,91 @@ function importeerLeerdoelenXlsx(input) {
     try {
       const wb  = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
       const ws  = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
-      // Verwacht kolommen: Niveau, Lesbrief, Hoofdstuk, Type (Kennen/Kunnen), Lesdoel
-      // Flexibel: zoek op kolomnamen (case-insensitive, ook varianten)
-      const normKey = k => String(k).toLowerCase().trim()
-        .replace(/kennen.*kunnen|type/,'type')
-        .replace(/lesbrief/,'lesbrief')
-        .replace(/hoofdstuk/,'hoofdstuk')
-        .replace(/niveau/,'niveau')
-        .replace(/lesdoel|omschrijving|doel/,'lesdoel')
-        .replace(/kennen/,'type_kennen')
-        .replace(/kunnen/,'type_kunnen');
+      // header:1 geeft arrays zodat we kolomnamen zelf kunnen lezen
+      const rawArr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (rawArr.length < 2) { showToast('Bestand is leeg of heeft geen data.'); return; }
 
-      const rijen = raw.map(row => {
-        const r = {};
-        Object.keys(row).forEach(k => { r[normKey(k)] = row[k]; });
-        // Detecteer type uit kolomnaam als er aparte Kennen/Kunnen kolommen zijn
-        let type = r.type || '';
-        if (!type && (r.type_kennen || r.type_kunnen)) {
-          type = r.type_kennen ? 'kennen' : 'kunnen';
+      // Zoek header-rij (eerste rij met herkenbare kolomnamen)
+      const norm = s => String(s).toLowerCase().trim()
+        .replace(/[^a-z0-9]/g, '');
+
+      const headers = rawArr[0].map(norm);
+
+      // Vind kolomindices flexibel
+      const idx = {
+        niveau:    headers.findIndex(h => h.includes('niveau')),
+        lesbrief:  headers.findIndex(h => h.includes('lesbrief')),
+        hoofdstuk: headers.findIndex(h => h.includes('hoofdstuk')),
+        // Kennen/Kunnen indicator kolom (bijv. "Kennen/Kunnen" of "Type")
+        type:      headers.findIndex(h => h.includes('kennenkun') || h.includes('type') || (h.includes('kennen') && h.includes('kun'))),
+        // Lesdoel kolom (bijv. "Lesdoel", "Omschrijving", "Doel")
+        lesdoel:   headers.findIndex(h => h.includes('lesdoel') || h.includes('omschrijving') || (h.includes('doel') && !h.includes('leerdoel'))),
+        // Aparte Kennen-kolom
+        kennen:    headers.findIndex(h => h === 'kennen'),
+        // Aparte Kunnen-kolom
+        kunnen:    headers.findIndex(h => h === 'kunnen'),
+      };
+
+      const rijen = [];
+
+      // ── Formaat A: aparte Kennen + Kunnen kolommen ───────
+      // (structuur uit leerdoelen_v2.xlsx: Niveau | Lesbrief | Hoofdstuk | Kennen | Kunnen)
+      if (idx.kennen >= 0 || idx.kunnen >= 0) {
+        for (let i = 1; i < rawArr.length; i++) {
+          const r = rawArr[i];
+          const niveau    = String(r[idx.niveau]    ?? '').trim();
+          const lesbrief  = String(r[idx.lesbrief]  ?? '').trim();
+          const hoofdstuk = String(r[idx.hoofdstuk] ?? '').trim();
+          if (idx.kennen >= 0) {
+            const tekst = String(r[idx.kennen] ?? '').trim();
+            if (tekst) rijen.push({ niveau, lesbrief, hoofdstuk, type: 'kennen', lesdoel: tekst });
+          }
+          if (idx.kunnen >= 0) {
+            const tekst = String(r[idx.kunnen] ?? '').trim();
+            if (tekst) rijen.push({ niveau, lesbrief, hoofdstuk, type: 'kunnen', lesdoel: tekst });
+          }
         }
-        type = type.toLowerCase().includes('kunnen') ? 'kunnen' : 'kennen';
-        return {
-          niveau:    String(r.niveau || '').trim(),
-          lesbrief:  String(r.lesbrief || '').trim(),
-          hoofdstuk: String(r.hoofdstuk || '').trim(),
-          type,
-          lesdoel:   String(r.lesdoel || '').trim(),
-        };
-      }).filter(r => r.lesdoel);
+      }
+      // ── Formaat B: één Lesdoel kolom + Type/Kennen/Kunnen indicator ──
+      else if (idx.lesdoel >= 0) {
+        for (let i = 1; i < rawArr.length; i++) {
+          const r = rawArr[i];
+          const lesdoel = String(r[idx.lesdoel] ?? '').trim();
+          if (!lesdoel) continue;
+          const rawType = String(r[idx.type] ?? '').toLowerCase();
+          const type    = rawType.includes('kun') ? 'kunnen' : 'kennen';
+          rijen.push({
+            niveau:    String(r[idx.niveau]    ?? '').trim(),
+            lesbrief:  String(r[idx.lesbrief]  ?? '').trim(),
+            hoofdstuk: String(r[idx.hoofdstuk] ?? '').trim(),
+            type,
+            lesdoel,
+          });
+        }
+      }
+      else {
+        // Toon debug-info zodat we kunnen zien welke kolommen gevonden zijn
+        showToast('Kolommen herkend: ' + rawArr[0].join(', ') + '. Verwacht: Niveau, Lesbrief, Hoofdstuk, Kennen, Kunnen (of Lesdoel + Type).');
+        return;
+      }
 
-      if (!rijen.length) { showToast('Geen geldige leerdoelen gevonden in het bestand.'); return; }
+      if (!rijen.length) {
+        showToast('Geen geldige leerdoelen gevonden. Controleer of de kolommen Kennen en/of Kunnen gevuld zijn.');
+        return;
+      }
+
       ldImportBuffer = rijen;
       document.getElementById('ld-import-info').textContent =
-        rijen.length + ' leerdoelen gevonden. Klik op Importeren om te bevestigen.';
+        rijen.length + ' leerdoelen gevonden in ' +
+        rijen.filter(r => r.type === 'kennen').length + ' kennen + ' +
+        rijen.filter(r => r.type === 'kunnen').length + ' kunnen. Klik op Importeren om te bevestigen.';
       document.getElementById('ld-import-error').style.display = 'none';
       document.getElementById('ld-import-preview').style.display = 'block';
-    } catch(err) { showToast('Fout bij lezen bestand: ' + err.message); }
+
+    } catch(err) {
+      showToast('Fout bij lezen bestand: ' + err.message);
+      console.error('Leerdoelen import fout:', err);
+    }
   };
   reader.readAsArrayBuffer(file);
 }
