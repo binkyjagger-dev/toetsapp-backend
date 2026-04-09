@@ -4095,6 +4095,75 @@ function laadLessenView() {
   loadTeacherLessons();
 }
 
+async function loadTeacherLessons() {
+  const grid  = document.getElementById('teacher-lessons-grid');
+  const noMsg = document.getElementById('no-lessons-teacher');
+  if (!grid) return;
+
+  grid.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);grid-column:1/-1;"><span class="spinner" style="border-top-color:var(--navy);display:inline-block;margin-right:8px;"></span>Lessen laden...</div>';
+
+  try {
+    const lessen = await apiFetch('/api/lessons');
+    lessonsCache = lessen || [];
+  } catch(e) {
+    grid.innerHTML = '<p style="color:var(--red);font-size:0.85rem;grid-column:1/-1;">Laden mislukt: ' + e.message + '</p>';
+    return;
+  }
+
+  if (!lessonsCache.length) {
+    grid.innerHTML = '';
+    if (noMsg) noMsg.style.display = 'block';
+    return;
+  }
+  if (noMsg) noMsg.style.display = 'none';
+
+  grid.innerHTML = lessonsCache.map(l => {
+    const datum = l.created_at
+      ? new Date(l.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+      : '';
+    const code = getLesCode(l.id);
+    const klasNaam = l.class_id
+      ? (classesCache.find(c => c.id === l.class_id)?.name || '')
+      : '';
+    // Leerdoelen tellen uit content
+    const kennenCount = (l.content?.match(/^- .+/gm) || []).length;
+    const safeId = l.id.replace(/'/g, "\\'");
+    const safeName = (l.name || '').replace(/'/g, "\\'");
+
+    return `<div class="lesson-card" style="display:flex;flex-direction:column;gap:0;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div class="lesson-card-name" style="font-size:15px;font-weight:700;color:var(--navy);">${l.name}</div>
+        <span style="font-family:'DM Mono',monospace;font-size:0.68rem;background:var(--navy-glow);
+          color:var(--navy);padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0;">
+          code: ${code}
+        </span>
+      </div>
+      ${datum ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:3px;">📅 ${datum}</div>` : ''}
+      ${klasNaam ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:2px;">🏫 ${klasNaam}</div>` : ''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
+        ${kennenCount ? `<span class="ld-badge ld-badge-niveau">${kennenCount} leerdoelen</span>` : ''}
+        <span class="ld-badge" style="background:rgba(46,107,62,0.1);color:#1a6a40;">
+          💬 Socratisch
+        </span>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
+        <button class="btn btn-ghost-navy btn-sm" style="flex:1;font-size:11px;"
+          onclick="openLesResultatenVanLessen('${safeId}')">Resultaten</button>
+        <button class="btn btn-ghost-navy btn-sm" style="font-size:11px;color:var(--red);border-color:rgba(192,57,43,0.25);"
+          onclick="deleteLesson('${safeId}','${safeName}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openLesResultatenVanLessen(lesId) {
+  navNaar('socratisch');
+  setTimeout(() => {
+    const sel = document.getElementById('teacher-lesson-select');
+    if (sel) { sel.value = lesId; loadStudentResults(); }
+  }, 150);
+}
+
 // ── Socratisch-view filterhulp ─────────────────────────────
 function vulClassFilter() {
   const sel = document.getElementById('teacher-class-filter');
