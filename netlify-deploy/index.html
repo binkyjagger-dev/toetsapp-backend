@@ -5908,9 +5908,25 @@ async function nkStartInlezen() {
     form.append('toets', nkToetsFile);
     form.append('antwoordmodel', nkModelFile);
 
-    const data = await fetch('/api/nakijk/inlezen', { method: 'POST', body: form })
-      .then(r => r.json());
+    // Multipart upload: gebruik API_BASE en stuur auth header mee.
+    // Content-Type NIET zelf zetten — browser voegt automatisch boundary toe.
+    const uploadHeaders = {};
+    if (leraarToken) uploadHeaders['Authorization'] = 'Bearer ' + leraarToken;
 
+    const uploadRes = await fetch(API_BASE + '/api/nakijk/inlezen', {
+      method: 'POST',
+      headers: uploadHeaders,
+      body: form,
+    });
+
+    if (!uploadRes.ok) {
+      let errMsg;
+      try { const j = await uploadRes.json(); errMsg = j.error || uploadRes.statusText; }
+      catch(e) { errMsg = 'Server fout: ' + uploadRes.status; }
+      throw new Error(errMsg);
+    }
+
+    const data = await uploadRes.json();
     if (!data.success) throw new Error(data.error || 'Onbekende fout');
 
     nkSessieId = data.sessie_id;
