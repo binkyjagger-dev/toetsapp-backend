@@ -188,10 +188,23 @@ Geef je beoordeling als JSON:
 // ════════════════════════════════════════════════════════════
 // ROUTE 1 — POST /api/nakijk/inlezen
 // ════════════════════════════════════════════════════════════
+// Optioneel: haal leraar_id uit Authorization header
+function optionalAuth(req) {
+  try {
+    const auth = req.headers['authorization'];
+    if (auth && auth.startsWith('Bearer ')) {
+      const jwt = require('jsonwebtoken');
+      const secret = process.env.JWT_SECRET || 'stanislascollege_mol_secret_2025';
+      req.leraar = jwt.verify(auth.slice(7), secret);
+    }
+  } catch(e) { /* geen token of verlopen — dat is ok */ }
+}
+
 router.post('/inlezen', upload.fields([
   { name: 'toets', maxCount: 1 },
   { name: 'antwoordmodel', maxCount: 1 },
 ]), async (req, res) => {
+  optionalAuth(req);
   try {
     const { supabase, anthropic } = clients(req);
     const toetsFile = req.files?.toets?.[0];
@@ -220,6 +233,7 @@ router.post('/inlezen', upload.fields([
     });
 
     const inlezing = parseClaudeJSON(claudeResp.content[0].text);
+    const leraarId = req.leraar?.id || null;
 
     const { data: sessie, error: sessieErr } = await supabase
       .from('nakijk_sessies')
@@ -232,6 +246,7 @@ router.post('/inlezen', upload.fields([
         aantal_vragen:  inlezing.vragen.length,
         max_score:      inlezing.max_score_totaal,
         status:         'ingelezen',
+        leraar_id:      leraarId,
       })
       .select().single();
 
@@ -476,5 +491,56 @@ router.get('/sessie/:id', async (req, res) => {
   }
 });
 
+
+
+// ════════════════════════════════════════════════════════════
+// ROUTE 8 — GET /api/nakijk/overzicht
+// Alle sessies van de ingelogde leraar, meest recent eerst
+// ════════════════════════════════════════════════════════════
+router.get('/overzicht', async (req, res) => {
+  try {
+    optionalAuth(req);
+    const { supabase } = clients(req);
+    const leraarId = req.leraar?.id || null;
+
+    let query = supabase
+      .from('nakijk_sessies')
+      .select(`
+        id, naam_op_toets, toets_naam, niveau, vak,
+        totaal_score, max_score, cijfer_suggestie, cijfer_definitief,
+        status, created_at, leerling_id
+      `)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    // Filter op leraar als die bekend is
+    if (leraarId) query = query.eq('leraar_id', leraarId);
+
+    const { data: sessies, error } = await query;
+    if (error) throw error;
+
+    // Voeg leerlingnaam toe per sessie
+    const sessiesMetNaam = await Promise.all((sessies || []).map(async s => {
+      if (s.leerling_id) {
+        const { data: ll } = await supabase
+          .from('leerlingen_import')
+          .select('roepnaam, tussenvoegsel, achternaam')
+          .eq('id', s.leerling_id)
+          .single();
+        if (ll) {
+          s.leerling_naam = [ll.roepnaam, ll.tussenvoegsel, ll.achternaam]
+            .filter(Boolean).join(' ');
+        }
+      }
+      return s;
+    }));
+
+    res.json({ success: true, sessies: sessiesMetNaam });
+
+  } catch (err) {
+    console.error('[nakijk/overzicht]', err);
+    res.status(500).json({ error: 'Fout bij laden overzicht', details: err.message });
+  }
+});
 
 module.exports = router;

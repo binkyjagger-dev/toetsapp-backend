@@ -1655,6 +1655,10 @@ function annuleerLdImport() {
     <button class="nav-item" id="nav-toetsagent" onclick="window.open('toets-agent-ui.html','_blank')">
       <span class="nav-icon">✦</span> Toetsagent
     </button>
+    <div class="nav-section-label">Toetsing</div>
+    <button class="nav-item" id="nav-nakijken" onclick="navNaar('nakijken')">
+      <span class="nav-icon">✍️</span> Nakijk-assistent
+    </button>
   </div>
   <div class="sidebar-bottom">
     <button class="nav-item" onclick="logoutTeacher()" style="color:rgba(255,255,255,0.4);font-size:12px;">
@@ -1878,6 +1882,207 @@ function annuleerLdImport() {
       <div class="empty-state"><div class="empty-icon">📋</div><p>Selecteer een les om de resultaten te zien.</p></div>
     </div>
   </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       NAKIJK-ASSISTENT VIEW
+  ════════════════════════════════════════════════════════ -->
+  <div id="view-nakijken" style="display:none;" class="main-content">
+
+    <!-- STEPPER -->
+    <div style="display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--border);
+      border-radius:10px;padding:4px;margin-bottom:1.5rem;overflow-x:auto;">
+      <button class="nk-step active" id="nkstep-0" onclick="nkGoStep(0)" style="flex:1;display:flex;align-items:center;
+        justify-content:center;gap:7px;padding:9px 8px;border:none;border-radius:7px;cursor:pointer;
+        font-family:inherit;font-size:13px;font-weight:600;background:var(--navy);color:#fff;transition:all .15s;">
+        <span id="nknum-0" style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.2);
+          display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">1</span>
+        Upload
+      </button>
+      <span style="color:var(--border2);padding:0 4px;">›</span>
+      <button class="nk-step" id="nkstep-1" onclick="nkGoStep(1)" style="flex:1;display:flex;align-items:center;
+        justify-content:center;gap:7px;padding:9px 8px;border:none;border-radius:7px;cursor:pointer;
+        font-family:inherit;font-size:13px;font-weight:600;background:transparent;color:var(--muted);transition:all .15s;">
+        <span id="nknum-1" style="width:22px;height:22px;border-radius:50%;background:var(--surface2);
+          display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">2</span>
+        Leerling
+      </button>
+      <span style="color:var(--border2);padding:0 4px;">›</span>
+      <button class="nk-step" id="nkstep-2" onclick="nkGoStep(2)" style="flex:1;display:flex;align-items:center;
+        justify-content:center;gap:7px;padding:9px 8px;border:none;border-radius:7px;cursor:pointer;
+        font-family:inherit;font-size:13px;font-weight:600;background:transparent;color:var(--muted);transition:all .15s;">
+        <span id="nknum-2" style="width:22px;height:22px;border-radius:50%;background:var(--surface2);
+          display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">3</span>
+        Verificatie
+      </button>
+      <span style="color:var(--border2);padding:0 4px;">›</span>
+      <button class="nk-step" id="nkstep-3" onclick="nkGoStep(3)" style="flex:1;display:flex;align-items:center;
+        justify-content:center;gap:7px;padding:9px 8px;border:none;border-radius:7px;cursor:pointer;
+        font-family:inherit;font-size:13px;font-weight:600;background:transparent;color:var(--muted);transition:all .15s;">
+        <span id="nknum-3" style="width:22px;height:22px;border-radius:50%;background:var(--surface2);
+          display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">4</span>
+        Beoordeling
+      </button>
+    </div>
+
+    <!-- STAP 0: UPLOAD -->
+    <div id="nkpanel-0">
+
+      <!-- Eerdere beoordelingen -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-weight:700;font-size:14px;color:var(--navy);">📂 Eerdere beoordelingen</div>
+          <button onclick="nkLaadOverzicht()" style="background:none;border:none;cursor:pointer;
+            font-size:12px;color:var(--muted);font-family:inherit;">↻ Vernieuwen</button>
+        </div>
+        <div id="nk-overzicht">
+          <div style="color:var(--muted);font-size:13px;text-align:center;padding:1rem;">Laden…</div>
+        </div>
+      </div>
+
+      <div style="font-weight:700;font-size:14px;color:var(--navy);margin-bottom:12px;">➕ Nieuwe toets nakijken</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <!-- Toets foto -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;">
+          <div style="font-weight:700;font-size:14px;color:var(--navy);margin-bottom:4px;">📷 Handgeschreven toets</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Foto of scan van de ingevulde toets van de leerling</div>
+          <div id="nk-dz-toets" onclick="document.getElementById('nk-input-toets').click()"
+            style="border:2px dashed var(--border2);border-radius:10px;padding:32px 16px;text-align:center;
+              cursor:pointer;background:var(--bg);transition:all .2s;"
+            onmouseover="this.style.borderColor='var(--gold)';this.style.background='#fffbea'"
+            onmouseout="if(!nkToetsFile){this.style.borderColor='var(--border2)';this.style.background='var(--bg)'}">
+            <div id="nk-dz-toets-icon" style="font-size:28px;margin-bottom:8px;">📷</div>
+            <div id="nk-dz-toets-label" style="font-size:13px;font-weight:600;color:var(--text2);">Sleep foto hiernaartoe of klik</div>
+            <div style="font-size:11px;color:var(--muted2);margin-top:3px;">JPG, PNG of PDF · max 10MB</div>
+          </div>
+          <input type="file" id="nk-input-toets" accept="image/*,.pdf" style="display:none"
+            onchange="nkHandleToets(this)">
+        </div>
+        <!-- Antwoordmodel -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;">
+          <div style="font-weight:700;font-size:14px;color:var(--navy);margin-bottom:4px;">📋 Antwoordmodel</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">PDF of Word · Claude detecteert vraagstructuur automatisch</div>
+          <div id="nk-dz-model" onclick="document.getElementById('nk-input-model').click()"
+            style="border:2px dashed var(--border2);border-radius:10px;padding:32px 16px;text-align:center;
+              cursor:pointer;background:var(--bg);transition:all .2s;"
+            onmouseover="this.style.borderColor='var(--gold)';this.style.background='#fffbea'"
+            onmouseout="if(!nkModelFile){this.style.borderColor='var(--border2)';this.style.background='var(--bg)'}">
+            <div id="nk-dz-model-icon" style="font-size:28px;margin-bottom:8px;">📋</div>
+            <div id="nk-dz-model-label" style="font-size:13px;font-weight:600;color:var(--text2);">Sleep bestand hiernaartoe of klik</div>
+            <div style="font-size:11px;color:var(--muted2);margin-top:3px;">PDF of DOCX · max 10MB</div>
+          </div>
+          <input type="file" id="nk-input-model" accept=".pdf,.doc,.docx" style="display:none"
+            onchange="nkHandleModel(this)">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:1.25rem;">
+        <button id="nk-btn-inlezen" class="btn btn-primary" onclick="nkStartInlezen()" disabled>
+          🤖 Inlezen met Claude →
+        </button>
+      </div>
+    </div>
+
+    <!-- STAP 1: LEERLING KOPPELEN -->
+    <div id="nkpanel-1" style="display:none;max-width:580px;">
+      <div id="nk-detected-banner" style="background:linear-gradient(135deg,var(--navy),var(--navy-light));
+        color:#fff;border-radius:12px;padding:18px 22px;margin-bottom:1.25rem;display:flex;align-items:center;gap:16px;">
+        <div style="font-size:28px;">👤</div>
+        <div>
+          <div style="font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Naam uitgelezen van toets</div>
+          <div id="nk-detected-naam" style="font-size:20px;font-weight:900;">—</div>
+          <div id="nk-detected-locatie" style="font-size:12px;opacity:.65;margin-top:2px;"></div>
+        </div>
+        <div id="nk-naam-zekerheid" style="margin-left:auto;"></div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+        Gevonden in jouw leerlingenlijst
+      </div>
+      <div id="nk-kandidaten-lijst"></div>
+
+      <div style="margin-top:1rem;display:flex;gap:8px;align-items:center;background:var(--surface);
+        border:1.5px solid var(--border);border-radius:9px;padding:9px 13px;">
+        <span style="color:var(--muted);">🔍</span>
+        <input type="text" id="nk-zoek-input" placeholder="Zoek handmatig op naam of stamnummer…"
+          style="border:none;outline:none;font-size:13px;color:var(--text);flex:1;font-family:inherit;background:transparent;"
+          oninput="nkZoekLeerling(this.value)">
+      </div>
+      <div id="nk-zoek-resultaten" style="margin-top:6px;"></div>
+
+      <div style="display:flex;justify-content:space-between;gap:10px;margin-top:1.25rem;">
+        <button class="btn btn-ghost-navy btn-sm" onclick="nkGoStep(0)">← Terug</button>
+        <button id="nk-btn-koppelen" class="btn btn-primary" onclick="nkBevestigKoppeling()" disabled>
+          Koppelen &amp; doorgaan →
+        </button>
+      </div>
+    </div>
+
+    <!-- STAP 2: VERIFICATIE -->
+    <div id="nkpanel-2" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+        <div id="nk-verif-stats" style="display:flex;gap:12px;font-size:12px;"></div>
+        <div id="nk-leerling-pill" style="display:flex;align-items:center;gap:7px;background:var(--navy-glow);
+          border:1.5px solid var(--navy-light);border-radius:99px;padding:5px 14px 5px 8px;font-size:12px;font-weight:700;color:var(--navy);">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start;">
+        <!-- Foto links -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:sticky;top:80px;">
+          <div style="background:var(--navy);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;
+            display:flex;align-items:center;justify-content:space-between;">
+            <span>📷 Origineel handschrift</span>
+            <div style="display:flex;gap:5px;">
+              <button onclick="nkZoom(1.15)" style="background:rgba(255,255,255,.15);border:none;color:#fff;
+                border-radius:5px;padding:3px 9px;cursor:pointer;font-size:12px;font-weight:700;">+</button>
+              <button onclick="nkZoom(0.87)" style="background:rgba(255,255,255,.15);border:none;color:#fff;
+                border-radius:5px;padding:3px 9px;cursor:pointer;font-size:12px;font-weight:700;">−</button>
+              <button onclick="nkZoomReset()" style="background:rgba(255,255,255,.15);border:none;color:#fff;
+                border-radius:5px;padding:3px 9px;cursor:pointer;font-size:11px;">⊡</button>
+              <span id="nk-zoom-label" style="font-size:11px;opacity:.6;align-self:center;margin-left:4px;">100%</span>
+            </div>
+          </div>
+          <div style="background:#1e293b;min-height:280px;overflow:auto;max-height:500px;">
+            <img id="nk-preview-img" src="" alt="Toets foto"
+              style="display:block;transform-origin:top left;transition:transform .2s;max-width:100%;">
+          </div>
+        </div>
+        <!-- Antwoorden rechts -->
+        <div id="nk-antwoorden-lijst" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;gap:10px;margin-top:1.25rem;">
+        <button class="btn btn-ghost-navy btn-sm" onclick="nkGoStep(1)">← Leerling</button>
+        <button class="btn btn-primary" onclick="nkStartNakijken()">✅ Goedgekeurd — nakijken →</button>
+      </div>
+    </div>
+
+    <!-- STAP 3: BEOORDELING -->
+    <div id="nkpanel-3" style="display:none;">
+      <!-- Scorekaart -->
+      <div id="nk-scorekaart" style="background:linear-gradient(135deg,var(--navy),var(--navy-light));
+        border-radius:14px;padding:22px 26px;color:#fff;display:flex;align-items:center;
+        gap:24px;flex-wrap:wrap;margin-bottom:1.25rem;">
+      </div>
+      <!-- Vraagkaarten -->
+      <div id="nk-beoordeling-lijst" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <!-- Acties -->
+      <div style="display:flex;gap:10px;margin-top:1.25rem;flex-wrap:wrap;">
+        <button class="btn btn-primary" style="flex:2;" onclick="nkAfronden()">✅ Beoordeling opslaan</button>
+        <button class="btn btn-ghost-navy" style="flex:1;" onclick="nkReset()">🔄 Nieuwe toets</button>
+      </div>
+    </div>
+
+    <!-- LOADING OVERLAY (binnen view) -->
+    <div id="nk-loading" style="display:none;position:fixed;inset:0;background:rgba(27,58,107,.65);
+      z-index:999;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:32px 36px;text-align:center;max-width:340px;width:90%;">
+        <div style="font-size:32px;margin-bottom:12px;">⏳</div>
+        <div id="nk-load-titel" style="font-weight:800;font-size:16px;color:var(--navy);margin-bottom:6px;"></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Even geduld...</div>
+        <div id="nk-load-stappen" style="display:flex;flex-direction:column;gap:6px;text-align:left;"></div>
+      </div>
+    </div>
+
+  </div><!-- /view-nakijken -->
 
 </div><!-- /main-area -->
 </div><!-- /screen-teacher -->
@@ -3461,7 +3666,7 @@ function navNaar(view) {
   huidigView = view;
   huidigKlasId = null;
   // Sidebar active
-  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch'].forEach(v => {
+  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken'].forEach(v => {
     const el = document.getElementById('nav-' + v);
     if (el) el.classList.toggle('active', v === view);
   });
@@ -3469,7 +3674,7 @@ function navNaar(view) {
   const klasHeader = document.getElementById('klas-header');
   if (klasHeader) klasHeader.style.display = 'none';
   // Views
-  const views = ['klassen','klas-detail','leerlingen','leerdoelen','lessen','analyse','socratisch'];
+  const views = ['klassen','klas-detail','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken'];
   views.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.style.display = 'none';
@@ -3488,10 +3693,11 @@ function navNaar(view) {
   if (view === 'lessen')    laadLessenView();
   if (view === 'analyse')   { vulAnalyseFilters(); runAnalyse(); }
   if (view === 'socratisch') { vulClassFilter(); loadLessonsForTeacher(); }
+  if (view === 'nakijken')   { initNakijkView(); }
 }
 
 function navLabel(view) {
-  const map = { klassen:'Mijn klassen', leerlingen:'Leerlingen', lessen:'Lessen', analyse:'Analyse', socratisch:'Socratische toets' };
+  const map = { klassen:'Mijn klassen', leerlingen:'Leerlingen', lessen:'Lessen', analyse:'Analyse', socratisch:'Socratische toets', nakijken:'Nakijk-assistent' };
   return map[view] || view;
 }
 
@@ -5491,6 +5697,569 @@ async function verwijderPeriode() {
     alert('Lesperiode ' + periode + ' verwijderd.');
     await laadLeerlingenTab();
   } catch(e) { alert('Verwijderen mislukt: ' + e.message); }
+}
+
+// ════════════════════════════════════════════════════════════
+// NAKIJK-ASSISTENT — frontend logica
+// ════════════════════════════════════════════════════════════
+
+let nkStap = 0;
+let nkToetsFile = null;
+let nkModelFile = null;
+let nkSessieId  = null;
+let nkInlezing  = null;
+let nkKandidaten = [];
+let nkGekozenLeerlingId = null;
+let nkZoomLvl = 1;
+let nkToetsObjectURL = null;
+
+async function initNakijkView() {
+  // Laad leerlingen in cache voor zoekfunctie
+  try {
+    if (!window._alleLeerlingenCache || window._alleLeerlingenCache.length === 0) {
+      window._alleLeerlingenCache = await apiFetch('/api/leerlingen');
+    }
+  } catch(e) { console.warn('Leerlingen cache niet geladen:', e.message); }
+  // Laad eerdere beoordelingen
+  nkLaadOverzicht();
+}
+
+async function nkLaadOverzicht() {
+  const wrap = document.getElementById('nk-overzicht');
+  if (!wrap) return;
+  try {
+    const data = await apiFetch('/api/nakijk/overzicht');
+    const sessies = data.sessies || [];
+    if (!sessies.length) {
+      wrap.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:1.5rem;">Nog geen beoordelingen opgeslagen.</div>';
+      return;
+    }
+    wrap.innerHTML = sessies.map(s => {
+      const statusColor = s.status === 'afgerond' ? 'var(--green)' : 'var(--gold)';
+      const statusLabel = s.status === 'afgerond' ? '✅ Afgerond' : '⏳ Concept';
+      const naam = s.leerling_naam || s.naam_op_toets || 'Onbekend';
+      const cijfer = s.cijfer_definitief ?? s.cijfer_suggestie;
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;
+          background:var(--surface);border:1px solid var(--border);border-radius:9px;margin-bottom:7px;cursor:pointer;
+          transition:border-color .15s;" onmouseover="this.style.borderColor='var(--navy)'"
+          onmouseout="this.style.borderColor='var(--border)'" onclick="nkHerstelSessie('${s.id}')">
+        <div style="width:36px;height:36px;border-radius:8px;background:var(--navy-glow);
+          color:var(--navy);font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✍️</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${naam}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px;">${s.toets_naam||'—'} · ${s.niveau||''} · ${new Date(s.created_at).toLocaleDateString('nl-NL')}</div>
+        </div>
+        ${cijfer ? `<div style="font-size:18px;font-weight:900;color:var(--navy);">${Number(cijfer).toFixed(1)}</div>` : ''}
+        <span style="font-size:11px;font-weight:700;color:${statusColor};">${statusLabel}</span>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    wrap.innerHTML = '<div style="color:var(--muted);font-size:12px;">Overzicht kon niet worden geladen.</div>';
+  }
+}
+
+async function nkHerstelSessie(sessieId) {
+  // Laad een eerdere sessie terug in de view
+  try {
+    const data = await apiFetch('/api/nakijk/sessie/' + sessieId);
+    const s = data.sessie;
+    nkSessieId = s.id;
+    nkInlezing = {
+      leerling_naam: s.naam_op_toets,
+      naam_zekerheid: s.naam_zekerheid,
+      naam_locatie: '',
+      toets_naam: s.toets_naam,
+      vak: s.vak,
+      niveau: s.niveau,
+      max_score_totaal: s.max_score,
+      vragen: (s.antwoorden || []).sort((a,b) => a.vraagnummer - b.vraagnummer).map(a => ({
+        vraagnummer: a.vraagnummer,
+        vraag_tekst: a.vraag_tekst,
+        max_score: a.max_score,
+        modelantwoord: a.modelantwoord,
+        puntenverdeling: a.puntenverdeling,
+        antwoord_rauw: a.antwoord_finaal,
+        leeszekerheid: a.leeszekerheid || 'zeker',
+        lees_opmerking: a.lees_opmerking,
+      })),
+    };
+    // Zoek leerling op
+    if (s.leerling_id) {
+      nkGekozenLeerlingId = s.leerling_id;
+      const leerling = (window._alleLeerlingenCache || []).find(l => l.id === s.leerling_id);
+      if (leerling) nkKandidaten = [{ ...leerling, match_score: 100, is_best_match: true }];
+    }
+    // Als al nagekeken: ga naar beoordeling
+    if (['nagekeken','afgerond'].includes(s.status) && s.antwoorden?.some(a => a.score !== null)) {
+      const beoordeling = {
+        vragen: (s.antwoorden||[]).map(a => ({
+          vraagnummer: a.vraagnummer, score: a.score, max_score: a.max_score,
+          behaalde_punten: a.behaalde_punten, feedback: a.feedback, argumentatie: a.argumentatie,
+        })),
+        totaal_score: s.totaal_score,
+        max_score: s.max_score,
+        cijfer_suggestie: s.cijfer_suggestie,
+        algemene_opmerking: s.algemene_opmerking,
+      };
+      nkStap = 3;
+      nkGoStep(3);
+      nkBouwBeoordeling(beoordeling);
+    } else {
+      nkStap = 2;
+      nkGoStep(2);
+      nkBouwVerificatieStap();
+    }
+  } catch(e) { showToast('Sessie laden mislukt: ' + e.message); }
+}
+
+// ── Stap navigatie ────────────────────────────────────────
+function nkGoStep(n) {
+  if (n > nkStap) return; // Kan niet vooruit springen
+  nkStap = n;
+  [0,1,2,3].forEach(i => {
+    document.getElementById('nkpanel-' + i).style.display = i === n ? 'block' : 'none';
+    const stepEl = document.getElementById('nkstep-' + i);
+    const numEl  = document.getElementById('nknum-' + i);
+    if (i === n) {
+      stepEl.style.background = 'var(--navy)'; stepEl.style.color = '#fff';
+      numEl.style.background = 'rgba(255,255,255,.2)';
+    } else if (i < n) {
+      stepEl.style.background = 'rgba(42,138,90,.15)'; stepEl.style.color = 'var(--green)';
+      numEl.style.background = 'var(--green)'; numEl.style.color = '#fff';
+      numEl.textContent = '✓';
+    } else {
+      stepEl.style.background = 'transparent'; stepEl.style.color = 'var(--muted)';
+      numEl.style.background = 'var(--surface2)'; numEl.style.color = 'var(--muted)';
+      numEl.textContent = i + 1;
+    }
+  });
+}
+
+// ── Loading overlay ───────────────────────────────────────
+function nkLoading(aan, titel, stappen = []) {
+  const ov = document.getElementById('nk-loading');
+  ov.style.display = aan ? 'flex' : 'none';
+  if (!aan) return;
+  document.getElementById('nk-load-titel').textContent = titel;
+  const container = document.getElementById('nk-load-stappen');
+  container.innerHTML = stappen.map((s,i) =>
+    `<div id="nkls${i}" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);
+      padding:7px 10px;background:var(--bg);border-radius:6px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0;"></span>${s}
+    </div>`
+  ).join('');
+  let i = 0;
+  function adv() {
+    if (i > 0) {
+      const p = document.getElementById('nkls'+(i-1));
+      if (p) { p.style.background='#f0fdf4'; p.style.color='var(--green)';
+        p.querySelector('span').style.background='var(--green)'; }
+    }
+    if (i < stappen.length) {
+      const c = document.getElementById('nkls'+i);
+      if (c) { c.style.background='var(--navy-glow)'; c.style.color='var(--navy)'; c.style.fontWeight='600';
+        c.querySelector('span').style.background='var(--navy)'; }
+      i++; setTimeout(adv, 650);
+    }
+  }
+  adv();
+}
+
+// ── Upload handlers ───────────────────────────────────────
+function nkHandleToets(input) {
+  const file = input.files[0];
+  if (!file) return;
+  nkToetsFile = file;
+  if (nkToetsObjectURL) URL.revokeObjectURL(nkToetsObjectURL);
+  nkToetsObjectURL = URL.createObjectURL(file);
+  const dz = document.getElementById('nk-dz-toets');
+  dz.style.borderColor = 'var(--green)'; dz.style.background = '#f0fdf4';
+  document.getElementById('nk-dz-toets-icon').textContent = '✅';
+  document.getElementById('nk-dz-toets-label').textContent = file.name;
+  nkCheckReady();
+}
+
+function nkHandleModel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  nkModelFile = file;
+  const dz = document.getElementById('nk-dz-model');
+  dz.style.borderColor = 'var(--green)'; dz.style.background = '#f0fdf4';
+  document.getElementById('nk-dz-model-icon').textContent = '✅';
+  document.getElementById('nk-dz-model-label').textContent = file.name;
+  nkCheckReady();
+}
+
+function nkCheckReady() {
+  document.getElementById('nk-btn-inlezen').disabled = !(nkToetsFile && nkModelFile);
+}
+
+// ── STAP 1: Inlezen ───────────────────────────────────────
+async function nkStartInlezen() {
+  nkLoading(true, 'Toets wordt ingelezen…', [
+    'Antwoordmodel verwerken',
+    'Vraagstructuur detecteren',
+    'Leerlingnaam uitlezen',
+    'Handschrift per vraag uitlezen',
+    'Leeszekerheid bepalen',
+  ]);
+  try {
+    const form = new FormData();
+    form.append('toets', nkToetsFile);
+    form.append('antwoordmodel', nkModelFile);
+
+    const data = await fetch('/api/nakijk/inlezen', { method: 'POST', body: form })
+      .then(r => r.json());
+
+    if (!data.success) throw new Error(data.error || 'Onbekende fout');
+
+    nkSessieId = data.sessie_id;
+    nkInlezing = data.inlezing;
+
+    // Zoek kandidaten op naam
+    const koppelData = await apiFetch('/api/nakijk/koppelen', {
+      method: 'POST',
+      body: JSON.stringify({ naam: data.inlezing.leerling_naam }),
+    });
+    nkKandidaten = koppelData.kandidaten || [];
+
+    nkLoading(false);
+    nkBouwLeerlingStap();
+    nkStap = 1;
+    nkGoStep(1);
+
+  } catch(e) {
+    nkLoading(false);
+    showToast('Fout bij inlezen: ' + e.message);
+  }
+}
+
+// ── STAP 2: Leerling koppelen ─────────────────────────────
+function nkBouwLeerlingStap() {
+  const inlezing = nkInlezing;
+  document.getElementById('nk-detected-naam').textContent = inlezing.leerling_naam || '(niet gevonden)';
+  document.getElementById('nk-detected-locatie').textContent = inlezing.naam_locatie || '';
+
+  const zekerheid = inlezing.naam_zekerheid;
+  const zekerheidEl = document.getElementById('nk-naam-zekerheid');
+  const map = { hoog: ['✅ Hoge zekerheid','#dcfce7','#16a34a'], middel: ['⚠️ Middel','#fef9c3','#ca8a04'], laag: ['❓ Laag','#fee2e2','#dc2626'] };
+  const [label, bg, color] = map[zekerheid] || map['laag'];
+  zekerheidEl.innerHTML = `<span style="background:${bg};color:${color};border-radius:99px;
+    padding:3px 11px;font-size:11px;font-weight:700;">${label}</span>`;
+
+  nkRenderKandidaten(nkKandidaten, 'nk-kandidaten-lijst');
+}
+
+function nkRenderKandidaten(kandidaten, containerId) {
+  const wrap = document.getElementById(containerId);
+  if (!kandidaten.length) {
+    wrap.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:12px;text-align:center;">Geen matches gevonden</div>';
+    return;
+  }
+  wrap.innerHTML = kandidaten.map((k, i) => {
+    const naam = [k.roepnaam, k.tussenvoegsel, k.achternaam].filter(Boolean).join(' ');
+    const scoreColor = k.match_score >= 90 ? '#16a34a' : k.match_score >= 70 ? '#2563eb' : '#64748b';
+    const scoreBg    = k.match_score >= 90 ? '#dcfce7' : k.match_score >= 70 ? '#dbeafe' : '#f1f5f9';
+    const selected   = nkGekozenLeerlingId === k.id;
+    return `<div id="nk-kandidaat-${k.id}"
+      onclick="nkSelectLeerling('${k.id}')"
+      style="display:flex;align-items:center;gap:12px;padding:12px 14px;
+        background:${selected ? 'var(--navy-glow)' : 'var(--surface)'};
+        border:2px solid ${selected ? 'var(--navy)' : i===0 ? '#86efac' : 'var(--border)'};
+        border-radius:10px;margin-bottom:7px;cursor:pointer;transition:all .15s;">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--navy-glow);
+        color:var(--navy);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        ${(k.roepnaam||'?')[0]}${(k.achternaam||'?')[0]}
+      </div>
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:14px;color:var(--text);">${naam}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px;">${k.klas||''} · Nr. ${k.stamnummer||'—'}</div>
+        ${i===0 ? '<div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px;">⭐ Beste overeenkomst</div>' : ''}
+      </div>
+      <span style="background:${scoreBg};color:${scoreColor};border-radius:99px;
+        padding:2px 9px;font-size:11px;font-weight:700;">${k.match_score}%</span>
+      <div style="width:20px;height:20px;border-radius:50%;border:2px solid ${selected ? 'var(--navy)' : 'var(--border2)'};
+        background:${selected ? 'var(--navy)' : 'transparent'};color:#fff;
+        display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;">
+        ${selected ? '✓' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function nkSelectLeerling(id) {
+  nkGekozenLeerlingId = id;
+  nkRenderKandidaten(nkKandidaten, 'nk-kandidaten-lijst');
+  // Ook in zoekresultaten updaten
+  const zoekResultaten = document.querySelectorAll('[id^="nk-kandidaat-"]');
+  document.getElementById('nk-btn-koppelen').disabled = false;
+}
+
+function nkZoekLeerling(val) {
+  const wrap = document.getElementById('nk-zoek-resultaten');
+  if (val.length < 2) { wrap.innerHTML = ''; return; }
+  const gevonden = (window._alleLeerlingenCache || []).filter(l => {
+    const naam = [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ').toLowerCase();
+    return naam.includes(val.toLowerCase()) || (l.stamnummer||'').includes(val);
+  }).slice(0, 5).map(l => ({ ...l, match_score: 0, match_label: 'handmatig', is_best_match: false }));
+  nkRenderKandidaten(gevonden, 'nk-zoek-resultaten');
+}
+
+async function nkBevestigKoppeling() {
+  if (!nkGekozenLeerlingId) return;
+  try {
+    await apiFetch('/api/nakijk/koppelen', {
+      method: 'POST',
+      body: JSON.stringify({ sessie_id: nkSessieId, leerling_id: nkGekozenLeerlingId }),
+    });
+    nkStap = 2;
+    nkBouwVerificatieStap();
+    nkGoStep(2);
+  } catch(e) { showToast('Koppelen mislukt: ' + e.message); }
+}
+
+// ── STAP 3: Verificatie ───────────────────────────────────
+function nkBouwVerificatieStap() {
+  // Preview foto
+  const img = document.getElementById('nk-preview-img');
+  if (nkToetsObjectURL) { img.src = nkToetsObjectURL; img.style.display = 'block'; }
+
+  // Leerling pill
+  const leerling = nkKandidaten.find(k => k.id === nkGekozenLeerlingId) || {};
+  const naam = [leerling.roepnaam, leerling.tussenvoegsel, leerling.achternaam].filter(Boolean).join(' ');
+  document.getElementById('nk-leerling-pill').innerHTML =
+    `<div style="width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;
+      font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;">
+      ${(leerling.roepnaam||'?')[0]}${(leerling.achternaam||'?')[0]}
+    </div>
+    ${naam} — ${leerling.klas||''}
+    <button onclick="nkGoStep(1)" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;margin-left:4px;">✎</button>`;
+
+  // Stats
+  const vragen = nkInlezing.vragen || [];
+  const zeker = vragen.filter(v => v.leeszekerheid === 'zeker').length;
+  const twijfel = vragen.filter(v => v.leeszekerheid === 'twijfelachtig').length;
+  const onleesbaar = vragen.filter(v => v.leeszekerheid === 'onleesbaar').length;
+  document.getElementById('nk-verif-stats').innerHTML = [
+    zeker ? `<span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:#16a34a;"></span><strong>${zeker}</strong> zeker</span>` : '',
+    twijfel ? `<span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:#f59e0b;"></span><strong>${twijfel}</strong> twijfelachtig</span>` : '',
+    onleesbaar ? `<span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:#ef4444;"></span><strong>${onleesbaar}</strong> onleesbaar</span>` : '',
+  ].filter(Boolean).join('');
+
+  // Antwoorden
+  const lijst = document.getElementById('nk-antwoorden-lijst');
+  lijst.innerHTML = vragen.map(v => {
+    const borderColor = v.leeszekerheid === 'zeker' ? '#86efac' : v.leeszekerheid === 'twijfelachtig' ? '#fbbf24' : '#f87171';
+    const confLabel = v.leeszekerheid === 'zeker' ? '✅ Zeker' : v.leeszekerheid === 'twijfelachtig' ? '⚠️ Twijfelachtig' : '❌ Onleesbaar';
+    const confColor = v.leeszekerheid === 'zeker' ? '#16a34a' : v.leeszekerheid === 'twijfelachtig' ? '#92400e' : '#dc2626';
+    const confBg = v.leeszekerheid === 'zeker' ? '#dcfce7' : v.leeszekerheid === 'twijfelachtig' ? '#fef3c7' : '#fee2e2';
+    return `<div style="background:var(--surface);border-radius:10px;border:1.5px solid ${borderColor};overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:9px;padding:10px 14px;background:var(--bg);">
+        <div style="width:28px;height:28px;border-radius:7px;background:var(--navy);color:#fff;
+          font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${v.vraagnummer}</div>
+        <div style="flex:1;font-weight:600;font-size:13px;color:var(--navy);">
+          Vraag ${v.vraagnummer} <span style="font-weight:400;color:var(--muted);">— max. ${v.max_score} pt</span>
+        </div>
+        <span style="background:${confBg};color:${confColor};border-radius:99px;
+          padding:2px 9px;font-size:11px;font-weight:700;">${confLabel}</span>
+      </div>
+      <div style="padding:10px 14px;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">
+          Uitgelezen antwoord — klik om aan te passen
+        </div>
+        <textarea id="nk-antwoord-${v.vraagnummer}"
+          style="width:100%;border:1.5px solid var(--border);border-radius:7px;padding:8px 10px;
+            font-size:12px;color:var(--text);line-height:1.6;resize:vertical;outline:none;
+            font-family:inherit;background:${v.leeszekerheid === 'onleesbaar' ? '#fff5f5' : 'var(--bg)'};
+            border-color:${v.leeszekerheid === 'onleesbaar' ? '#f87171' : 'var(--border)'};min-height:50px;"
+          placeholder="${v.leeszekerheid === 'onleesbaar' ? 'Typ hier het antwoord van de leerling…' : ''}"
+        >${v.antwoord_rauw || ''}</textarea>
+        ${v.lees_opmerking ? `<div style="font-size:11px;color:#f59e0b;margin-top:5px;">⚠️ ${v.lees_opmerking}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function nkZoom(factor) {
+  nkZoomLvl = Math.min(Math.max(nkZoomLvl * factor, 0.4), 4);
+  const img = document.getElementById('nk-preview-img');
+  img.style.transform = `scale(${nkZoomLvl})`;
+  img.style.transformOrigin = 'top left';
+  document.getElementById('nk-zoom-label').textContent = Math.round(nkZoomLvl*100) + '%';
+}
+
+function nkZoomReset() {
+  nkZoomLvl = 1;
+  document.getElementById('nk-preview-img').style.transform = 'scale(1)';
+  document.getElementById('nk-zoom-label').textContent = '100%';
+}
+
+// ── STAP 4: Nakijken ─────────────────────────────────────
+async function nkStartNakijken() {
+  // Verzamel geverifieerde antwoorden
+  const vragen = nkInlezing.vragen || [];
+  const antwoorden = vragen.map(v => ({
+    vraagnummer:    v.vraagnummer,
+    antwoord_finaal: (document.getElementById('nk-antwoord-' + v.vraagnummer) || {}).value || v.antwoord_rauw || '',
+  }));
+
+  nkLoading(true, 'Toets wordt nagekeken…', [
+    'Antwoorden verwerken',
+    'Vergelijken met modelantwoord',
+    'Punten per onderdeel toekennen',
+    'Feedback formuleren',
+    'Cijferberekening',
+  ]);
+
+  try {
+    await apiFetch('/api/nakijk/verificeren', {
+      method: 'POST', body: JSON.stringify({ sessie_id: nkSessieId, antwoorden }),
+    });
+    const data = await apiFetch('/api/nakijk/nakijken', {
+      method: 'POST', body: JSON.stringify({ sessie_id: nkSessieId }),
+    });
+    nkLoading(false);
+    nkBouwBeoordeling(data.beoordeling);
+    nkStap = 3;
+    nkGoStep(3);
+  } catch(e) {
+    nkLoading(false);
+    showToast('Fout bij nakijken: ' + e.message);
+  }
+}
+
+function nkBouwBeoordeling(b) {
+  const leerling = nkKandidaten.find(k => k.id === nkGekozenLeerlingId) || {};
+  const naam = [leerling.roepnaam, leerling.tussenvoegsel, leerling.achternaam].filter(Boolean).join(' ');
+  const pct = b.totaal_score / b.max_score;
+  const barColor = pct >= .8 ? '#16a34a' : pct >= .55 ? '#ca8a04' : '#dc2626';
+
+  document.getElementById('nk-scorekaart').innerHTML = `
+    <div>
+      <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Totaalscore</div>
+      <div style="font-size:42px;font-weight:900;line-height:1;">${b.totaal_score}<span style="font-size:20px;opacity:.5;">/${b.max_score}</span></div>
+      <div style="background:rgba(255,255,255,.15);border-radius:99px;height:7px;overflow:hidden;margin-top:8px;width:140px;">
+        <div style="width:${Math.round(pct*100)}%;background:var(--gold);height:100%;border-radius:99px;"></div>
+      </div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,.2);height:60px;align-self:center;flex-shrink:0;"></div>
+    <div>
+      <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Suggestie cijfer</div>
+      <div style="font-size:42px;font-weight:900;color:var(--gold);line-height:1;">${b.cijfer_suggestie?.toFixed(1)}</div>
+      <div style="font-size:11px;opacity:.5;margin-top:3px;">Ter verificatie</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,.2);height:60px;align-self:center;flex-shrink:0;"></div>
+    <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);border-radius:9px;padding:10px 14px;">
+      <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);
+        font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        ${(leerling.roepnaam||'?')[0]}${(leerling.achternaam||'?')[0]}
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:14px;">${naam}</div>
+        <div style="font-size:11px;opacity:.6;">${leerling.klas||''} · ${nkInlezing?.toets_naam||''}</div>
+      </div>
+    </div>
+    ${b.algemene_opmerking ? `
+    <div style="flex:1;min-width:180px;background:rgba(255,255,255,.08);border-radius:9px;padding:11px 14px;font-size:12px;line-height:1.55;">
+      <div style="font-size:10px;opacity:.65;margin-bottom:3px;">📝 Opmerking</div>
+      ${b.algemene_opmerking}
+    </div>` : ''}
+  `;
+
+  const lijst = document.getElementById('nk-beoordeling-lijst');
+  lijst.innerHTML = (b.vragen || []).map(v => {
+    const pct = v.score / v.max_score;
+    const ptsBg = pct >= .8 ? '#dcfce7' : pct >= .5 ? '#fef9c3' : '#fee2e2';
+    const ptsColor = pct >= .8 ? '#16a34a' : pct >= .5 ? '#ca8a04' : '#dc2626';
+    const barW = Math.round(pct * 100);
+    const barCol = pct >= .8 ? '#16a34a' : pct >= .5 ? '#ca8a04' : '#dc2626';
+    const behaald = (v.behaalde_punten || []).map(p =>
+      `<span style="background:${p.behaald?'#dcfce7':'#fee2e2'};color:${p.behaald?'#16a34a':'#dc2626'};
+        border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700;margin:2px;">${p.behaald?'✓':'✗'} ${p.onderdeel}</span>`
+    ).join('');
+
+    return `<div style="background:var(--surface);border-radius:12px;border:1.5px solid var(--border);overflow:hidden;">
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'"
+        style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:var(--bg);">
+        <div style="width:32px;height:32px;border-radius:7px;background:var(--navy);color:#fff;
+          font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${v.vraagnummer}</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:var(--text2);">Vraag ${v.vraagnummer}</div>
+          <div style="background:var(--border);border-radius:99px;height:5px;overflow:hidden;margin-top:5px;width:120px;">
+            <div style="width:${barW}%;background:${barCol};height:100%;border-radius:99px;"></div>
+          </div>
+        </div>
+        <span style="font-size:11px;color:var(--muted);margin-right:4px;">max. ${v.max_score} pt</span>
+        <span style="background:${ptsBg};color:${ptsColor};border-radius:6px;padding:2px 10px;font-weight:700;font-size:13px;">${v.score}/${v.max_score}</span>
+        <span style="color:var(--muted2);font-size:12px;">▼</span>
+      </div>
+      <div style="display:none;padding:14px 16px;border-top:1px solid var(--border);">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Modelantwoord</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;">${nkInlezing?.vragen?.find(q=>q.vraagnummer===v.vraagnummer)?.modelantwoord||'—'}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Antwoord leerling</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;">${(document.getElementById('nk-antwoord-'+v.vraagnummer)||{}).value || '—'}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Beoordeling</div>
+            <div style="margin-bottom:6px;line-height:1.8;">${behaald || '—'}</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.55;">${v.argumentatie||''}</div>
+            <div style="margin-top:8px;font-size:12px;color:var(--text2);line-height:1.55;padding:8px;background:var(--bg);border-radius:6px;">${v.feedback||''}</div>
+            <button onclick="nkWijzigScore(${v.vraagnummer})"
+              style="margin-top:8px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);
+                border-radius:6px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+              ✏️ Score wijzigen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function nkWijzigScore(vraagnummer) {
+  const nieuweScore = prompt(`Nieuwe score voor vraag ${vraagnummer}:`);
+  if (nieuweScore === null || isNaN(Number(nieuweScore))) return;
+  apiFetch('/api/nakijk/score', {
+    method: 'PATCH',
+    body: JSON.stringify({ sessie_id: nkSessieId, vraagnummer, score: Number(nieuweScore) }),
+  }).then(() => showToast('Score aangepast')).catch(e => showToast('Fout: ' + e.message));
+}
+
+async function nkAfronden() {
+  const cijfer = prompt('Definitief cijfer (laat leeg om suggestie te gebruiken):');
+  const definitief = cijfer ? Number(cijfer) : null;
+  try {
+    await apiFetch('/api/nakijk/afronden', {
+      method: 'POST',
+      body: JSON.stringify({ sessie_id: nkSessieId, cijfer_definitief: definitief }),
+    });
+    showToast('✅ Beoordeling opgeslagen');
+    setTimeout(() => nkReset(), 1500);
+  } catch(e) { showToast('Fout: ' + e.message); }
+}
+
+function nkReset() {
+  nkStap = 0; nkToetsFile = null; nkModelFile = null;
+  nkSessieId = null; nkInlezing = null; nkKandidaten = [];
+  nkGekozenLeerlingId = null; nkZoomLvl = 1;
+  if (nkToetsObjectURL) { URL.revokeObjectURL(nkToetsObjectURL); nkToetsObjectURL = null; }
+  // Reset upload zones
+  ['toets','model'].forEach(t => {
+    const dz = document.getElementById('nk-dz-' + t);
+    if (dz) { dz.style.borderColor=''; dz.style.background=''; }
+    const icon = document.getElementById('nk-dz-' + t + '-icon');
+    const label = document.getElementById('nk-dz-' + t + '-label');
+    if (t === 'toets') { if(icon) icon.textContent='📷'; if(label) label.textContent='Sleep foto hiernaartoe of klik'; }
+    else { if(icon) icon.textContent='📋'; if(label) label.textContent='Sleep bestand hiernaartoe of klik'; }
+    const input = document.getElementById('nk-input-' + t);
+    if (input) input.value = '';
+  });
+  document.getElementById('nk-btn-inlezen').disabled = true;
+  nkGoStep(0);
 }
 
 </script>
