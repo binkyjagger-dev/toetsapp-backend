@@ -18,6 +18,12 @@ const anthropic  = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase   = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 const JWT_SECRET = process.env.JWT_SECRET || 'stanislascollege_mol_secret_2025';
 
+// ── Nakijk-assistent ──────────────────────────────────────────
+app.locals.supabase  = supabase;
+app.locals.anthropic = anthropic;
+const nakijkRouter = require('./routes/nakijk.routes');
+app.use('/api/nakijk', nakijkRouter);
+
 // ── JWT middleware ────────────────────────────────────────────
 function verifyToken(req, res, next) {
   const auth = req.headers['authorization'];
