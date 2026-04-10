@@ -1,150 +1,260 @@
 // ============================================================
 // NAKIJK-ASSISTENT · Express routes
-// Voeg toe aan je bestaande server.js:
+// Aangepast voor de bestaande Stanislascollege Toetsapp:
+//   - Gebruikt leerlingen_import (niet een aparte leerlingen tabel)
+//   - Hergebruikt supabase + anthropic uit app.locals (server.js)
+//   - Geen aparte env vars nodig
 //
-//   const nakijkRouter = require('./routes/nakijk');
+// Voeg toe aan server.js VÓÓR app.listen:
+//   app.locals.supabase  = supabase;   // al aangemaakt in server.js
+//   app.locals.anthropic = anthropic;  // al aangemaakt in server.js
+//   const nakijkRouter = require('./routes/nakijk.routes');
 //   app.use('/api/nakijk', nakijkRouter);
-//
-// Vereiste packages (naast wat je al hebt):
-//   npm install multer pdf-parse mammoth
 // ============================================================
 
 const express  = require('express');
 const multer   = require('multer');
 const pdfParse = require('pdf-parse');
 const mammoth  = require('mammoth');
-const Anthropic = require('@anthropic-ai/sdk');
-const { createClient } = require('@supabase/supabase-js');
 
-const { INLEZEN_SYSTEM, INLEZEN_USER, NAKIJKEN_SYSTEM, NAKIJKEN_USER } = require('../prompts/nakijk.prompts');
-const { matchLeerling } = require('./leerling.match');
+const router = express.Router();
 
-const router  = express.Router();
-const upload  = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
-const claude  = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+});
 
-// ── Hulpfunctie: parse JSON uit Claude-respons (strips markdown fences) ──
+// ── Haal gedeelde clients op ─────────────────────────────────
+function clients(req) {
+  return {
+    supabase:  req.app.locals.supabase,
+    anthropic: req.app.locals.anthropic,
+  };
+}
+
+// ── Hulpfuncties ─────────────────────────────────────────────
+
 function parseClaudeJSON(text) {
   const clean = text.replace(/```json|```/g, '').trim();
-  return JSON.parse(clean);
+  try { return JSON.parse(clean); }
+  catch {
+    const m = clean.match(/\{[\s\S]*\}/);
+    if (m) return JSON.parse(m[0]);
+    throw new Error('Geen geldige JSON in Claude-respons');
+  }
 }
 
-// ── Hulpfunctie: extraheer tekst uit PDF of DOCX buffer ──
 async function extractTekst(buffer, mimetype) {
   if (mimetype === 'application/pdf') {
-    const data = await pdfParse(buffer);
-    return data.text;
+    return (await pdfParse(buffer)).text;
   }
-  if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-    const result = await mammoth.extractRawText({ buffer });
-    return result.value;
+  if (mimetype.includes('wordprocessingml') || mimetype.includes('msword')) {
+    return (await mammoth.extractRawText({ buffer })).value;
   }
-  // Fallback: probeer als plain text
   return buffer.toString('utf8');
 }
+
+// Levenshtein fuzzy match
+function lev(a, b) {
+  const dp = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0)
+  );
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[a.length][b.length];
+}
+
+function norm(s) {
+  return (s || '').toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+// leerlingen_import heeft: roepnaam, tussenvoegsel, achternaam
+function volNaam(l) {
+  return [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ');
+}
+
+function matchScore(uitgelezen, l) {
+  const a = norm(uitgelezen), b = norm(volNaam(l));
+  if (a === b) return 100;
+  const mx = Math.max(a.length, b.length);
+  return mx ? Math.round((1 - lev(a, b) / mx) * 95) : 0;
+}
+
+function zoekKandidaten(naam, leerlingen, topN = 5) {
+  return leerlingen
+    .map(l => ({ ...l, match_score: matchScore(naam, l) }))
+    .filter(l => l.match_score >= 30)
+    .sort((a, b) => b.match_score - a.match_score)
+    .slice(0, topN)
+    .map((l, i) => ({
+      ...l,
+      match_label: l.match_score >= 95 ? 'exact'
+                 : l.match_score >= 75 ? 'hoog'
+                 : l.match_score >= 50 ? 'middel' : 'laag',
+      is_best_match: i === 0,
+    }));
+}
+
+// ── Claude prompts ────────────────────────────────────────────
+
+const INLEZEN_SYSTEM = `
+Je bent een nauwkeurige assistent die handgeschreven toetsen uitleest voor een Nederlandse economiedocent.
+
+Je taak:
+1. Analyseer het antwoordmodel: detecteer vraagnummers, puntenverdeling en verwachte antwoorden.
+2. Lees de handgeschreven toets uit: koppel elk antwoord aan het juiste vraagnummer.
+3. Zoek de naam van de leerling (voorblad, bovenhoek, of invulvak).
+
+Regels:
+- Twijfel je over een woord? Geef je beste gok en zet leeszekerheid op "twijfelachtig".
+- Volledig onleesbaar: antwoord_rauw: null, leeszekerheid: "onleesbaar".
+- Reageer UITSLUITEND met geldig JSON. Geen uitleg, geen markdown, geen backticks.
+`.trim();
+
+const inlezenUser = (modelTekst) => `
+Analyseer het antwoordmodel en lees de bijgevoegde toetsfoto uit.
+
+ANTWOORDMODEL:
+${modelTekst}
+
+Geef je antwoord als JSON:
+{
+  "leerling_naam": "Voornaam Achternaam",
+  "naam_zekerheid": "hoog",
+  "naam_locatie": "rechtsboven pagina 1",
+  "toets_naam": "naam van de toets",
+  "vak": "Economie",
+  "niveau": "VWO 5",
+  "max_score_totaal": 20,
+  "vragen": [
+    {
+      "vraagnummer": 1,
+      "vraag_tekst": "De vraagstelling",
+      "max_score": 3,
+      "modelantwoord": "Het verwachte antwoord",
+      "puntenverdeling": [
+        { "onderdeel": "Omschrijving punt", "punten": 1 }
+      ],
+      "antwoord_rauw": "Wat de leerling schreef",
+      "leeszekerheid": "zeker",
+      "lees_opmerking": null
+    }
+  ]
+}
+`.trim();
+
+const NAKIJKEN_SYSTEM = `
+Je bent een ervaren economiedocent die toetsen nauwkeurig nakijkt.
+
+Regels:
+- Beoordeel inhoudelijk — antwoord hoeft niet letterlijk overeen te komen als de strekking klopt.
+- Ken per onderdeel van de puntenverdeling punten toe. Gedeeltelijke score is mogelijk.
+- Leeg of null antwoord → score 0.
+- Cijfer: (score/max)*9 + 1, afgerond op 1 decimaal.
+- Reageer UITSLUITEND met geldig JSON. Geen markdown, geen backticks.
+`.trim();
+
+const nakijkenUser = (vragen) => `
+Kijk de volgende antwoorden na.
+
+${JSON.stringify(vragen, null, 2)}
+
+Geef je beoordeling als JSON:
+{
+  "vragen": [
+    {
+      "vraagnummer": 1,
+      "score": 2,
+      "max_score": 3,
+      "behaalde_punten": [
+        { "onderdeel": "Omschrijving", "behaald": true }
+      ],
+      "feedback": "Korte feedback aan leerling (1-2 zinnen)",
+      "argumentatie": "Toelichting voor docent"
+    }
+  ],
+  "totaal_score": 13,
+  "max_score": 20,
+  "cijfer_suggestie": 6.8,
+  "algemene_opmerking": "Algemeen beeld van de prestatie"
+}
+`.trim();
 
 
 // ════════════════════════════════════════════════════════════
 // ROUTE 1 — POST /api/nakijk/inlezen
-// Upload toets-foto + antwoordmodel → Claude leest uit
-//
-// Body (multipart/form-data):
-//   toets       : image file (JPG/PNG/PDF)
-//   antwoordmodel: PDF or DOCX
 // ════════════════════════════════════════════════════════════
 router.post('/inlezen', upload.fields([
   { name: 'toets', maxCount: 1 },
   { name: 'antwoordmodel', maxCount: 1 },
 ]), async (req, res) => {
   try {
+    const { supabase, anthropic } = clients(req);
     const toetsFile = req.files?.toets?.[0];
     const modelFile = req.files?.antwoordmodel?.[0];
 
-    if (!toetsFile || !modelFile) {
-      return res.status(400).json({ error: 'Beide bestanden zijn verplicht (toets + antwoordmodel)' });
-    }
+    if (!toetsFile || !modelFile)
+      return res.status(400).json({ error: 'Beide bestanden verplicht' });
 
-    // 1. Extraheer tekst uit antwoordmodel
-    const antwoordmodelTekst = await extractTekst(modelFile.buffer, modelFile.mimetype);
+    const modelTekst = await extractTekst(modelFile.buffer, modelFile.mimetype);
 
-    // 2. Bepaal image mediatype voor de toets
-    const imageMediaType = toetsFile.mimetype.startsWith('image/')
-      ? toetsFile.mimetype
-      : 'image/jpeg';
+    const beeldTypes = ['image/jpeg','image/png','image/gif','image/webp'];
+    const imgType = beeldTypes.includes(toetsFile.mimetype)
+      ? toetsFile.mimetype : 'image/jpeg';
 
-    // 3. Stuur naar Claude: afbeelding + antwoordmodel tekst
-    const claudeResponse = await claude.messages.create({
+    const claudeResp = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4000,
       system: INLEZEN_SYSTEM,
       messages: [{
         role: 'user',
         content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: imageMediaType,
-              data: toetsFile.buffer.toString('base64'),
-            },
-          },
-          {
-            type: 'text',
-            text: INLEZEN_USER(antwoordmodelTekst),
-          },
+          { type: 'image', source: { type: 'base64', media_type: imgType, data: toetsFile.buffer.toString('base64') } },
+          { type: 'text', text: inlezenUser(modelTekst) },
         ],
       }],
     });
 
-    // 4. Parse het JSON-antwoord van Claude
-    const inlezing = parseClaudeJSON(claudeResponse.content[0].text);
+    const inlezing = parseClaudeJSON(claudeResp.content[0].text);
 
-    // 5. Sla een concept-sessie op in Supabase
-    const { data: sessie, error: sessieError } = await supabase
+    const { data: sessie, error: sessieErr } = await supabase
       .from('nakijk_sessies')
       .insert({
-        naam_op_toets:    inlezing.leerling_naam,
-        naam_zekerheid:   inlezing.naam_zekerheid,
-        toets_naam:       inlezing.toets_naam,
-        vak:              inlezing.vak,
-        niveau:           inlezing.niveau,
-        aantal_vragen:    inlezing.vragen.length,
-        max_score:        inlezing.max_score_totaal,
-        status:           'ingelezen',
+        naam_op_toets:  inlezing.leerling_naam,
+        naam_zekerheid: inlezing.naam_zekerheid,
+        toets_naam:     inlezing.toets_naam,
+        vak:            inlezing.vak,
+        niveau:         inlezing.niveau,
+        aantal_vragen:  inlezing.vragen.length,
+        max_score:      inlezing.max_score_totaal,
+        status:         'ingelezen',
       })
-      .select()
-      .single();
+      .select().single();
 
-    if (sessieError) throw sessieError;
+    if (sessieErr) throw sessieErr;
 
-    // 6. Sla antwoorden op
-    const antwoordenRows = inlezing.vragen.map(v => ({
-      sessie_id:       sessie.id,
-      vraagnummer:     v.vraagnummer,
-      vraag_tekst:     v.vraag_tekst,
-      max_score:       v.max_score,
-      modelantwoord:   v.modelantwoord,
-      puntenverdeling: v.puntenverdeling,
-      antwoord_rauw:   v.antwoord_rauw,
-      antwoord_finaal: v.antwoord_rauw,  // initieel gelijk aan rauw
-      leeszekerheid:   v.leeszekerheid,
-      lees_opmerking:  v.lees_opmerking || null,
-    }));
-
-    const { error: antwoordenError } = await supabase
+    const { error: antErr } = await supabase
       .from('nakijk_antwoorden')
-      .insert(antwoordenRows);
+      .insert(inlezing.vragen.map(v => ({
+        sessie_id:       sessie.id,
+        vraagnummer:     v.vraagnummer,
+        vraag_tekst:     v.vraag_tekst,
+        max_score:       v.max_score,
+        modelantwoord:   v.modelantwoord,
+        puntenverdeling: v.puntenverdeling,
+        antwoord_rauw:   v.antwoord_rauw,
+        antwoord_finaal: v.antwoord_rauw,
+        leeszekerheid:   v.leeszekerheid,
+        lees_opmerking:  v.lees_opmerking || null,
+      })));
 
-    if (antwoordenError) throw antwoordenError;
+    if (antErr) throw antErr;
 
-    // 7. Stuur terug
-    res.json({
-      success: true,
-      sessie_id: sessie.id,
-      inlezing,
-      tokens_gebruikt: claudeResponse.usage,
-    });
+    res.json({ success: true, sessie_id: sessie.id, inlezing });
 
   } catch (err) {
     console.error('[nakijk/inlezen]', err);
@@ -155,43 +265,34 @@ router.post('/inlezen', upload.fields([
 
 // ════════════════════════════════════════════════════════════
 // ROUTE 2 — POST /api/nakijk/koppelen
-// Match uitgelezen naam aan leerlingenlijst
-//
-// Body (JSON):
-//   sessie_id    : UUID van de nakijk-sessie
-//   leerling_id  : UUID van de gekozen leerling (door docent bevestigd)
-//
-// Of alleen zoeken:
-//   naam         : string om te matchen (zonder leerling_id)
-//   klas         : optioneel filter
 // ════════════════════════════════════════════════════════════
 router.post('/koppelen', async (req, res) => {
   try {
-    const { sessie_id, leerling_id, naam, klas } = req.body;
+    const { supabase } = clients(req);
+    const { sessie_id, leerling_id, naam, lesperiode } = req.body;
 
-    // ── A: Zoek kandidaten (naam matching) ──
+    // A: Zoek kandidaten
     if (naam && !leerling_id) {
-      let query = supabase.from('leerlingen').select('*');
-      if (klas) query = query.eq('klas', klas);
-      const { data: leerlingen, error } = await query;
+      let q = supabase
+        .from('leerlingen_import')
+        .select('id, stamnummer, roepnaam, tussenvoegsel, achternaam, klas, leerjaar, leerniveau');
+      if (lesperiode) q = q.eq('lesperiode', lesperiode);
+      const { data: leerlingen, error } = await q;
       if (error) throw error;
-
-      const kandidaten = matchLeerling(naam, leerlingen);
-      return res.json({ success: true, kandidaten });
+      return res.json({ success: true, kandidaten: zoekKandidaten(naam, leerlingen || []) });
     }
 
-    // ── B: Bevestig koppeling ──
+    // B: Bevestig koppeling
     if (sessie_id && leerling_id) {
       const { error } = await supabase
         .from('nakijk_sessies')
         .update({ leerling_id, status: 'gekoppeld' })
         .eq('id', sessie_id);
-
       if (error) throw error;
-      return res.json({ success: true, sessie_id, leerling_id });
+      return res.json({ success: true });
     }
 
-    res.status(400).json({ error: 'Geef naam (voor zoeken) of sessie_id + leerling_id (voor koppelen)' });
+    res.status(400).json({ error: 'Geef naam of sessie_id + leerling_id' });
 
   } catch (err) {
     console.error('[nakijk/koppelen]', err);
@@ -202,32 +303,23 @@ router.post('/koppelen', async (req, res) => {
 
 // ════════════════════════════════════════════════════════════
 // ROUTE 3 — POST /api/nakijk/verificeren
-// Sla geverifieerde antwoorden op (door docent gecorrigeerd)
-//
-// Body (JSON):
-//   sessie_id   : UUID
-//   antwoorden  : [{ vraagnummer, antwoord_finaal }]
 // ════════════════════════════════════════════════════════════
 router.post('/verificeren', async (req, res) => {
   try {
+    const { supabase } = clients(req);
     const { sessie_id, antwoorden } = req.body;
+    if (!sessie_id || !antwoorden?.length)
+      return res.status(400).json({ error: 'sessie_id en antwoorden verplicht' });
 
-    if (!sessie_id || !antwoorden?.length) {
-      return res.status(400).json({ error: 'sessie_id en antwoorden zijn verplicht' });
-    }
-
-    // Update elk antwoord
     for (const a of antwoorden) {
       const { error } = await supabase
         .from('nakijk_antwoorden')
         .update({ antwoord_finaal: a.antwoord_finaal })
         .eq('sessie_id', sessie_id)
         .eq('vraagnummer', a.vraagnummer);
-
       if (error) throw error;
     }
 
-    // Update sessie status
     await supabase
       .from('nakijk_sessies')
       .update({ status: 'geverifieerd' })
@@ -244,82 +336,50 @@ router.post('/verificeren', async (req, res) => {
 
 // ════════════════════════════════════════════════════════════
 // ROUTE 4 — POST /api/nakijk/nakijken
-// Kijk de geverifieerde antwoorden na met Claude
-//
-// Body (JSON):
-//   sessie_id : UUID
 // ════════════════════════════════════════════════════════════
 router.post('/nakijken', async (req, res) => {
   try {
+    const { supabase, anthropic } = clients(req);
     const { sessie_id } = req.body;
+    if (!sessie_id) return res.status(400).json({ error: 'sessie_id verplicht' });
 
-    if (!sessie_id) {
-      return res.status(400).json({ error: 'sessie_id is verplicht' });
-    }
-
-    // Haal antwoorden op uit Supabase
-    const { data: antwoorden, error: fetchError } = await supabase
+    const { data: antwoorden, error: fetchErr } = await supabase
       .from('nakijk_antwoorden')
       .select('*')
       .eq('sessie_id', sessie_id)
       .order('vraagnummer');
+    if (fetchErr) throw fetchErr;
 
-    if (fetchError) throw fetchError;
-
-    // Bouw de input voor Claude op
-    const vragenVoorClaude = antwoorden.map(a => ({
-      vraagnummer:     a.vraagnummer,
-      vraag_tekst:     a.vraag_tekst,
-      max_score:       a.max_score,
-      modelantwoord:   a.modelantwoord,
-      puntenverdeling: a.puntenverdeling,
-      antwoord_leerling: a.antwoord_finaal,
-    }));
-
-    // Roep Claude aan
-    const claudeResponse = await claude.messages.create({
+    const claudeResp = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4000,
       system: NAKIJKEN_SYSTEM,
-      messages: [{
-        role: 'user',
-        content: NAKIJKEN_USER(vragenVoorClaude),
-      }],
+      messages: [{ role: 'user', content: nakijkenUser(antwoorden.map(a => ({
+        vraagnummer:       a.vraagnummer,
+        vraag_tekst:       a.vraag_tekst,
+        max_score:         a.max_score,
+        modelantwoord:     a.modelantwoord,
+        puntenverdeling:   a.puntenverdeling,
+        antwoord_leerling: a.antwoord_finaal,
+      }))) }],
     });
 
-    const beoordeling = parseClaudeJSON(claudeResponse.content[0].text);
+    const beoordeling = parseClaudeJSON(claudeResp.content[0].text);
 
-    // Sla scores en feedback op per vraag
     for (const vb of beoordeling.vragen) {
       await supabase
         .from('nakijk_antwoorden')
-        .update({
-          score:           vb.score,
-          behaalde_punten: vb.behaalde_punten,
-          feedback:        vb.feedback,
-          argumentatie:    vb.argumentatie,
-        })
+        .update({ score: vb.score, behaalde_punten: vb.behaalde_punten, feedback: vb.feedback, argumentatie: vb.argumentatie })
         .eq('sessie_id', sessie_id)
         .eq('vraagnummer', vb.vraagnummer);
     }
 
-    // Update sessie met totalen
     await supabase
       .from('nakijk_sessies')
-      .update({
-        totaal_score:      beoordeling.totaal_score,
-        cijfer_suggestie:  beoordeling.cijfer_suggestie,
-        algemene_opmerking: beoordeling.algemene_opmerking,
-        status:            'nagekeken',
-      })
+      .update({ totaal_score: beoordeling.totaal_score, cijfer_suggestie: beoordeling.cijfer_suggestie, algemene_opmerking: beoordeling.algemene_opmerking, status: 'nagekeken' })
       .eq('id', sessie_id);
 
-    res.json({
-      success: true,
-      sessie_id,
-      beoordeling,
-      tokens_gebruikt: claudeResponse.usage,
-    });
+    res.json({ success: true, sessie_id, beoordeling });
 
   } catch (err) {
     console.error('[nakijk/nakijken]', err);
@@ -330,34 +390,23 @@ router.post('/nakijken', async (req, res) => {
 
 // ════════════════════════════════════════════════════════════
 // ROUTE 5 — PATCH /api/nakijk/score
-// Docent past een score handmatig aan
-//
-// Body (JSON):
-//   sessie_id    : UUID
-//   vraagnummer  : integer
-//   score        : number
-//   notitie      : string (optioneel)
 // ════════════════════════════════════════════════════════════
 router.patch('/score', async (req, res) => {
   try {
+    const { supabase } = clients(req);
     const { sessie_id, vraagnummer, score, notitie } = req.body;
 
-    const { error } = await supabase
+    await supabase
       .from('nakijk_antwoorden')
       .update({ score, score_aangepast: true, argumentatie: notitie || null })
       .eq('sessie_id', sessie_id)
       .eq('vraagnummer', vraagnummer);
 
-    if (error) throw error;
-
-    // Herbereken totaal
     const { data: alle } = await supabase
-      .from('nakijk_antwoorden')
-      .select('score, max_score')
-      .eq('sessie_id', sessie_id);
+      .from('nakijk_antwoorden').select('score, max_score').eq('sessie_id', sessie_id);
 
-    const totaal = alle.reduce((s, a) => s + (a.score || 0), 0);
-    const max    = alle.reduce((s, a) => s + (a.max_score || 0), 0);
+    const totaal = alle.reduce((s, a) => s + (Number(a.score) || 0), 0);
+    const max    = alle.reduce((s, a) => s + (Number(a.max_score) || 0), 0);
     const cijfer = Math.round(((totaal / max) * 9 + 1) * 10) / 10;
 
     await supabase
@@ -376,23 +425,18 @@ router.patch('/score', async (req, res) => {
 
 // ════════════════════════════════════════════════════════════
 // ROUTE 6 — POST /api/nakijk/afronden
-// Docent keurt de beoordeling goed en slaat het definitief op
 // ════════════════════════════════════════════════════════════
 router.post('/afronden', async (req, res) => {
   try {
+    const { supabase } = clients(req);
     const { sessie_id, cijfer_definitief, docent_notitie } = req.body;
 
-    const { error } = await supabase
+    await supabase
       .from('nakijk_sessies')
-      .update({
-        cijfer_definitief,
-        docent_notitie,
-        status: 'afgerond',
-      })
+      .update({ cijfer_definitief, docent_notitie, status: 'afgerond' })
       .eq('id', sessie_id);
 
-    if (error) throw error;
-    res.json({ success: true, sessie_id });
+    res.json({ success: true });
 
   } catch (err) {
     console.error('[nakijk/afronden]', err);
@@ -403,21 +447,27 @@ router.post('/afronden', async (req, res) => {
 
 // ════════════════════════════════════════════════════════════
 // ROUTE 7 — GET /api/nakijk/sessie/:id
-// Haal volledige sessie op (voor het herladen van de pagina)
 // ════════════════════════════════════════════════════════════
 router.get('/sessie/:id', async (req, res) => {
   try {
-    const { data: sessie, error: sessieError } = await supabase
+    const { supabase } = clients(req);
+
+    const { data: sessie, error } = await supabase
       .from('nakijk_sessies')
-      .select(`
-        *,
-        leerling:leerlingen(*),
-        antwoorden:nakijk_antwoorden(*)
-      `)
+      .select('*, antwoorden:nakijk_antwoorden(*)')
       .eq('id', req.params.id)
       .single();
+    if (error) throw error;
 
-    if (sessieError) throw sessieError;
+    if (sessie.leerling_id) {
+      const { data: leerling } = await supabase
+        .from('leerlingen_import')
+        .select('id, stamnummer, roepnaam, tussenvoegsel, achternaam, klas')
+        .eq('id', sessie.leerling_id)
+        .single();
+      sessie.leerling = leerling;
+    }
+
     res.json({ success: true, sessie });
 
   } catch (err) {
