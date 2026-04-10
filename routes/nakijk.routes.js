@@ -409,11 +409,16 @@ router.post('/nakijken', async (req, res) => {
 router.patch('/score', async (req, res) => {
   try {
     const { supabase } = clients(req);
-    const { sessie_id, vraagnummer, score, notitie } = req.body;
+    const { sessie_id, vraagnummer, score, notitie, feedback } = req.body;
+
+    // Bouw update object op — sla feedback op als die meegegeven is
+    const updateData = { score, score_aangepast: true };
+    if (notitie !== undefined) updateData.argumentatie = notitie;
+    if (feedback !== undefined) updateData.feedback = feedback;
 
     await supabase
       .from('nakijk_antwoorden')
-      .update({ score, score_aangepast: true, argumentatie: notitie || null })
+      .update(updateData)
       .eq('sessie_id', sessie_id)
       .eq('vraagnummer', vraagnummer);
 

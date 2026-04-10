@@ -6144,90 +6144,104 @@ async function nkStartNakijken() {
   }
 }
 
+// Sla de huidige beoordeling op in geheugen voor UI-updates
+let nkBeoordelingState = null;
+
 function nkBouwBeoordeling(b) {
+  nkBeoordelingState = b;
   const leerling = nkKandidaten.find(k => k.id === nkGekozenLeerlingId) || {};
   const naam = [leerling.roepnaam, leerling.tussenvoegsel, leerling.achternaam].filter(Boolean).join(' ');
-  const pct = b.totaal_score / b.max_score;
-  const barColor = pct >= .8 ? '#16a34a' : pct >= .55 ? '#ca8a04' : '#dc2626';
 
-  document.getElementById('nk-scorekaart').innerHTML = `
-    <div>
-      <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Totaalscore</div>
-      <div style="font-size:42px;font-weight:900;line-height:1;">${b.totaal_score}<span style="font-size:20px;opacity:.5;">/${b.max_score}</span></div>
-      <div style="background:rgba(255,255,255,.15);border-radius:99px;height:7px;overflow:hidden;margin-top:8px;width:140px;">
-        <div style="width:${Math.round(pct*100)}%;background:var(--gold);height:100%;border-radius:99px;"></div>
-      </div>
-    </div>
-    <div style="width:1px;background:rgba(255,255,255,.2);height:60px;align-self:center;flex-shrink:0;"></div>
-    <div>
-      <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Suggestie cijfer</div>
-      <div style="font-size:42px;font-weight:900;color:var(--gold);line-height:1;">${b.cijfer_suggestie?.toFixed(1)}</div>
-      <div style="font-size:11px;opacity:.5;margin-top:3px;">Ter verificatie</div>
-    </div>
-    <div style="width:1px;background:rgba(255,255,255,.2);height:60px;align-self:center;flex-shrink:0;"></div>
-    <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);border-radius:9px;padding:10px 14px;">
-      <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);
-        font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        ${(leerling.roepnaam||'?')[0]}${(leerling.achternaam||'?')[0]}
-      </div>
-      <div>
-        <div style="font-weight:700;font-size:14px;">${naam}</div>
-        <div style="font-size:11px;opacity:.6;">${leerling.klas||''} · ${nkInlezing?.toets_naam||''}</div>
-      </div>
-    </div>
-    ${b.algemene_opmerking ? `
-    <div style="flex:1;min-width:180px;background:rgba(255,255,255,.08);border-radius:9px;padding:11px 14px;font-size:12px;line-height:1.55;">
-      <div style="font-size:10px;opacity:.65;margin-bottom:3px;">📝 Opmerking</div>
-      ${b.algemene_opmerking}
-    </div>` : ''}
-  `;
+  nkUpdateScorekaart(b.totaal_score, b.max_score, b.cijfer_suggestie, naam, leerling, b.algemene_opmerking);
 
   const lijst = document.getElementById('nk-beoordeling-lijst');
   lijst.innerHTML = (b.vragen || []).map(v => {
-    const pct = v.score / v.max_score;
-    const ptsBg = pct >= .8 ? '#dcfce7' : pct >= .5 ? '#fef9c3' : '#fee2e2';
-    const ptsColor = pct >= .8 ? '#16a34a' : pct >= .5 ? '#ca8a04' : '#dc2626';
+    const pct = (v.score || 0) / v.max_score;
     const barW = Math.round(pct * 100);
-    const barCol = pct >= .8 ? '#16a34a' : pct >= .5 ? '#ca8a04' : '#dc2626';
     const behaald = (v.behaalde_punten || []).map(p =>
       `<span style="background:${p.behaald?'#dcfce7':'#fee2e2'};color:${p.behaald?'#16a34a':'#dc2626'};
         border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700;margin:2px;">${p.behaald?'✓':'✗'} ${p.onderdeel}</span>`
     ).join('');
+    const modelAntw = nkInlezing?.vragen?.find(q => q.vraagnummer === v.vraagnummer)?.modelantwoord || '—';
+    const llAntw = (document.getElementById('nk-antwoord-'+v.vraagnummer)||{}).value || v.antwoord_leerling || '—';
 
-    return `<div style="background:var(--surface);border-radius:12px;border:1.5px solid var(--border);overflow:hidden;">
-      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'"
+    return `<div id="nk-beoor-card-${v.vraagnummer}"
+      style="background:var(--surface);border-radius:12px;border:1.5px solid var(--border);overflow:hidden;">
+
+      <!-- Header (klikbaar voor open/dicht) -->
+      <div onclick="nkToggleCard(${v.vraagnummer})"
         style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:var(--bg);">
         <div style="width:32px;height:32px;border-radius:7px;background:var(--navy);color:#fff;
           font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${v.vraagnummer}</div>
         <div style="flex:1;">
           <div style="font-size:13px;font-weight:600;color:var(--text2);">Vraag ${v.vraagnummer}</div>
           <div style="background:var(--border);border-radius:99px;height:5px;overflow:hidden;margin-top:5px;width:120px;">
-            <div style="width:${barW}%;background:${barCol};height:100%;border-radius:99px;"></div>
+            <div id="nk-bar-${v.vraagnummer}" style="width:${barW}%;background:${nkScoreKleur(pct)};height:100%;border-radius:99px;transition:width .3s;"></div>
           </div>
         </div>
         <span style="font-size:11px;color:var(--muted);margin-right:4px;">max. ${v.max_score} pt</span>
-        <span style="background:${ptsBg};color:${ptsColor};border-radius:6px;padding:2px 10px;font-weight:700;font-size:13px;">${v.score}/${v.max_score}</span>
-        <span style="color:var(--muted2);font-size:12px;">▼</span>
+        <span id="nk-score-badge-${v.vraagnummer}" style="background:${nkScoreBadgeBg(pct)};color:${nkScoreKleur(pct)};
+          border-radius:6px;padding:2px 10px;font-weight:700;font-size:13px;">${v.score ?? '—'}/${v.max_score}</span>
+        <span id="nk-chevron-${v.vraagnummer}" style="color:var(--muted2);font-size:12px;">▼</span>
       </div>
-      <div style="display:none;padding:14px 16px;border-top:1px solid var(--border);">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+
+      <!-- Body -->
+      <div id="nk-body-${v.vraagnummer}" style="display:none;padding:14px 16px;border-top:1px solid var(--border);">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+
+          <!-- Kolom 1: Modelantwoord -->
           <div>
             <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Modelantwoord</div>
-            <div style="font-size:12px;color:var(--text2);line-height:1.6;">${nkInlezing?.vragen?.find(q=>q.vraagnummer===v.vraagnummer)?.modelantwoord||'—'}</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.65;">${modelAntw}</div>
+            ${behaald ? `<div style="margin-top:10px;line-height:1.9;">${behaald}</div>` : ''}
           </div>
+
+          <!-- Kolom 2: Antwoord leerling -->
           <div>
             <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Antwoord leerling</div>
-            <div style="font-size:12px;color:var(--text2);line-height:1.6;">${(document.getElementById('nk-antwoord-'+v.vraagnummer)||{}).value || '—'}</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.65;">${llAntw}</div>
           </div>
+
+          <!-- Kolom 3: Beoordeling (bewerkbaar) -->
           <div>
-            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Beoordeling</div>
-            <div style="margin-bottom:6px;line-height:1.8;">${behaald || '—'}</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.55;">${v.argumentatie||''}</div>
-            <div style="margin-top:8px;font-size:12px;color:var(--text2);line-height:1.55;padding:8px;background:var(--bg);border-radius:6px;">${v.feedback||''}</div>
-            <button onclick="nkWijzigScore(${v.vraagnummer})"
-              style="margin-top:8px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);
-                border-radius:6px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
-              ✏️ Score wijzigen
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Beoordeling</div>
+
+            <!-- Score invoer -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;
+              background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;">
+              <span style="font-size:12px;color:var(--muted);flex-shrink:0;">Score:</span>
+              <input type="number" id="nk-score-input-${v.vraagnummer}"
+                value="${v.score ?? 0}" min="0" max="${v.max_score}" step="0.5"
+                style="width:52px;border:1.5px solid var(--border);border-radius:6px;padding:3px 6px;
+                  font-size:14px;font-weight:700;color:var(--navy);text-align:center;
+                  font-family:inherit;outline:none;background:#fff;"
+                oninput="nkPreviewScore(${v.vraagnummer}, ${v.max_score})">
+              <span style="font-size:13px;color:var(--muted);">/ ${v.max_score}</span>
+            </div>
+
+            <!-- Argumentatie (alleen lezen) -->
+            ${v.argumentatie ? `<div style="font-size:11px;color:var(--muted);line-height:1.55;margin-bottom:8px;
+              padding:6px 8px;background:var(--bg);border-radius:6px;border-left:3px solid var(--border);">${v.argumentatie}</div>` : ''}
+
+            <!-- Feedback (bewerkbaar) -->
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">
+              Feedback aan leerling
+            </div>
+            <textarea id="nk-feedback-input-${v.vraagnummer}"
+              style="width:100%;border:1.5px solid var(--border);border-radius:7px;padding:8px 10px;
+                font-size:12px;color:var(--text);line-height:1.6;resize:vertical;outline:none;
+                font-family:inherit;background:#fff;min-height:70px;transition:border-color .15s;"
+              onfocus="this.style.borderColor='var(--navy)'"
+              onblur="this.style.borderColor='var(--border)'"
+            >${v.feedback||''}</textarea>
+
+            <!-- Opslaan knop -->
+            <button onclick="nkSlaBeoordelingOp(${v.vraagnummer}, ${v.max_score})"
+              style="margin-top:8px;width:100%;background:var(--navy);color:#fff;border:none;
+                border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;
+                cursor:pointer;font-family:inherit;transition:opacity .15s;"
+              onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+              💾 Score &amp; feedback opslaan
             </button>
           </div>
         </div>
@@ -6236,13 +6250,105 @@ function nkBouwBeoordeling(b) {
   }).join('');
 }
 
+// Hulpfuncties voor kleuren
+function nkScoreKleur(pct) {
+  return pct >= .8 ? '#16a34a' : pct >= .5 ? '#ca8a04' : '#dc2626';
+}
+function nkScoreBadgeBg(pct) {
+  return pct >= .8 ? '#dcfce7' : pct >= .5 ? '#fef9c3' : '#fee2e2';
+}
+
+// Toggle open/dicht van een kaart
+function nkToggleCard(nr) {
+  const body = document.getElementById('nk-body-' + nr);
+  const chev = document.getElementById('nk-chevron-' + nr);
+  const open = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  chev.textContent = open ? '▼' : '▲';
+}
+
+// Live preview van score in header terwijl docent typt
+function nkPreviewScore(vraagnummer, maxScore) {
+  const input = document.getElementById('nk-score-input-' + vraagnummer);
+  const score = Math.min(Math.max(Number(input.value) || 0, 0), maxScore);
+  const pct = score / maxScore;
+  const badge = document.getElementById('nk-score-badge-' + vraagnummer);
+  const bar   = document.getElementById('nk-bar-' + vraagnummer);
+  if (badge) { badge.textContent = score + '/' + maxScore; badge.style.background = nkScoreBadgeBg(pct); badge.style.color = nkScoreKleur(pct); }
+  if (bar)   { bar.style.width = Math.round(pct*100) + '%'; bar.style.background = nkScoreKleur(pct); }
+}
+
+// Sla score + feedback op en update scorekaart
+async function nkSlaBeoordelingOp(vraagnummer, maxScore) {
+  const scoreInput    = document.getElementById('nk-score-input-' + vraagnummer);
+  const feedbackInput = document.getElementById('nk-feedback-input-' + vraagnummer);
+  const score    = Math.min(Math.max(Number(scoreInput?.value) || 0, 0), maxScore);
+  const feedback = feedbackInput?.value || '';
+
+  const btn = scoreInput?.closest('.beoor-col')?.querySelector('button') ||
+              document.querySelector(`[onclick="nkSlaBeoordelingOp(${vraagnummer}, ${maxScore})"]`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Opslaan…'; }
+
+  try {
+    const data = await apiFetch('/api/nakijk/score', {
+      method: 'PATCH',
+      body: JSON.stringify({ sessie_id: nkSessieId, vraagnummer, score, feedback }),
+    });
+
+    // Update scorekaart bovenaan
+    if (data.totaal_score !== undefined) {
+      const leerling = nkKandidaten.find(k => k.id === nkGekozenLeerlingId) || {};
+      const naam = [leerling.roepnaam, leerling.tussenvoegsel, leerling.achternaam].filter(Boolean).join(' ');
+      nkUpdateScorekaart(data.totaal_score, nkBeoordelingState?.max_score, data.cijfer_suggestie, naam, leerling, nkBeoordelingState?.algemene_opmerking);
+    }
+
+    showToast('✅ Opgeslagen');
+    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Score &amp; feedback opslaan'; }
+  } catch(e) {
+    showToast('Fout: ' + e.message);
+    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Score &amp; feedback opslaan'; }
+  }
+}
+
+// Update de scorekaart bovenaan zonder de vraagkaarten opnieuw te tekenen
+function nkUpdateScorekaart(totaal, max, cijfer, naam, leerling, opmerking) {
+  const pct = (totaal || 0) / (max || 1);
+  document.getElementById('nk-scorekaart').innerHTML = `
+    <div>
+      <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Totaalscore</div>
+      <div style="font-size:42px;font-weight:900;line-height:1;">${totaal}<span style="font-size:20px;opacity:.5;">/${max}</span></div>
+      <div style="background:rgba(255,255,255,.15);border-radius:99px;height:7px;overflow:hidden;margin-top:8px;width:140px;">
+        <div style="width:${Math.round(pct*100)}%;background:var(--gold);height:100%;border-radius:99px;transition:width .4s;"></div>
+      </div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,.2);height:60px;align-self:center;flex-shrink:0;"></div>
+    <div>
+      <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Suggestie cijfer</div>
+      <div style="font-size:42px;font-weight:900;color:var(--gold);line-height:1;">${Number(cijfer||0).toFixed(1)}</div>
+      <div style="font-size:11px;opacity:.5;margin-top:3px;">Ter verificatie</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,.2);height:60px;align-self:center;flex-shrink:0;"></div>
+    <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);border-radius:9px;padding:10px 14px;">
+      <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);
+        font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        ${(leerling?.roepnaam||'?')[0]}${(leerling?.achternaam||'?')[0]}
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:14px;">${naam||'—'}</div>
+        <div style="font-size:11px;opacity:.6;">${leerling?.klas||''} · ${nkInlezing?.toets_naam||''}</div>
+      </div>
+    </div>
+    ${opmerking ? `<div style="flex:1;min-width:180px;background:rgba(255,255,255,.08);border-radius:9px;
+      padding:11px 14px;font-size:12px;line-height:1.55;">
+      <div style="font-size:10px;opacity:.65;margin-bottom:3px;">📝 Opmerking</div>${opmerking}</div>` : ''}
+  `;
+}
+
+// Verouderde functie — niet meer gebruikt maar bewaard voor compatibiliteit
 function nkWijzigScore(vraagnummer) {
-  const nieuweScore = prompt(`Nieuwe score voor vraag ${vraagnummer}:`);
-  if (nieuweScore === null || isNaN(Number(nieuweScore))) return;
-  apiFetch('/api/nakijk/score', {
-    method: 'PATCH',
-    body: JSON.stringify({ sessie_id: nkSessieId, vraagnummer, score: Number(nieuweScore) }),
-  }).then(() => showToast('Score aangepast')).catch(e => showToast('Fout: ' + e.message));
+  // Vervangen door nkSlaBeoordelingOp — open de kaart als die nog dicht is
+  const body = document.getElementById('nk-body-' + vraagnummer);
+  if (body && body.style.display !== 'block') nkToggleCard(vraagnummer);
 }
 
 async function nkAfronden() {
