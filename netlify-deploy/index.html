@@ -5712,6 +5712,7 @@ let nkKandidaten = [];
 let nkGekozenLeerlingId = null;
 let nkZoomLvl = 1;
 let nkToetsObjectURL = null;
+let nkHerstelFotoUrl = null;  // opgeslagen foto URL bij herstel
 
 async function initNakijkView() {
   // Laad leerlingen in cache voor zoekfunctie
@@ -5759,62 +5760,87 @@ async function nkLaadOverzicht() {
 }
 
 async function nkHerstelSessie(sessieId) {
-  // Laad een eerdere sessie terug in de view
   try {
     const data = await apiFetch('/api/nakijk/sessie/' + sessieId);
     const s = data.sessie;
     nkSessieId = s.id;
+
+    // Sla toets_url op zodat verificatiestap foto kan tonen
+    nkHerstelFotoUrl = s.toets_url || null;
+
+    const gesorteerdeAntwoorden = (s.antwoorden || [])
+      .sort((a, b) => a.vraagnummer - b.vraagnummer);
+
     nkInlezing = {
-      leerling_naam: s.naam_op_toets,
-      naam_zekerheid: s.naam_zekerheid,
-      naam_locatie: '',
-      toets_naam: s.toets_naam,
-      vak: s.vak,
-      niveau: s.niveau,
+      leerling_naam:   s.naam_op_toets,
+      naam_zekerheid:  s.naam_zekerheid,
+      naam_locatie:    '',
+      toets_naam:      s.toets_naam,
+      vak:             s.vak,
+      niveau:          s.niveau,
       max_score_totaal: s.max_score,
-      vragen: (s.antwoorden || []).sort((a,b) => a.vraagnummer - b.vraagnummer).map(a => ({
-        vraagnummer: a.vraagnummer,
-        vraag_tekst: a.vraag_tekst,
-        max_score: a.max_score,
-        modelantwoord: a.modelantwoord,
+      vragen: gesorteerdeAntwoorden.map(a => ({
+        vraagnummer:    a.vraagnummer,
+        vraag_tekst:    a.vraag_tekst,
+        max_score:      a.max_score,
+        modelantwoord:  a.modelantwoord,
         puntenverdeling: a.puntenverdeling,
-        antwoord_rauw: a.antwoord_finaal,
-        leeszekerheid: a.leeszekerheid || 'zeker',
+        antwoord_rauw:  a.antwoord_finaal,   // geverifieerd antwoord
+        antwoord_finaal: a.antwoord_finaal,
+        leeszekerheid:  a.leeszekerheid || 'zeker',
         lees_opmerking: a.lees_opmerking,
       })),
     };
-    // Zoek leerling op
+
+    // Leerling ophalen
     if (s.leerling_id) {
       nkGekozenLeerlingId = s.leerling_id;
       const leerling = (window._alleLeerlingenCache || []).find(l => l.id === s.leerling_id);
       if (leerling) nkKandidaten = [{ ...leerling, match_score: 100, is_best_match: true }];
+      // Probeer leerling direct uit sessie als niet in cache
+      if (!leerling && s.leerling) {
+        nkKandidaten = [{ ...s.leerling, match_score: 100, is_best_match: true }];
+      }
     }
-    // Als al nagekeken: ga naar beoordeling
-    if (['nagekeken','afgerond'].includes(s.status) && s.antwoorden?.some(a => a.score !== null)) {
+
+    // Bouw verificatiestap altijd op (ook als we naar beoordeling gaan)
+    // zodat terugnavigeren altijd werkt
+    nkBouwVerificatieStap();
+
+    const isNagekeken = ['nagekeken','afgerond'].includes(s.status)
+      && gesorteerdeAntwoorden.some(a => a.score !== null);
+
+    if (isNagekeken) {
       const beoordeling = {
-        vragen: (s.antwoorden||[]).map(a => ({
-          vraagnummer: a.vraagnummer, score: a.score, max_score: a.max_score,
-          behaalde_punten: a.behaalde_punten, feedback: a.feedback, argumentatie: a.argumentatie,
+        vragen: gesorteerdeAntwoorden.map(a => ({
+          vraagnummer:     a.vraagnummer,
+          score:           a.score,
+          max_score:       a.max_score,
+          behaalde_punten: a.behaalde_punten,
+          feedback:        a.feedback,
+          argumentatie:    a.argumentatie,
+          // antwoord_leerling meegeven zodat kolom altijd gevuld is
+          antwoord_leerling: a.antwoord_finaal,
         })),
-        totaal_score: s.totaal_score,
-        max_score: s.max_score,
-        cijfer_suggestie: s.cijfer_suggestie,
+        totaal_score:       s.totaal_score,
+        max_score:          s.max_score,
+        cijfer_suggestie:   s.cijfer_suggestie,
         algemene_opmerking: s.algemene_opmerking,
       };
+      // Alle stappen bereikbaar (herstel = volledige flow zichtbaar)
       nkStap = 3;
       nkGoStep(3);
       nkBouwBeoordeling(beoordeling);
     } else {
       nkStap = 2;
       nkGoStep(2);
-      nkBouwVerificatieStap();
     }
   } catch(e) { showToast('Sessie laden mislukt: ' + e.message); }
 }
 
 // ── Stap navigatie ────────────────────────────────────────
 function nkGoStep(n) {
-  if (n > nkStap) return; // Kan niet vooruit springen
+  if (n > nkStap) return; // Kan niet vooruit springen bij normale flow
   nkStap = n;
   [0,1,2,3].forEach(i => {
     document.getElementById('nkpanel-' + i).style.display = i === n ? 'block' : 'none';
@@ -6036,9 +6062,23 @@ async function nkBevestigKoppeling() {
 
 // ── STAP 3: Verificatie ───────────────────────────────────
 function nkBouwVerificatieStap() {
-  // Preview foto
+  // Preview foto — gebruik upload-URL, opgeslagen URL, of toon melding
   const img = document.getElementById('nk-preview-img');
-  if (nkToetsObjectURL) { img.src = nkToetsObjectURL; img.style.display = 'block'; }
+  const fotoUrl = nkToetsObjectURL || nkHerstelFotoUrl || null;
+  if (fotoUrl) {
+    img.src = fotoUrl;
+    img.style.display = 'block';
+    img.style.maxWidth = '100%';
+  } else {
+    img.style.display = 'none';
+    img.insertAdjacentHTML('afterend',
+      '<div id="nk-foto-placeholder" style="color:rgba(255,255,255,.4);font-size:13px;' +
+      'text-align:center;padding:40px 20px;line-height:1.7;">' +
+      '📷 Foto niet beschikbaar<br>' +
+      '<span style="font-size:11px;opacity:.6;">De originele foto is niet opgeslagen.<br>' +
+      'Upload de toets opnieuw om de foto te zien.</span></div>'
+    );
+  }
 
   // Leerling pill
   const leerling = nkKandidaten.find(k => k.id === nkGekozenLeerlingId) || {};
@@ -6163,7 +6203,12 @@ function nkBouwBeoordeling(b) {
         border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700;margin:2px;">${p.behaald?'✓':'✗'} ${p.onderdeel}</span>`
     ).join('');
     const modelAntw = nkInlezing?.vragen?.find(q => q.vraagnummer === v.vraagnummer)?.modelantwoord || '—';
-    const llAntw = (document.getElementById('nk-antwoord-'+v.vraagnummer)||{}).value || v.antwoord_leerling || '—';
+    // Lees antwoord leerling: 1) uit verificatie DOM (live flow), 2) uit state (herstel), 3) uit inlezing
+    const llAntw = (document.getElementById('nk-antwoord-'+v.vraagnummer)||{}).value
+      || v.antwoord_leerling
+      || nkInlezing?.vragen?.find(q => q.vraagnummer === v.vraagnummer)?.antwoord_finaal
+      || nkInlezing?.vragen?.find(q => q.vraagnummer === v.vraagnummer)?.antwoord_rauw
+      || '—';
 
     return `<div id="nk-beoor-card-${v.vraagnummer}"
       style="background:var(--surface);border-radius:12px;border:1.5px solid var(--border);overflow:hidden;">
@@ -6367,8 +6412,11 @@ async function nkAfronden() {
 function nkReset() {
   nkStap = 0; nkToetsFile = null; nkModelFile = null;
   nkSessieId = null; nkInlezing = null; nkKandidaten = [];
-  nkGekozenLeerlingId = null; nkZoomLvl = 1;
+  nkGekozenLeerlingId = null; nkZoomLvl = 1; nkHerstelFotoUrl = null;
   if (nkToetsObjectURL) { URL.revokeObjectURL(nkToetsObjectURL); nkToetsObjectURL = null; }
+  // Verwijder eventuele foto-placeholder
+  const ph = document.getElementById('nk-foto-placeholder');
+  if (ph) ph.remove();
   // Reset upload zones
   ['toets','model'].forEach(t => {
     const dz = document.getElementById('nk-dz-' + t);

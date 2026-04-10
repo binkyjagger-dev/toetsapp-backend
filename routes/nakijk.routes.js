@@ -235,6 +235,28 @@ router.post('/inlezen', upload.fields([
     const inlezing = parseClaudeJSON(claudeResp.content[0].text);
     const leraarId = req.leraar?.id || null;
 
+    // Sla de toetsfoto op in Supabase Storage zodat we die later kunnen terugkijken
+    let toetsUrl = null;
+    try {
+      const bestandsnaam = `toetsen/${Date.now()}_${toetsFile.originalname || 'toets.jpg'}`;
+      const { data: uploadData, error: uploadErr } = await supabase
+        .storage
+        .from('nakijk-toetsen')
+        .upload(bestandsnaam, toetsFile.buffer, {
+          contentType: imgType,
+          upsert: false,
+        });
+      if (!uploadErr && uploadData) {
+        const { data: urlData } = supabase.storage
+          .from('nakijk-toetsen')
+          .getPublicUrl(bestandsnaam);
+        toetsUrl = urlData?.publicUrl || null;
+      }
+    } catch(uploadEx) {
+      // Foto opslaan is niet kritisch — ga door zonder URL
+      console.warn('[nakijk/inlezen] foto opslaan mislukt:', uploadEx.message);
+    }
+
     const { data: sessie, error: sessieErr } = await supabase
       .from('nakijk_sessies')
       .insert({
@@ -247,6 +269,7 @@ router.post('/inlezen', upload.fields([
         max_score:      inlezing.max_score_totaal,
         status:         'ingelezen',
         leraar_id:      leraarId,
+        toets_url:      toetsUrl,
       })
       .select().single();
 
