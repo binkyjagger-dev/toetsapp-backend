@@ -2617,6 +2617,16 @@ async function registreer() {
 function logoutTeacher() {
   leraarToken = null; leraarProfiel = null;
   localStorage.removeItem('leraar_token');
+
+  // Reset nakijk state zodat data van deze gebruiker niet zichtbaar is bij volgend account
+  nkReset();
+  nkBeoordelingState = null;
+  window._alleLeerlingenCache = null;
+
+  // Leeg de overzichtcontainer direct
+  const overzicht = document.getElementById('nk-overzicht');
+  if (overzicht) overzicht.innerHTML = '';
+
   showScreen('screen-landing');
 }
 function goHome() { showScreen('screen-landing'); }
@@ -5743,6 +5753,10 @@ let nkToetsObjectURL = null;
 let nkHerstelFotoUrl = null;  // opgeslagen foto URL bij herstel
 
 async function initNakijkView() {
+  // Leeg de overzichtcontainer direct — voorkomt dat data van vorige gebruiker zichtbaar blijft
+  const overzicht = document.getElementById('nk-overzicht');
+  if (overzicht) overzicht.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:1rem;">Laden…</div>';
+
   // Laad leerlingen in cache voor zoekfunctie
   try {
     if (!window._alleLeerlingenCache || window._alleLeerlingenCache.length === 0) {
