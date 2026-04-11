@@ -1629,7 +1629,7 @@ function annuleerLdImport() {
     </div>
   </div>
   <div class="sidebar-nav">
-    <button class="nav-item" id="nav-leerlingen" onclick="navNaar('leerlingen')">
+    <button class="nav-item" id="nav-leerlingen' onclick="navNaar('leerlingen')">
       <span class="nav-icon">👥</span> Leerlingen
       <span class="nav-badge" id="nav-ll-badge"></span>
     </button>
@@ -1710,7 +1710,7 @@ function annuleerLdImport() {
     <div class="klas-content" id="klas-tab-content"></div>
   </div>
 
-  <div id="view-leerlingen" style="display:none;" class="main-content">
+  <div id="view-leerlingen' style="display:none;" class="main-content">
     <div class="page-eyebrow">Leerlingenbeheer</div>
     <h2 class="page-title" style="margin-bottom:0.25rem;">Mijn leerlingen</h2>
     <div style="font-size:13px;color:var(--muted);margin-bottom:1.5rem;">Importeer en beheer leerlingen per lesperiode</div>
@@ -7146,9 +7146,9 @@ function bulkGoStep(n) {
 async function bulkStart() {
   nkLoading(true, 'PDF wordt geanalyseerd…', [
     'Antwoordmodel verwerken',
-    'PDF splitsen in losse pagina's',
-    'Pagina's uitlezen — namen en vraagnummers',
-    'Pagina's koppelen per leerling',
+    'PDF splitsen in losse pagina\'s',
+    'Pagina\'s uitlezen — namen en vraagnummers',
+    'Pagina\'s koppelen per leerling',
   ]);
 
   try {
@@ -7390,7 +7390,7 @@ function bulkUpdateVerifStats() {
   const sub = document.getElementById('bulk-verif-bottom-stats');
   if (sub) sub.textContent = onbekend
     ? `⚠️ Nog ${onbekend} pagina's niet gekoppeld`
-    : '✅ Alle pagina's zijn gekoppeld';
+    : "✅ Alle pagina's zijn gekoppeld";
 }
 
 function bulkKoppelPool() {
@@ -7399,9 +7399,9 @@ function bulkKoppelPool() {
   if (!leerlingId) return;
   const pool = document.getElementById('bulk-pool-paginas');
   const thumbs = [...pool.querySelectorAll('[id^="bthumb-"]')];
-  if (!thumbs.length) { showToast('Geen pagina's in de pool'); return; }
+  if (!thumbs.length) { showToast("Geen pagina's in de pool"); return; }
   const row = document.getElementById('bthumbs-' + leerlingId);
-  if (!row) { showToast('Leerlingkaart niet gevonden — klik de kaart open'); return; }
+  if (!row) { showToast("Leerlingkaart niet gevonden — klik de kaart open"); return; }
   thumbs.forEach(t => {
     row.insertBefore(t, row.lastElementChild);
     t.dataset.leerlingId = leerlingId;
@@ -7411,7 +7411,7 @@ function bulkKoppelPool() {
   });
   document.getElementById('bulk-pool-teller').textContent = '0';
   bulkUpdateVerifStats();
-  showToast('Pagina's gekoppeld aan leerling');
+  showToast("Pagina's gekoppeld aan leerling");
 }
 
 function bulkZoomPagina(url, nr, e) {
@@ -7687,8 +7687,7 @@ function exporteerBulkCSV() {
     const cijfer = r.cijfer_definitief ?? r.cijfer_suggestie ?? '';
     return `"${naam}","${ll.stamnummer||''}","${ll.klas||''}","${r.totaal_score||''}","${r.max_score||''}","${cijfer}"`;
   });
-  const csv = [header, ...rijen].join('
-');
+  const csv = [header, ...rijen].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url;
