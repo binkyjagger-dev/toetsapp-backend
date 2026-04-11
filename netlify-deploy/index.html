@@ -7526,6 +7526,7 @@ function bulkFilterResultaten() {
 
   const cijferKleur = c => !c ? 'var(--muted)' : c >= 7 ? 'var(--green)' : c >= 5.5 ? 'var(--orange)' : 'var(--red)';
 
+  window._bulkGefilterd = gefilterd;
   wrap.innerHTML = gefilterd.map((r, i) => {
     const ll = r.leerling || {};
     const naam = [ll.roepnaam, ll.tussenvoegsel, ll.achternaam].filter(Boolean).join(' ') || r.naam_op_toets || '—';
@@ -7533,7 +7534,7 @@ function bulkFilterResultaten() {
     const cijfer = r.cijfer_definitief ?? r.cijfer_suggestie;
     const pct = r.totaal_score && r.max_score ? Math.round(r.totaal_score/r.max_score*100) : 0;
 
-    return `<div onclick="bulkOpenLlDetail(${i}, ${JSON.stringify(gefilterd).replace(/"/g,'&quot;')})"
+    return `<div onclick="bulkOpenLlDetail(${i}, window._bulkGefilterd)"
         style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;
           margin-bottom:10px;padding:13px 18px;cursor:pointer;display:flex;align-items:center;
           gap:12px;transition:border-color .15s;flex-wrap:wrap;"
