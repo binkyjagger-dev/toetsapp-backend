@@ -21,10 +21,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'stanislascollege_mol_secret_2025';
 // ── Nakijk-assistent ──────────────────────────────────────────
 app.locals.supabase  = supabase;
 app.locals.anthropic = anthropic;
-const nakijkRouter = require('./routes/nakijk.routes');
-app.use('/api/nakijk', nakijkRouter);
+// Bulk router EERST registreren — anders pikt /api/nakijk alles af
 const nakijkBulkRouter = require('./routes/nakijk-bulk.routes');
 app.use('/api/nakijk/bulk', nakijkBulkRouter);
+const nakijkRouter = require('./routes/nakijk.routes');
+app.use('/api/nakijk', nakijkRouter);
 
 // ── JWT middleware ────────────────────────────────────────────
 function verifyToken(req, res, next) {
