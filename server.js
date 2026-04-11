@@ -23,6 +23,8 @@ app.locals.supabase  = supabase;
 app.locals.anthropic = anthropic;
 const nakijkRouter = require('./routes/nakijk.routes');
 app.use('/api/nakijk', nakijkRouter);
+const nakijkBulkRouter = require('./routes/nakijk-bulk.routes');
+app.use('/api/nakijk/bulk', nakijkBulkRouter);
 
 // ── JWT middleware ────────────────────────────────────────────
 function verifyToken(req, res, next) {

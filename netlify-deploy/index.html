@@ -1940,7 +1940,13 @@ function annuleerLdImport() {
         </div>
       </div>
 
-      <div style="font-weight:700;font-size:14px;color:var(--navy);margin-bottom:12px;">➕ Nieuwe toets nakijken</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div style="font-weight:700;font-size:14px;color:var(--navy);">➕ Nieuwe toets nakijken</div>
+        <button class="btn btn-primary btn-sm" onclick="openBulkNakijk()"
+          style="background:linear-gradient(135deg,var(--navy),var(--navy-light));">
+          👥 Hele klas nakijken
+        </button>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
         <!-- Toets foto -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;">
@@ -2083,6 +2089,217 @@ function annuleerLdImport() {
     </div>
 
   </div><!-- /view-nakijken -->
+  <!-- ═══ BULK NAKIJK PANELS ═══════════════════════════════════ -->
+  <div id="view-bulk" style="display:none;" class="main-content">
+
+    <!-- STEPPER -->
+    <div style="display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--border);
+      border-radius:10px;padding:4px;margin-bottom:1.5rem;overflow-x:auto;">
+      <button class="nk-step" id="bstep-0" style="flex:1;display:flex;align-items:center;justify-content:center;
+        gap:7px;padding:9px 8px;border:none;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;
+        font-weight:600;background:var(--navy);color:#fff;transition:all .15s;">
+        <span id="bsnum-0" style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.2);
+          display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">1</span>Upload
+      </button>
+      <span style="color:var(--border2);padding:0 4px;">›</span>
+      <button class="nk-step" id="bstep-1" style="flex:1;display:flex;align-items:center;justify-content:center;
+        gap:7px;padding:9px 8px;border:none;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;
+        font-weight:600;background:transparent;color:var(--muted);transition:all .15s;">
+        <span id="bsnum-1" style="width:22px;height:22px;border-radius:50%;background:var(--surface2);
+          display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">2</span>Verificatie
+      </button>
+      <span style="color:var(--border2);padding:0 4px;">›</span>
+      <button class="nk-step" id="bstep-2" style="flex:1;display:flex;align-items:center;justify-content:center;
+        gap:7px;padding:9px 8px;border:none;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;
+        font-weight:600;background:transparent;color:var(--muted);transition:all .15s;">
+        <span id="bsnum-2" style="width:22px;height:22px;border-radius:50%;background:var(--surface2);
+          display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">3</span>Nakijken
+      </button>
+      <span style="color:var(--border2);padding:0 4px;">›</span>
+      <button class="nk-step" id="bstep-3" style="flex:1;display:flex;align-items:center;justify-content:center;
+        gap:7px;padding:9px 8px;border:none;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;
+        font-weight:600;background:transparent;color:var(--muted);transition:all .15s;">
+        <span id="bsnum-3" style="width:22px;height:22px;border-radius:50%;background:var(--surface2);
+          display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">4</span>Resultaten
+      </button>
+    </div>
+
+    <!-- PANEL 0: UPLOAD -->
+    <div id="bpanel-0">
+      <!-- Klas selectie -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem;">
+        <div style="font-weight:700;font-size:14px;color:var(--navy);margin-bottom:10px;">👥 Selecteer klas</div>
+        <div id="bulk-klas-knoppen" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <select id="bulk-lesperiode" style="font-size:13px;padding:6px 10px;border:1.5px solid var(--border);
+            border-radius:7px;font-family:inherit;color:var(--text);">
+            <option value="">— Alle periodes —</option>
+          </select>
+          <div id="bulk-klas-info" style="font-size:12px;color:var(--muted);"></div>
+        </div>
+      </div>
+      <!-- Upload zones -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;">
+          <div style="font-weight:700;font-size:14px;color:var(--navy);margin-bottom:4px;">📄 Gescande toetsen</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Alle toetsen van de klas in één PDF. Volgorde maakt niet uit.</div>
+          <div id="bulk-dz-toetsen" onclick="document.getElementById('bulk-input-toetsen').click()"
+            style="border:2px dashed var(--border2);border-radius:10px;padding:28px 12px;text-align:center;
+              cursor:pointer;background:var(--bg);transition:all .2s;"
+            onmouseover="this.style.borderColor='var(--gold)';this.style.background='#fffbea'"
+            onmouseout="if(!bulkToetsenFile){this.style.borderColor='var(--border2)';this.style.background='var(--bg)'}">
+            <div id="bulk-dz-toetsen-icon" style="font-size:26px;margin-bottom:7px;">📄</div>
+            <div id="bulk-dz-toetsen-label" style="font-size:13px;font-weight:600;color:var(--text2);">Sleep PDF hiernaartoe of klik</div>
+            <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Alleen PDF · max 100MB</div>
+          </div>
+          <input type="file" id="bulk-input-toetsen" accept=".pdf" style="display:none" onchange="bulkHandleToetsen(this)">
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;">
+          <div style="font-weight:700;font-size:14px;color:var(--navy);margin-bottom:4px;">📋 Antwoordmodel</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">PDF of Word. Claude detecteert vraagstructuur automatisch.</div>
+          <div id="bulk-dz-model" onclick="document.getElementById('bulk-input-model').click()"
+            style="border:2px dashed var(--border2);border-radius:10px;padding:28px 12px;text-align:center;
+              cursor:pointer;background:var(--bg);transition:all .2s;"
+            onmouseover="this.style.borderColor='var(--gold)';this.style.background='#fffbea'"
+            onmouseout="if(!bulkModelFile){this.style.borderColor='var(--border2)';this.style.background='var(--bg)'}">
+            <div id="bulk-dz-model-icon" style="font-size:26px;margin-bottom:7px;">📋</div>
+            <div id="bulk-dz-model-label" style="font-size:13px;font-weight:600;color:var(--text2);">Sleep bestand hiernaartoe of klik</div>
+            <div style="font-size:11px;color:var(--muted2);margin-top:3px;">PDF of DOCX · max 10MB</div>
+          </div>
+          <input type="file" id="bulk-input-model" accept=".pdf,.doc,.docx" style="display:none" onchange="bulkHandleModel(this)">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <button class="btn btn-ghost-navy btn-sm" onclick="navNaar('nakijken')">← Terug</button>
+        <button id="bulk-btn-start" class="btn btn-primary" onclick="bulkStart()" disabled style="padding:12px 28px;font-size:15px;">
+          🤖 Analyseren met Claude →
+        </button>
+      </div>
+    </div>
+
+    <!-- PANEL 1: VERIFICATIE -->
+    <div id="bpanel-1" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-weight:800;font-size:16px;color:var(--navy);">Verificeer paginakoppelingen</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">Sleep pagina's naar de juiste leerling · Klik 🔍 om in te zoomen</div>
+        </div>
+        <div id="bulk-verif-stats" style="display:flex;gap:12px;font-size:12px;flex-wrap:wrap;"></div>
+      </div>
+
+      <!-- Twee kolommen -->
+      <div style="display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start;">
+
+        <!-- Leerlingenlijst -->
+        <div id="bulk-ll-kaarten"></div>
+
+        <!-- Niet-herkend pool -->
+        <div>
+          <div id="bulk-pool"
+            ondragover="bulkPoolDragOver(event)" ondrop="bulkPoolDrop(event)" ondragleave="this.style.borderColor='#fca5a5'"
+            style="background:var(--surface);border:1.5px dashed #fca5a5;border-radius:12px;padding:14px;position:sticky;top:80px;">
+            <div style="font-weight:700;font-size:13px;color:var(--red);margin-bottom:4px;">❌ Niet herkend (<span id="bulk-pool-teller">0</span>)</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;">Sleep pagina's naar de juiste leerling hiernaast.</div>
+            <div id="bulk-pool-paginas" style="display:flex;gap:8px;flex-wrap:wrap;min-height:60px;"></div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;">Koppel aan leerling</div>
+              <select id="bulk-pool-select" style="width:100%;font-size:12px;padding:6px 8px;border:1.5px solid var(--border);
+                border-radius:7px;font-family:inherit;color:var(--text);margin-bottom:7px;">
+                <option value="">— Selecteer leerling —</option>
+              </select>
+              <button class="btn btn-primary btn-sm" style="width:100%;" onclick="bulkKoppelPool()">Koppelen →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom acties -->
+      <div style="display:flex;justify-content:space-between;gap:10px;margin-top:1.25rem;flex-wrap:wrap;align-items:center;">
+        <div style="font-size:13px;color:var(--muted);" id="bulk-verif-bottom-stats"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost-navy btn-sm" onclick="bulkGoStep(0)">← Upload</button>
+          <button id="bulk-btn-nakijken" class="btn btn-primary" onclick="bulkStartNakijken()" style="padding:11px 24px;">
+            Nakijken starten →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 2: NAKIJKEN VOORTGANG -->
+    <div id="bpanel-2" style="display:none;text-align:center;padding:3rem 1rem;">
+      <div style="font-size:36px;margin-bottom:14px;">⏳</div>
+      <div style="font-weight:800;font-size:18px;color:var(--navy);margin-bottom:6px;">Toetsen worden nagekeken…</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px;" id="bulk-progress-sub">Claude kijkt alle leerlingen na</div>
+      <div style="background:var(--border);border-radius:99px;height:8px;overflow:hidden;max-width:400px;margin:0 auto 8px;">
+        <div id="bulk-progress-bar" style="height:100%;background:linear-gradient(90deg,var(--navy),#2d5fa3);border-radius:99px;width:0%;transition:width .5s;"></div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);" id="bulk-progress-label">0 / 0 nagekeken</div>
+    </div>
+
+    <!-- PANEL 3: RESULTATEN OVERZICHT -->
+    <div id="bpanel-3" style="display:none;">
+      <!-- Klasse scorekaart -->
+      <div id="bulk-scorekaart" style="background:linear-gradient(135deg,var(--navy),#2d5fa3);border-radius:14px;
+        padding:22px 26px;color:#fff;display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-bottom:1.25rem;"></div>
+
+      <!-- Filter bar -->
+      <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+        <input type="text" id="bulk-res-zoek" placeholder="Zoek leerling..." oninput="bulkFilterResultaten()"
+          style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;
+            font-family:inherit;outline:none;min-width:180px;">
+        <select id="bulk-res-filter" onchange="bulkFilterResultaten()"
+          style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);">
+          <option value="">Alle leerlingen</option>
+          <option value="onvoldoende">Onvoldoende (&lt;5.5)</option>
+          <option value="voldoende">Voldoende (&ge;5.5)</option>
+        </select>
+        <div style="margin-left:auto;font-size:12px;color:var(--muted);" id="bulk-res-count"></div>
+      </div>
+
+      <div id="bulk-resultaten-lijst"></div>
+
+      <div style="display:flex;gap:10px;margin-top:1.25rem;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="bulkSlaAllesOp()">✅ Alles definitief opslaan</button>
+        <button class="btn btn-ghost-navy btn-sm" onclick="exporteerBulkCSV()">📊 Exporteer CSV</button>
+        <button class="btn btn-ghost-navy btn-sm" onclick="navNaar('nakijken')">← Terug naar nakijk-assistent</button>
+      </div>
+    </div>
+
+    <!-- PANEL 4: INDIVIDUELE LEERLING (vanuit bulk resultaten) -->
+    <div id="bpanel-4" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;">
+        <button class="btn btn-ghost-navy btn-sm" onclick="bulkSluitLlDetail()">← Terug naar klas</button>
+        <div style="display:flex;align-items:center;gap:10px;flex:1;">
+          <div id="bulk-ll-avatar" style="width:40px;height:40px;border-radius:50%;background:var(--navy);
+            color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">?</div>
+          <div>
+            <div style="font-weight:800;font-size:16px;color:var(--navy);" id="bulk-ll-naam">—</div>
+            <div style="font-size:11px;color:var(--muted);" id="bulk-ll-meta">—</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div style="text-align:center;">
+            <div style="font-size:28px;font-weight:900;" id="bulk-ll-cijfer">—</div>
+            <div style="font-size:10px;color:var(--muted);">cijfer</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:18px;font-weight:700;color:var(--navy);" id="bulk-ll-score">—</div>
+            <div style="font-size:10px;color:var(--muted);">punten</div>
+          </div>
+          <button class="btn btn-ghost-navy btn-sm" id="bulk-prev-ll" onclick="bulkNavLeerling(-1)">← Vorige</button>
+          <button class="btn btn-ghost-navy btn-sm" id="bulk-next-ll" onclick="bulkNavLeerling(1)">Volgende →</button>
+        </div>
+      </div>
+      <!-- Detail content -->
+      <div id="bulk-ll-detail-inhoud"></div>
+    </div>
+
+    <!-- Zoom modal (hergebruikt van individuele nakijk) -->
+
+    <!-- Loading overlay (hergebruikt) -->
+
+  </div><!-- /view-bulk -->
+
   <!-- ═══════════════════════════════════════════════════════
        LEERLING DETAIL VIEW
   ════════════════════════════════════════════════════════ -->
@@ -3690,7 +3907,7 @@ function navNaar(view) {
   huidigView = view;
   huidigKlasId = null;
   // Sidebar active
-  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll'].forEach(v => {
+  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll','bulk'].forEach(v => {
     const el = document.getElementById('nav-' + v);
     if (el) el.classList.toggle('active', v === view);
   });
@@ -3698,7 +3915,7 @@ function navNaar(view) {
   const klasHeader = document.getElementById('klas-header');
   if (klasHeader) klasHeader.style.display = 'none';
   // Views
-  const views = ['klassen','klas-detail','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll'];
+  const views = ['klassen','klas-detail','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll','bulk'];
   views.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.style.display = 'none';
@@ -3722,12 +3939,13 @@ function navNaar(view) {
   if (view === 'analyse')   { vulAnalyseFilters(); runAnalyse(); }
   if (view === 'socratisch') { vulClassFilter(); loadLessonsForTeacher(); }
   if (view === 'nakijken')   { initNakijkView(); }
+  if (view === 'bulk')       { initBulkView(); }
   if (view === 'leerling-detail') { /* geladen via openLeerlingDetail */ }
   if (view === 'toets-detail-ll') { /* geladen via openToetsDetail */ }
 }
 
 function navLabel(view) {
-  const map = { klassen:'Mijn klassen', leerlingen:'Leerlingen', lessen:'Lessen', analyse:'Analyse', socratisch:'Socratische toets', nakijken:'Nakijk-assistent', 'leerling-detail':'Leerling', 'toets-detail-ll':'Toetsdetails' };
+  const map = { klassen:'Mijn klassen', leerlingen:'Leerlingen', lessen:'Lessen', analyse:'Analyse', socratisch:'Socratische toets', nakijken:'Nakijk-assistent', 'leerling-detail':'Leerling', 'toets-detail-ll':'Toetsdetails', bulk:'Klas nakijken' };
   return map[view] || view;
 }
 
@@ -6499,7 +6717,7 @@ async function openLeerlingDetail(leerlingId, vorigeView) {
 
   // Navigeer naar de view
   huidigView = 'leerling-detail';
-  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll'].forEach(v => {
+  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll','bulk'].forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.style.display = 'none';
   });
@@ -6651,7 +6869,7 @@ async function openLeerlingDetail(leerlingId, vorigeView) {
 async function openToetsDetailLl(sessieId, leerlingId) {
   huidigView = 'toets-detail-ll';
 
-  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll'].forEach(v => {
+  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll','bulk'].forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.style.display = 'none';
   });
@@ -6813,6 +7031,669 @@ async function nkVerwijderSessie(sessieId, kaartEl) {
   } catch(e) {
     showToast('Verwijderen mislukt: ' + e.message);
   }
+}
+
+
+// ════════════════════════════════════════════════════════════
+// BULK NAKIJK — frontend logica
+// ════════════════════════════════════════════════════════════
+
+let bulkToetsenFile = null;
+let bulkModelFile   = null;
+let bulkSessieId    = null;
+let bulkPaginas     = [];     // {nr, url, leerling_id, zekerheid, ...}
+let bulkLeerlingen  = [];     // leerlingen_import records
+let bulkResultaten  = [];     // nakijk_sessies met scores
+let bulkLlIdx       = 0;
+let bulkDragEl      = null;
+let bulkGekozenKlas = null;
+
+// ── Init ──────────────────────────────────────────────────
+async function initBulkView() {
+  bulkGoStep(0);
+  await bulkLaadKlassen();
+  await bulkLaadPeriodes();
+}
+
+async function bulkLaadKlassen() {
+  try {
+    const { klassen } = await apiFetch('/api/leerlingen/klassen');
+    const wrap = document.getElementById('bulk-klas-knoppen');
+    if (!wrap) return;
+    wrap.innerHTML = (klassen || []).map(k =>
+      `<button onclick="bulkSelectKlas('${k}')"
+        style="padding:6px 16px;border-radius:99px;border:1.5px solid var(--border);
+          background:var(--surface);font-size:13px;font-weight:600;cursor:pointer;
+          font-family:inherit;color:var(--text2);transition:all .15s;"
+        id="bklas-${k.replace(/\s/g,'_')}"
+        onmouseover="this.style.borderColor='var(--navy)'"
+        onmouseout="if(bulkGekozenKlas!=='${k}')this.style.borderColor='var(--border)'"
+      >${k}</button>`
+    ).join('');
+  } catch(e) {}
+}
+
+async function bulkLaadPeriodes() {
+  try {
+    const periodes = await apiFetch('/api/leerlingen/periodes');
+    const sel = document.getElementById('bulk-lesperiode');
+    if (!sel) return;
+    (periodes || []).forEach(p => {
+      const opt = document.createElement('option'); opt.value = p; opt.textContent = p; sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+
+function bulkSelectKlas(klas) {
+  bulkGekozenKlas = klas;
+  document.querySelectorAll('[id^="bklas-"]').forEach(el => {
+    const isSelected = el.id === 'bklas-' + klas.replace(/\s/g,'_');
+    el.style.background   = isSelected ? 'var(--navy)' : 'var(--surface)';
+    el.style.color        = isSelected ? '#fff' : 'var(--text2)';
+    el.style.borderColor  = isSelected ? 'var(--navy)' : 'var(--border)';
+  });
+  document.getElementById('bulk-klas-info').textContent = klas + ' geselecteerd';
+  bulkCheckReady();
+}
+
+function bulkHandleToetsen(input) {
+  const file = input.files[0]; if (!file) return;
+  bulkToetsenFile = file;
+  const dz = document.getElementById('bulk-dz-toetsen');
+  dz.style.borderColor = 'var(--green)'; dz.style.background = '#f0fdf4';
+  document.getElementById('bulk-dz-toetsen-icon').textContent = '✅';
+  document.getElementById('bulk-dz-toetsen-label').textContent = file.name + ' (' + Math.round(file.size/1024/1024*10)/10 + ' MB)';
+  bulkCheckReady();
+}
+
+function bulkHandleModel(input) {
+  const file = input.files[0]; if (!file) return;
+  bulkModelFile = file;
+  const dz = document.getElementById('bulk-dz-model');
+  dz.style.borderColor = 'var(--green)'; dz.style.background = '#f0fdf4';
+  document.getElementById('bulk-dz-model-icon').textContent = '✅';
+  document.getElementById('bulk-dz-model-label').textContent = file.name;
+  bulkCheckReady();
+}
+
+function bulkCheckReady() {
+  const btn = document.getElementById('bulk-btn-start');
+  if (btn) btn.disabled = !(bulkToetsenFile && bulkModelFile && bulkGekozenKlas);
+}
+
+// ── Stap navigatie ────────────────────────────────────────
+function bulkGoStep(n) {
+  [0,1,2,3,4].forEach(i => {
+    const panel = document.getElementById('bpanel-' + i);
+    if (panel) panel.style.display = i === n ? 'block' : 'none';
+    const stepEl = document.getElementById('bstep-' + i);
+    const numEl  = document.getElementById('bsnum-' + i);
+    if (!stepEl) return;
+    if (i === n) {
+      stepEl.style.background = 'var(--navy)'; stepEl.style.color = '#fff';
+      if (numEl) numEl.style.background = 'rgba(255,255,255,.2)';
+    } else if (i < n) {
+      stepEl.style.background = 'rgba(42,138,90,.12)'; stepEl.style.color = 'var(--green)';
+      if (numEl) { numEl.style.background = 'var(--green)'; numEl.style.color = '#fff'; numEl.textContent = '✓'; }
+    } else {
+      stepEl.style.background = 'transparent'; stepEl.style.color = 'var(--muted)';
+      if (numEl) { numEl.style.background = 'var(--surface2)'; numEl.style.color = 'var(--muted)'; numEl.textContent = i+1; }
+    }
+  });
+}
+
+// ── STAP 1: Upload + segmenteren + groeperen ──────────────
+async function bulkStart() {
+  nkLoading(true, 'PDF wordt geanalyseerd…', [
+    'Antwoordmodel verwerken',
+    'PDF splitsen in losse pagina's',
+    'Pagina's uitlezen — namen en vraagnummers',
+    'Pagina's koppelen per leerling',
+  ]);
+
+  try {
+    const lesperiode = document.getElementById('bulk-lesperiode')?.value || '';
+
+    // Upload
+    const form = new FormData();
+    form.append('toetsen', bulkToetsenFile);
+    form.append('antwoordmodel', bulkModelFile);
+    form.append('klas_naam', bulkGekozenKlas);
+    if (lesperiode) form.append('lesperiode', lesperiode);
+
+    const headers = {};
+    if (leraarToken) headers['Authorization'] = 'Bearer ' + leraarToken;
+
+    const uploadRes = await fetch(API_BASE + '/api/nakijk/bulk/upload', { method: 'POST', headers, body: form });
+    if (!uploadRes.ok) throw new Error('Upload mislukt: ' + uploadRes.status);
+    const uploadData = await uploadRes.json();
+    if (!uploadData.success) throw new Error(uploadData.error);
+
+    bulkSessieId = uploadData.sessie_id;
+
+    // Segmenteren
+    const segRes = await apiFetch('/api/nakijk/bulk/segmenteren', {
+      method: 'POST',
+      body: JSON.stringify({ sessie_id: bulkSessieId }),
+    });
+    if (!segRes.success) throw new Error(segRes.error);
+
+    // Groeperen
+    const groepRes = await apiFetch('/api/nakijk/bulk/groeperen', {
+      method: 'POST',
+      body: JSON.stringify({ sessie_id: bulkSessieId, lesperiode }),
+    });
+    if (!groepRes.success) throw new Error(groepRes.error);
+
+    bulkLeerlingen = groepRes.leerlingen || [];
+
+    // Haal volledige sessie op
+    const sessieData = await apiFetch('/api/nakijk/bulk/sessie/' + bulkSessieId);
+    bulkPaginas = sessieData.paginas || [];
+
+    nkLoading(false);
+    bulkBouwVerificatie();
+    bulkGoStep(1);
+
+  } catch(e) {
+    nkLoading(false);
+    showToast('Fout: ' + e.message);
+  }
+}
+
+function openBulkNakijk() {
+  navNaar('bulk');
+}
+
+// ── STAP 2: Verificatie ───────────────────────────────────
+function bulkBouwVerificatie() {
+  // Groepeer paginas per leerling
+  const perLeerling = {};
+  const onbekend = [];
+
+  for (const p of bulkPaginas) {
+    if (p.leerling_id) {
+      if (!perLeerling[p.leerling_id]) perLeerling[p.leerling_id] = [];
+      perLeerling[p.leerling_id].push(p);
+    } else {
+      onbekend.push(p);
+    }
+  }
+
+  // Stats
+  const zeker    = Object.values(perLeerling).filter(ps => ps.every(p => p.koppeling_zekerheid === 'hoog')).length;
+  const twijfel  = Object.values(perLeerling).filter(ps => ps.some(p => p.koppeling_zekerheid === 'middel' || p.koppeling_zekerheid === 'laag')).length;
+  document.getElementById('bulk-verif-stats').innerHTML = [
+    `<span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:var(--green);"></span><strong>${zeker}</strong> zeker</span>`,
+    twijfel ? `<span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:var(--orange);"></span><strong>${twijfel}</strong> twijfelachtig</span>` : '',
+    onbekend.length ? `<span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:var(--red);"></span><strong>${onbekend.length}</strong> niet herkend</span>` : '',
+  ].filter(Boolean).join('');
+
+  // Pool selectie vullen
+  const sel = document.getElementById('bulk-pool-select');
+  sel.innerHTML = '<option value="">— Selecteer leerling —</option>' +
+    bulkLeerlingen.map(l => {
+      const naam = [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ');
+      return `<option value="${l.id}">${naam}</option>`;
+    }).join('');
+
+  // Bouw leerlingkaarten
+  const wrap = document.getElementById('bulk-ll-kaarten');
+  wrap.innerHTML = Object.entries(perLeerling).map(([lId, paginas]) => {
+    const ll = bulkLeerlingen.find(l => l.id === lId) || {};
+    const naam = [ll.roepnaam, ll.tussenvoegsel, ll.achternaam].filter(Boolean).join(' ') || 'Onbekend';
+    const init = ((ll.roepnaam||'?')[0] + (ll.achternaam||'?')[0]).toUpperCase();
+    const zekerheid = paginas.every(p => p.koppeling_zekerheid === 'hoog') ? 'hoog'
+                    : paginas.some(p => p.koppeling_zekerheid === 'laag') ? 'laag' : 'middel';
+    const conf = zekerheid === 'hoog'
+      ? '<span style="background:#dcfce7;color:#16a34a;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:700;">✅ Zeker</span>'
+      : zekerheid === 'middel'
+      ? '<span style="background:#fef3c7;color:#92400e;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:700;">⚠️ Twijfelachtig</span>'
+      : '<span style="background:#fee2e2;color:#dc2626;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:700;">❌ Laag</span>';
+
+    const thumbs = paginas.sort((a,b) => (a.volgorde_in_toets||0)-(b.volgorde_in_toets||0)).map(p => `
+      <div id="bthumb-${p.id}" draggable="true" data-pagina-id="${p.id}" data-leerling-id="${lId}"
+        ondragstart="bulkDragStart(event,this)"
+        style="width:64px;border-radius:7px;border:1.5px solid var(--border);background:#1e293b;
+          cursor:grab;flex-shrink:0;overflow:hidden;position:relative;">
+        <div style="width:100%;height:80px;background:#1e293b;padding:7px 5px;display:flex;flex-direction:column;gap:3px;">
+          ${p.naam_gelezen ? '<div style="height:3px;background:rgba(200,169,81,.7);border-radius:2px;width:60%;"></div>' : ''}
+          <div style="height:2px;background:rgba(255,255,255,.2);border-radius:2px;width:80%;"></div>
+          <div style="height:2px;background:rgba(255,255,255,.15);border-radius:2px;width:65%;"></div>
+          <div style="height:2px;background:rgba(255,255,255,.2);border-radius:2px;width:70%;"></div>
+          <div style="height:2px;background:rgba(255,255,255,.1);border-radius:2px;width:50%;"></div>
+        </div>
+        ${p.naam_gelezen ? '<div style="position:absolute;top:3px;left:3px;background:rgba(200,169,81,.9);color:#fff;font-size:7px;font-weight:800;border-radius:2px;padding:1px 3px;">Naam</div>' : ''}
+        <div style="padding:3px 5px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:9px;font-weight:700;color:var(--muted);">p.${p.pagina_nr}</span>
+          <button onclick="bulkZoomPagina('${p.pagina_url}','${p.pagina_nr}',event)"
+            style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:10px;padding:0;">🔍</button>
+        </div>
+      </div>`).join('');
+
+    return `
+      <div id="bcard-${lId}"
+        ondragover="bulkCardDragOver(event,'${lId}')" ondrop="bulkCardDrop(event,'${lId}')"
+        ondragleave="document.getElementById('bcard-${lId}').style.borderColor='var(--border)'"
+        style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;
+          margin-bottom:10px;overflow:hidden;">
+        <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'"
+          style="display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;background:var(--surface2);">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--navy);color:#fff;
+            font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${init}</div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:14px;color:var(--navy);">${naam}</div>
+            <div style="font-size:11px;color:var(--muted);">${paginas.length} pagina's · Nr. ${ll.stamnummer||'—'}</div>
+          </div>
+          ${conf}
+          <span style="color:var(--muted2);font-size:12px;">▼</span>
+        </div>
+        <div style="display:none;padding:12px 14px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;" id="bthumbs-${lId}">
+            ${thumbs}
+            <div style="width:64px;height:95px;border:2px dashed #cbd5e1;border-radius:7px;
+              display:flex;align-items:center;justify-content:center;font-size:10px;
+              color:#94a3b8;text-align:center;padding:4px;line-height:1.3;">Sleep pagina</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Bouw pool (niet-herkende pagina's)
+  const poolWrap = document.getElementById('bulk-pool-paginas');
+  poolWrap.innerHTML = onbekend.map(p => `
+    <div id="bthumb-${p.id}" draggable="true" data-pagina-id="${p.id}" data-leerling-id=""
+      ondragstart="bulkDragStart(event,this)"
+      style="width:64px;border-radius:7px;border:1.5px solid #fca5a5;background:#1e293b;
+        cursor:grab;flex-shrink:0;overflow:hidden;position:relative;">
+      <div style="width:100%;height:80px;background:#1e293b;padding:7px 5px;display:flex;flex-direction:column;gap:3px;">
+        <div style="height:2px;background:rgba(255,255,255,.2);border-radius:2px;width:80%;"></div>
+        <div style="height:2px;background:rgba(255,255,255,.15);border-radius:2px;width:60%;"></div>
+        <div style="height:2px;background:rgba(255,255,255,.2);border-radius:2px;width:70%;"></div>
+      </div>
+      <div style="position:absolute;top:3px;left:3px;background:rgba(220,38,38,.85);color:#fff;
+        font-size:7px;font-weight:800;border-radius:2px;padding:1px 3px;">?</div>
+      <div style="padding:3px 5px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:9px;font-weight:700;color:var(--red);">p.${p.pagina_nr}</span>
+        <button onclick="bulkZoomPagina('${p.pagina_url}','${p.pagina_nr}',event)"
+          style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:10px;padding:0;">🔍</button>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('bulk-pool-teller').textContent = onbekend.length;
+  bulkUpdateVerifStats();
+}
+
+// ── Drag & drop ───────────────────────────────────────────
+function bulkDragStart(e, el) {
+  bulkDragEl = el;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', el.dataset.paginaId);
+  setTimeout(() => el.style.opacity = '.4', 0);
+}
+document.addEventListener('dragend', () => {
+  if (bulkDragEl) { bulkDragEl.style.opacity = '1'; bulkDragEl = null; }
+});
+
+function bulkCardDragOver(e, leerlingId) {
+  e.preventDefault();
+  const card = document.getElementById('bcard-' + leerlingId);
+  if (card) card.style.borderColor = 'var(--gold)';
+}
+function bulkCardDrop(e, leerlingId) {
+  e.preventDefault();
+  const card = document.getElementById('bcard-' + leerlingId);
+  if (card) card.style.borderColor = 'var(--border)';
+  const paginaId = e.dataTransfer.getData('text/plain');
+  if (!paginaId) return;
+  const el = document.getElementById('bthumb-' + paginaId);
+  if (!el) return;
+  // Verplaats thumbnail
+  const row = document.getElementById('bthumbs-' + leerlingId);
+  if (row) row.insertBefore(el, row.lastElementChild);
+  el.dataset.leerlingId = leerlingId;
+  // Sla op in backend
+  apiFetch('/api/nakijk/bulk/pagina/' + paginaId, {
+    method: 'PATCH',
+    body: JSON.stringify({ leerling_id: leerlingId }),
+  }).catch(err => showToast('Fout bij opslaan: ' + err.message));
+  // Update pagina state
+  const p = bulkPaginas.find(p => p.id === paginaId);
+  if (p) p.leerling_id = leerlingId;
+  bulkUpdateVerifStats();
+}
+function bulkPoolDragOver(e) {
+  e.preventDefault();
+  document.getElementById('bulk-pool').style.borderColor = 'var(--red)';
+}
+function bulkPoolDrop(e) {
+  e.preventDefault();
+  document.getElementById('bulk-pool').style.borderColor = '#fca5a5';
+  const paginaId = e.dataTransfer.getData('text/plain');
+  if (!paginaId) return;
+  const el = document.getElementById('bthumb-' + paginaId);
+  if (!el) return;
+  document.getElementById('bulk-pool-paginas').appendChild(el);
+  el.dataset.leerlingId = '';
+  apiFetch('/api/nakijk/bulk/pagina/' + paginaId, {
+    method: 'PATCH', body: JSON.stringify({ leerling_id: null }),
+  }).catch(() => {});
+  const p = bulkPaginas.find(p => p.id === paginaId);
+  if (p) p.leerling_id = null;
+  document.getElementById('bulk-pool-teller').textContent =
+    document.getElementById('bulk-pool-paginas').querySelectorAll('[id^="bthumb-"]').length;
+  bulkUpdateVerifStats();
+}
+
+function bulkUpdateVerifStats() {
+  const onbekend = document.getElementById('bulk-pool-paginas').querySelectorAll('[id^="bthumb-"]').length;
+  const sub = document.getElementById('bulk-verif-bottom-stats');
+  if (sub) sub.textContent = onbekend
+    ? `⚠️ Nog ${onbekend} pagina's niet gekoppeld`
+    : '✅ Alle pagina's zijn gekoppeld';
+}
+
+function bulkKoppelPool() {
+  const sel = document.getElementById('bulk-pool-select');
+  const leerlingId = sel.value;
+  if (!leerlingId) return;
+  const pool = document.getElementById('bulk-pool-paginas');
+  const thumbs = [...pool.querySelectorAll('[id^="bthumb-"]')];
+  if (!thumbs.length) { showToast('Geen pagina's in de pool'); return; }
+  const row = document.getElementById('bthumbs-' + leerlingId);
+  if (!row) { showToast('Leerlingkaart niet gevonden — klik de kaart open'); return; }
+  thumbs.forEach(t => {
+    row.insertBefore(t, row.lastElementChild);
+    t.dataset.leerlingId = leerlingId;
+    apiFetch('/api/nakijk/bulk/pagina/' + t.dataset.paginaId, {
+      method: 'PATCH', body: JSON.stringify({ leerling_id: leerlingId }),
+    }).catch(() => {});
+  });
+  document.getElementById('bulk-pool-teller').textContent = '0';
+  bulkUpdateVerifStats();
+  showToast('Pagina's gekoppeld aan leerling');
+}
+
+function bulkZoomPagina(url, nr, e) {
+  if (e) e.stopPropagation();
+  if (url) {
+    document.getElementById('zoom-label').textContent = 'Pagina ' + nr;
+    // Toon de echte pagina als iframe of image
+    const zoomCard = document.querySelector('.zoom-card');
+    if (zoomCard) {
+      const existing = zoomCard.querySelector('.zoom-real');
+      if (existing) existing.remove();
+      const iframe = document.createElement('iframe');
+      iframe.src = url;
+      iframe.className = 'zoom-real';
+      iframe.style.cssText = 'width:100%;height:340px;border:none;border-radius:10px;';
+      zoomCard.insertBefore(iframe, zoomCard.querySelector('.zoom-footer'));
+      // Verberg de mock
+      const mock = zoomCard.querySelector('.zoom-mock');
+      if (mock) mock.style.display = 'none';
+    }
+  }
+  document.getElementById('zoom-modal').classList.add('show');
+}
+
+// ── STAP 3: Nakijken ──────────────────────────────────────
+async function bulkStartNakijken() {
+  if (!bulkSessieId) return;
+  bulkGoStep(2);
+  const bar = document.getElementById('bulk-progress-bar');
+  const label = document.getElementById('bulk-progress-label');
+  const sub = document.getElementById('bulk-progress-sub');
+
+  try {
+    // Simuleer voortgang terwijl de server werkt
+    let simPct = 0;
+    const simInterval = setInterval(() => {
+      simPct = Math.min(simPct + 2, 90);
+      if (bar) bar.style.width = simPct + '%';
+    }, 800);
+
+    const result = await apiFetch('/api/nakijk/bulk/nakijken', {
+      method: 'POST',
+      body: JSON.stringify({ sessie_id: bulkSessieId }),
+    });
+
+    clearInterval(simInterval);
+    if (bar) bar.style.width = '100%';
+    if (label) label.textContent = `${result.gelukt} / ${result.totaal} nagekeken`;
+
+    // Laad resultaten
+    const resData = await apiFetch('/api/nakijk/bulk/resultaten/' + bulkSessieId);
+    bulkResultaten = resData.resultaten || [];
+
+    setTimeout(() => {
+      bulkBouwResultaten(resData);
+      bulkGoStep(3);
+    }, 600);
+
+  } catch(e) {
+    showToast('Nakijken mislukt: ' + e.message);
+    bulkGoStep(1);
+  }
+}
+
+// ── STAP 4: Resultaten ────────────────────────────────────
+function bulkBouwResultaten(resData) {
+  const stats = resData.statistieken || {};
+  const pct = stats.geslaagd && stats.totaal ? Math.round(stats.geslaagd/stats.totaal*100) : 0;
+
+  document.getElementById('bulk-scorekaart').innerHTML = `
+    <div>
+      <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Klasgemiddelde</div>
+      <div style="font-size:44px;font-weight:900;color:var(--gold);line-height:1;">${stats.gemiddeld_cijfer?.toFixed(1) || '—'}</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,.2);height:60px;align-self:center;flex-shrink:0;"></div>
+    <div>
+      <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Nagekeken</div>
+      <div style="font-size:44px;font-weight:900;line-height:1;">${stats.totaal}<span style="font-size:22px;opacity:.5;">/${bulkLeerlingen.length}</span></div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,.2);height:60px;align-self:center;flex-shrink:0;"></div>
+    <div>
+      <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Geslaagd (&ge;5.5)</div>
+      <div style="font-size:44px;font-weight:900;line-height:1;">${stats.geslaagd}<span style="font-size:22px;opacity:.5;">/${stats.totaal}</span></div>
+    </div>
+    <div style="flex:1;min-width:200px;background:rgba(255,255,255,.08);border-radius:10px;padding:12px 16px;">
+      <div style="font-size:10px;opacity:.65;margin-bottom:6px;">Geslaagd percentage</div>
+      <div style="font-size:22px;font-weight:900;">${pct}%</div>
+      <div style="background:rgba(255,255,255,.15);border-radius:99px;height:6px;overflow:hidden;margin-top:8px;">
+        <div style="width:${pct}%;background:var(--gold);height:100%;border-radius:99px;"></div>
+      </div>
+    </div>`;
+
+  document.getElementById('bulk-res-count').textContent = bulkResultaten.length + ' leerlingen';
+  bulkFilterResultaten();
+}
+
+function bulkFilterResultaten() {
+  const zoek    = (document.getElementById('bulk-res-zoek')?.value || '').toLowerCase();
+  const filter  = document.getElementById('bulk-res-filter')?.value || '';
+  const gefilterd = bulkResultaten.filter(r => {
+    const naam = [r.leerling?.roepnaam, r.leerling?.tussenvoegsel, r.leerling?.achternaam]
+      .filter(Boolean).join(' ').toLowerCase();
+    if (zoek && !naam.includes(zoek)) return false;
+    const cijfer = r.cijfer_definitief ?? r.cijfer_suggestie;
+    if (filter === 'onvoldoende' && (!cijfer || cijfer >= 5.5)) return false;
+    if (filter === 'voldoende' && (!cijfer || cijfer < 5.5)) return false;
+    return true;
+  });
+  document.getElementById('bulk-res-count').textContent = gefilterd.length + ' leerlingen';
+  const wrap = document.getElementById('bulk-resultaten-lijst');
+  if (!wrap) return;
+
+  const cijferKleur = c => !c ? 'var(--muted)' : c >= 7 ? 'var(--green)' : c >= 5.5 ? 'var(--orange)' : 'var(--red)';
+
+  wrap.innerHTML = gefilterd.map((r, i) => {
+    const ll = r.leerling || {};
+    const naam = [ll.roepnaam, ll.tussenvoegsel, ll.achternaam].filter(Boolean).join(' ') || r.naam_op_toets || '—';
+    const init = ((ll.roepnaam||'?')[0] + (ll.achternaam||'?')[0]).toUpperCase();
+    const cijfer = r.cijfer_definitief ?? r.cijfer_suggestie;
+    const pct = r.totaal_score && r.max_score ? Math.round(r.totaal_score/r.max_score*100) : 0;
+
+    return `<div onclick="bulkOpenLlDetail(${i}, ${JSON.stringify(gefilterd).replace(/"/g,'&quot;')})"
+        style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;
+          margin-bottom:10px;padding:13px 18px;cursor:pointer;display:flex;align-items:center;
+          gap:12px;transition:border-color .15s;flex-wrap:wrap;"
+        onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--navy);color:#fff;
+          font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${init}</div>
+        <div style="flex:1;min-width:160px;">
+          <div style="font-weight:700;font-size:14px;color:var(--navy);">${naam}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Nr. ${ll.stamnummer||'—'} · ${r.totaal_score??'—'}/${r.max_score??'—'} punten</div>
+          <div style="background:var(--border);border-radius:99px;height:5px;overflow:hidden;margin-top:6px;width:160px;">
+            <div style="width:${pct}%;background:${cijferKleur(cijfer)};height:100%;border-radius:99px;"></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;flex-shrink:0;">
+          <div style="text-align:center;">
+            <div style="font-size:26px;font-weight:900;color:${cijferKleur(cijfer)};">${cijfer ? Number(cijfer).toFixed(1) : '—'}</div>
+            <div style="font-size:10px;color:var(--muted);">cijfer</div>
+          </div>
+          <span style="color:var(--muted2);font-size:14px;">›</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function bulkOpenLlDetail(idx, gefilterd) {
+  bulkLlIdx = idx;
+  const r = gefilterd[idx];
+  if (!r) return;
+  bulkGoStep(4);
+
+  const ll = r.leerling || {};
+  const naam = [ll.roepnaam, ll.tussenvoegsel, ll.achternaam].filter(Boolean).join(' ') || r.naam_op_toets || '—';
+  const init = ((ll.roepnaam||'?')[0] + (ll.achternaam||'?')[0]).toUpperCase();
+  const cijfer = r.cijfer_definitief ?? r.cijfer_suggestie;
+  const cijferKleur = c => !c ? 'var(--muted)' : c >= 7 ? 'var(--green)' : c >= 5.5 ? 'var(--orange)' : 'var(--red)';
+
+  document.getElementById('bulk-ll-avatar').textContent = init;
+  document.getElementById('bulk-ll-naam').textContent = naam;
+  document.getElementById('bulk-ll-meta').textContent = `${ll.klas||''} · Nr. ${ll.stamnummer||'—'} · ${r.toets_naam||''}`;
+  document.getElementById('bulk-ll-cijfer').textContent = cijfer ? Number(cijfer).toFixed(1) : '—';
+  document.getElementById('bulk-ll-cijfer').style.color = cijferKleur(cijfer);
+  document.getElementById('bulk-ll-score').textContent = `${r.totaal_score??'—'}/${r.max_score??'—'}`;
+  document.getElementById('bulk-prev-ll').style.opacity = idx === 0 ? '.35' : '1';
+  document.getElementById('bulk-next-ll').style.opacity = idx === gefilterd.length-1 ? '.35' : '1';
+
+  // Bouw vraagkaarten
+  const antwoorden = (r.antwoorden || []).sort((a,b) => a.vraagnummer - b.vraagnummer);
+  const scoreKleur = (sc, mx) => { const p=sc/mx; return p>=.8?'var(--green)':p>=.5?'var(--orange)':'var(--red)'; };
+  const scoreBg = (sc, mx) => { const p=sc/mx; return p>=.8?'rgba(42,138,90,.1)':p>=.5?'rgba(212,130,10,.1)':'rgba(192,57,43,.1)'; };
+
+  const vraagKaarten = antwoorden.map(a => {
+    const sc = a.score ?? 0;
+    const pctV = a.max_score ? Math.round(sc/a.max_score*100) : 0;
+    const behaald = (a.behaalde_punten||[]).map(p =>
+      `<span style="background:${p.behaald?'rgba(42,138,90,.1)':'rgba(192,57,43,.1)'};color:${p.behaald?'var(--green)':'var(--red)'};
+        border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700;margin:2px;display:inline-block;">
+        ${p.behaald?'✓':'✗'} ${p.onderdeel}</span>`).join('');
+
+    return `<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:11px;margin-bottom:10px;overflow:hidden;">
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'"
+        style="display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;background:var(--surface2);">
+        <div style="width:28px;height:28px;border-radius:6px;background:var(--navy);color:#fff;
+          font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${a.vraagnummer}</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:var(--text2);">${a.vraag_tekst||'Vraag '+a.vraagnummer}</div>
+          <div style="background:var(--border);border-radius:99px;height:4px;overflow:hidden;margin-top:5px;width:120px;">
+            <div style="width:${pctV}%;background:${scoreKleur(sc,a.max_score||1)};height:100%;border-radius:99px;"></div>
+          </div>
+        </div>
+        <div style="background:${scoreBg(sc,a.max_score||1)};color:${scoreKleur(sc,a.max_score||1)};
+          border-radius:6px;padding:2px 10px;font-weight:700;font-size:13px;">
+          ${a.score!==null&&a.score!==undefined?a.score:'—'}/${a.max_score}</div>
+        <span style="color:var(--muted2);font-size:12px;">▼</span>
+      </div>
+      <div style="display:none;padding:13px 16px;">
+        ${a.antwoord_finaal?`<div style="margin-bottom:10px;">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Antwoord leerling</div>
+          <div style="font-size:12px;color:var(--text2);background:var(--surface2);padding:8px 10px;border-radius:7px;">${a.antwoord_finaal}</div>
+        </div>`:''}
+        ${behaald?`<div style="margin-bottom:10px;">${behaald}</div>`:''}
+        <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);flex-shrink:0;">Score:</span>
+          <input type="number" value="${a.score??0}" min="0" max="${a.max_score}" step="0.5"
+            onchange="bulkPasScoreAan('${r.id}',${a.vraagnummer},${a.max_score},this.value)"
+            style="width:52px;border:1.5px solid var(--border);border-radius:6px;padding:3px 6px;
+              font-size:14px;font-weight:700;color:var(--navy);text-align:center;font-family:inherit;">
+          <span style="font-size:13px;color:var(--muted);">/ ${a.max_score}</span>
+        </div>
+        ${a.feedback?`<div style="font-size:12px;color:var(--text2);padding:8px 10px;
+          background:var(--navy-glow);border-left:3px solid var(--navy);border-radius:0 7px 7px 0;line-height:1.6;">${a.feedback}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('bulk-ll-detail-inhoud').innerHTML = `
+    ${r.algemene_opmerking?`<div style="background:var(--surface2);border-radius:9px;padding:11px 14px;font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.55;">📝 ${r.algemene_opmerking}</div>`:''}
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">Per vraag</div>
+    ${vraagKaarten}
+    <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="bulkSlaLlOp('${r.id}')">✅ Opslaan</button>
+  `;
+  window.scrollTo(0, 0);
+
+  // Bewaar gefilterd voor navigatie
+  window._bulkGefilterd = gefilterd;
+}
+
+function bulkNavLeerling(dir) {
+  const newIdx = bulkLlIdx + dir;
+  const gefilterd = window._bulkGefilterd || bulkResultaten;
+  if (newIdx >= 0 && newIdx < gefilterd.length) bulkOpenLlDetail(newIdx, gefilterd);
+}
+
+function bulkSluitLlDetail() { bulkGoStep(3); }
+
+async function bulkPasScoreAan(sessieId, vraagnummer, maxScore, score) {
+  try {
+    await apiFetch('/api/nakijk/score', {
+      method: 'PATCH',
+      body: JSON.stringify({ sessie_id: sessieId, vraagnummer, score: Math.min(Math.max(Number(score)||0, 0), maxScore) }),
+    });
+    showToast('Score aangepast');
+  } catch(e) { showToast('Fout: ' + e.message); }
+}
+
+async function bulkSlaLlOp(sessieId) {
+  try {
+    await apiFetch('/api/nakijk/afronden', {
+      method: 'POST', body: JSON.stringify({ sessie_id: sessieId, cijfer_definitief: null }),
+    });
+    showToast('✅ Opgeslagen');
+  } catch(e) { showToast('Fout: ' + e.message); }
+}
+
+async function bulkSlaAllesOp() {
+  try {
+    await Promise.all(bulkResultaten.map(r =>
+      apiFetch('/api/nakijk/afronden', {
+        method: 'POST', body: JSON.stringify({ sessie_id: r.id, cijfer_definitief: r.cijfer_suggestie }),
+      }).catch(() => {})
+    ));
+    showToast('✅ Alle beoordelingen opgeslagen');
+  } catch(e) { showToast('Fout: ' + e.message); }
+}
+
+function exporteerBulkCSV() {
+  const header = 'Naam,Stamnummer,Klas,Score,Max,Cijfer';
+  const rijen = bulkResultaten.map(r => {
+    const ll = r.leerling || {};
+    const naam = [ll.roepnaam, ll.tussenvoegsel, ll.achternaam].filter(Boolean).join(' ') || r.naam_op_toets || '';
+    const cijfer = r.cijfer_definitief ?? r.cijfer_suggestie ?? '';
+    return `"${naam}","${ll.stamnummer||''}","${ll.klas||''}","${r.totaal_score||''}","${r.max_score||''}","${cijfer}"`;
+  });
+  const csv = [header, ...rijen].join('
+');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = `nakijk_${bulkGekozenKlas||'klas'}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 </script>
