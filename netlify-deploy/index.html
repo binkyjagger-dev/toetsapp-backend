@@ -7146,65 +7146,55 @@ function bulkGoStep(n) {
 
 // ── STAP 1: Upload + segmenteren + groeperen ──────────────
 async function bulkStart() {
-  // Zet knop op laden-staat zodat gebruiker weet dat er iets gebeurt
   const startBtn = document.getElementById('bulk-btn-start');
-  if (startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳ Bezig...'; }
+  if (startBtn) { startBtn.disabled = true; startBtn.innerHTML = '⏳ Bezig…'; }
 
-  nkLoading(true, 'PDF wordt geanalyseerd…', [
+  nkLoading(true, 'Klas wordt geanalyseerd…', [
     'Antwoordmodel verwerken',
-    'PDF splitsen in losse pagina\'s',
-    'Pagina\'s uitlezen — namen en vraagnummers',
-    'Pagina\'s koppelen per leerling',
+    'PDF splitsen in losse paginas',
+    'Paginas uitlezen per leerling',
+    'Koppelingen groeperen',
   ]);
 
   try {
     const lesperiode = document.getElementById('bulk-lesperiode')?.value || '';
-
-    // Upload
     const form = new FormData();
     form.append('toetsen', bulkToetsenFile);
     form.append('antwoordmodel', bulkModelFile);
-    form.append('klas_naam', bulkGekozenKlas);
+    if (bulkGekozenKlas) form.append('klas_naam', bulkGekozenKlas);
     if (lesperiode) form.append('lesperiode', lesperiode);
 
     const headers = {};
     if (leraarToken) headers['Authorization'] = 'Bearer ' + leraarToken;
 
-    const uploadRes = await fetch(API_BASE + '/api/nakijk/bulk/upload', { method: 'POST', headers, body: form });
-    if (!uploadRes.ok) throw new Error('Upload mislukt: ' + uploadRes.status);
-    const uploadData = await uploadRes.json();
-    if (!uploadData.success) throw new Error(uploadData.error);
-
-    bulkSessieId = uploadData.sessie_id;
-
-    // Segmenteren
-    const segRes = await apiFetch('/api/nakijk/bulk/segmenteren', {
-      method: 'POST',
-      body: JSON.stringify({ sessie_id: bulkSessieId }),
+    // Alles in één call: split + segmenteer + groepeer
+    const uploadRes = await fetch(API_BASE + '/api/nakijk/bulk/upload', {
+      method: 'POST', headers, body: form,
     });
-    if (!segRes.success) throw new Error(segRes.error);
 
-    // Groeperen
-    const groepRes = await apiFetch('/api/nakijk/bulk/groeperen', {
-      method: 'POST',
-      body: JSON.stringify({ sessie_id: bulkSessieId, lesperiode }),
-    });
-    if (!groepRes.success) throw new Error(groepRes.error);
+    let uploadData;
+    try {
+      uploadData = await uploadRes.json();
+    } catch(parseErr) {
+      throw new Error('Server gaf geen geldig antwoord (status ' + uploadRes.status + ')');
+    }
 
-    bulkLeerlingen = groepRes.leerlingen || [];
+    if (!uploadRes.ok || !uploadData.success) {
+      throw new Error(uploadData?.error || 'Upload mislukt: ' + uploadRes.status);
+    }
 
-    // Haal volledige sessie op
-    const sessieData = await apiFetch('/api/nakijk/bulk/sessie/' + bulkSessieId);
-    bulkPaginas = sessieData.paginas || [];
+    bulkSessieId  = uploadData.sessie_id;
+    bulkLeerlingen = uploadData.leerlingen || [];
+    bulkPaginas    = uploadData.paginas || [];
 
     nkLoading(false);
+    if (startBtn) { startBtn.disabled = false; startBtn.innerHTML = '🤖 Analyseren met Claude →'; }
     bulkBouwVerificatie();
     bulkGoStep(1);
 
   } catch(e) {
     nkLoading(false);
-    const btn = document.getElementById('bulk-btn-start');
-    if (btn) { btn.disabled = false; btn.textContent = '🤖 Analyseren met Claude →'; }
+    if (startBtn) { startBtn.disabled = false; startBtn.innerHTML = '🤖 Analyseren met Claude →'; }
     showToast('Fout bij analyseren: ' + e.message);
     console.error('[bulkStart]', e);
   }

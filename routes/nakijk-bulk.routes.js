@@ -1,13 +1,7 @@
 // ============================================================
-// NAKIJK BULK — Express routes
-// Kijkt een complete klas na vanuit één PDF
-//
-// Voeg toe aan server.js:
-//   const nakijkBulkRouter = require('./routes/nakijk-bulk.routes');
-//   app.use('/api/nakijk/bulk', nakijkBulkRouter);
-//
-// Extra package:
-//   npm install pdf-lib
+// NAKIJK BULK — Express routes (vereenvoudigd)
+// Alles in één upload-call: split → segmenteer → groepeer
+// Geen Storage-afhankelijkheid voor kerntaken
 // ============================================================
 
 const express   = require('express');
@@ -17,7 +11,10 @@ const pdfParse  = require('pdf-parse');
 const { PDFDocument } = require('pdf-lib');
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 150 * 1024 * 1024 },
+});
 
 function clients(req) {
   return { supabase: req.app.locals.supabase, anthropic: req.app.locals.anthropic };
@@ -36,7 +33,11 @@ function optionalAuth(req) {
 function parseClaudeJSON(text) {
   const clean = text.replace(/```json|```/g, '').trim();
   try { return JSON.parse(clean); }
-  catch { const m = clean.match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); throw new Error('Geen geldige JSON'); }
+  catch {
+    const m = clean.match(/\{[\s\S]*\}/);
+    if (m) return JSON.parse(m[0]);
+    throw new Error('Geen geldige JSON in Claude-respons');
+  }
 }
 
 async function extractTekst(buffer, mimetype) {
@@ -46,28 +47,25 @@ async function extractTekst(buffer, mimetype) {
   return buffer.toString('utf8');
 }
 
-// ── Split PDF in losse pagina-buffers ────────────────────
-async function splitPDFInPaginas(pdfBuffer) {
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
-  const aantalPaginas = pdfDoc.getPageCount();
-  const paginas = [];
-  for (let i = 0; i < aantalPaginas; i++) {
-    const nieuwDoc = await PDFDocument.create();
-    const [pagina] = await nieuwDoc.copyPages(pdfDoc, [i]);
-    nieuwDoc.addPage(pagina);
-    const bytes = await nieuwDoc.save();
-    paginas.push(Buffer.from(bytes));
+async function splitPDF(pdfBuffer) {
+  const doc = await PDFDocument.load(pdfBuffer);
+  const n = doc.getPageCount();
+  const buffers = [];
+  for (let i = 0; i < n; i++) {
+    const nieuw = await PDFDocument.create();
+    const [p] = await nieuw.copyPages(doc, [i]);
+    nieuw.addPage(p);
+    buffers.push(Buffer.from(await nieuw.save()));
   }
-  return paginas;
+  return buffers;
 }
 
-// ── Segmenteer één pagina ─────────────────────────────────
-async function segmenteerPagina(paginaNr, pdfBuffer, anthropic) {
+async function segmenteerPagina(nr, pdfBuffer, anthropic) {
   try {
     const resp = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 300,
-      system: `Je analyseert één pagina van een handgeschreven toets. Reageer ALLEEN met geldige JSON, geen uitleg.`,
+      max_tokens: 400,
+      system: 'Je analyseert één pagina van een handgeschreven toets. Reageer ALLEEN met geldige JSON.',
       messages: [{
         role: 'user',
         content: [
@@ -77,78 +75,71 @@ async function segmenteerPagina(paginaNr, pdfBuffer, anthropic) {
           },
           {
             type: 'text',
-            text: `Analyseer deze pagina en geef terug als JSON:
+            text: `Analyseer deze pagina. Geef terug als JSON:
 {
-  "naam_gevonden": true/false,
+  "naam_gevonden": true,
   "naam": "Voornaam Achternaam of null",
   "naam_zekerheid": "hoog/middel/laag/geen",
-  "vraagnummers": [lijst van vraagnummers zichtbaar op deze pagina],
-  "is_eerste_pagina": true als dit een voorblad of eerste pagina lijkt
+  "vraagnummers": [1, 2],
+  "is_eerste_pagina": true
 }`,
           },
         ],
       }],
     });
-    const data = parseClaudeJSON(resp.content[0].text);
-    return { pagina_nr: paginaNr, ...data, fout: null };
+    return { pagina_nr: nr, ...parseClaudeJSON(resp.content[0].text) };
   } catch(e) {
-    return {
-      pagina_nr: paginaNr, naam_gevonden: false, naam: null,
-      naam_zekerheid: 'geen', vraagnummers: [], is_eerste_pagina: false, fout: e.message,
-    };
+    console.warn(`[bulk] pagina ${nr} segmentatie fout:`, e.message);
+    return { pagina_nr: nr, naam_gevonden: false, naam: null, naam_zekerheid: 'geen', vraagnummers: [], is_eerste_pagina: false };
   }
 }
 
-// ── Groepeer pagina's per leerling ────────────────────────
-async function groepeerPaginas(paginaMetadata, leerlingenLijst, anthropic) {
-  const leerlingenNamen = leerlingenLijst.map(l =>
+async function groepeerPaginas(paginaMeta, leerlingen, anthropic) {
+  const namen = leerlingen.map(l =>
     [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ')
   );
-
   const resp = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 2000,
-    system: `Je groepeert pagina's van handgeschreven toetsen per leerling.
-Gebruik: namen op pagina's, continuïteit van vraagnummers, en logische volgorde.
-Reageer ALLEEN met geldige JSON, geen uitleg.`,
+    system: 'Je groepeert toetspaginas per leerling. Reageer ALLEEN met geldige JSON.',
     messages: [{
       role: 'user',
-      content: `Groepeer de volgende pagina's per leerling.
+      content: `Groepeer paginas per leerling op basis van namen, vraagnummercontinuïteit en volgorde.
 
-Bekende leerlingen in de klas:
-${leerlingenNamen.map((n,i) => `${i+1}. ${n}`).join('\n')}
+Bekende leerlingen:
+${namen.map((n,i) => `${i+1}. ${n}`).join('\n') || '(geen leerlingenlijst beschikbaar)'}
 
 Pagina metadata:
-${JSON.stringify(paginaMetadata, null, 2)}
+${JSON.stringify(paginaMeta, null, 2)}
 
-Geef terug als JSON:
+Geef JSON:
 {
   "groepen": [
     {
-      "leerling_naam": "naam zoals gevonden op toets",
-      "paginas": [1, 2, 3],
-      "volgorde": [1, 2, 3],
-      "zekerheid": "hoog/middel/laag",
-      "reden": "korte uitleg"
+      "leerling_naam": "naam",
+      "paginas": [1,2,3],
+      "volgorde": [1,2,3],
+      "zekerheid": "hoog/middel/laag"
     }
   ],
-  "niet_herkend": [paginanummers die niet gekoppeld konden worden]
+  "niet_herkend": [7, 15]
 }`,
     }],
   });
   return parseClaudeJSON(resp.content[0].text);
 }
 
-// ── Match leerlingnaam aan leerlingen_import ──────────────
 function lev(a, b) {
   const dp = Array.from({ length: a.length+1 }, (_,i) =>
     Array.from({ length: b.length+1 }, (_,j) => i===0?j:j===0?i:0));
-  for (let i=1;i<=a.length;i++) for (let j=1;j<=b.length;j++)
-    dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  for (let i=1; i<=a.length; i++)
+    for (let j=1; j<=b.length; j++)
+      dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
   return dp[a.length][b.length];
 }
-function matchLeerlingId(naam, leerlingen) {
-  if (!naam) return null;
+
+function matchLeerling(naam, leerlingen) {
+  if (!naam || !leerlingen.length) return null;
   const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
   const a = norm(naam);
   let beste = null, besteScore = 0;
@@ -159,13 +150,28 @@ function matchLeerlingId(naam, leerlingen) {
     const score = (1 - lev(a,b)/mx) * 100;
     if (score > besteScore) { besteScore = score; beste = l; }
   }
-  return besteScore >= 50 ? { leerling: beste, score: Math.round(besteScore) } : null;
+  return besteScore >= 45 ? { leerling: beste, score: Math.round(besteScore) } : null;
+}
+
+// ── Optioneel: sla buffer op in Supabase Storage ─────────
+async function slaOpInStorage(supabase, pad, buffer, contentType) {
+  try {
+    const { data, error } = await supabase.storage
+      .from('nakijk-toetsen')
+      .upload(pad, buffer, { contentType, upsert: false });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from('nakijk-toetsen').getPublicUrl(pad);
+    return urlData?.publicUrl || null;
+  } catch(e) {
+    console.warn('[bulk] Storage upload mislukt (niet kritisch):', e.message);
+    return null;
+  }
 }
 
 
 // ════════════════════════════════════════════════════════════
 // ROUTE 1 — POST /api/nakijk/bulk/upload
-// Upload klas-PDF + antwoordmodel → maak sessie aan
+// Doet alles: split + segmenteer + groepeer in één call
 // ════════════════════════════════════════════════════════════
 router.post('/upload', upload.fields([
   { name: 'toetsen', maxCount: 1 },
@@ -174,290 +180,192 @@ router.post('/upload', upload.fields([
   try {
     optionalAuth(req);
     const { supabase, anthropic } = clients(req);
-    const toetsenFile   = req.files?.toetsen?.[0];
-    const modelFile     = req.files?.antwoordmodel?.[0];
-    const { klas_naam, lesperiode } = req.body;
+    const toetsenFile = req.files?.toetsen?.[0];
+    const modelFile   = req.files?.antwoordmodel?.[0];
+    const klas_naam   = req.body?.klas_naam || null;
+    const lesperiode  = req.body?.lesperiode || null;
 
-    if (!toetsenFile || !modelFile || !klas_naam)
-      return res.status(400).json({ error: 'toetsen, antwoordmodel en klas_naam zijn verplicht' });
+    if (!toetsenFile || !modelFile)
+      return res.status(400).json({ error: 'Beide bestanden zijn verplicht (toetsen + antwoordmodel)' });
 
-    // 1. Extraheer antwoordmodel tekst
+    console.log(`[bulk/upload] start: ${toetsenFile.originalname}, klas: ${klas_naam}`);
+
+    // 1. Antwoordmodel analyseren
     const modelTekst = await extractTekst(modelFile.buffer, modelFile.mimetype);
-
-    // 2. Detecteer vraagstructuur uit antwoordmodel
-    const modelResp = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      system: 'Analyseer een antwoordmodel en geef structuur terug als JSON. Geen uitleg.',
-      messages: [{ role: 'user', content: `${modelTekst}\n\nGeef JSON: {"toets_naam":"...","niveau":"...","max_score":20,"aantal_vragen":5,"vragen":[{"nr":1,"max_score":3,"modelantwoord":"...","puntenverdeling":[{"onderdeel":"...","punten":1}]}]}` }],
-    });
-    const modelData = parseClaudeJSON(modelResp.content[0].text);
-
-    // 3. Split PDF in pagina's
-    const paginaBuffers = await splitPDFInPaginas(toetsenFile.buffer);
-    const aantalPaginas = paginaBuffers.length;
-
-    // 4. Sla antwoordmodel op in Storage
-    let antwoordmodelUrl = null;
+    let modelData = { toets_naam: 'Onbekende toets', niveau: null, max_score: 20, aantal_vragen: 5 };
     try {
-      const modelNaam = `antwoordmodellen/${Date.now()}_model.pdf`;
-      const { data: ulData } = await supabase.storage
-        .from('nakijk-toetsen').upload(modelNaam, modelFile.buffer, { contentType: 'application/pdf' });
-      if (ulData) {
-        const { data: urlData } = supabase.storage.from('nakijk-toetsen').getPublicUrl(modelNaam);
-        antwoordmodelUrl = urlData?.publicUrl;
-      }
-    } catch(e) { console.warn('antwoordmodel opslaan mislukt:', e.message); }
+      const modelResp = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: 'Analyseer antwoordmodel. Reageer alleen met geldige JSON.',
+        messages: [{ role: 'user', content: `${modelTekst}\n\nGeef JSON: {"toets_naam":"...","niveau":"...","max_score":20,"aantal_vragen":5}` }],
+      });
+      modelData = { ...modelData, ...parseClaudeJSON(modelResp.content[0].text) };
+    } catch(e) { console.warn('[bulk] modelanalyse mislukt:', e.message); }
 
-    // 5. Maak bulk sessie aan
+    // 2. PDF splitsen
+    console.log('[bulk/upload] PDF splitsen...');
+    const paginaBuffers = await splitPDF(toetsenFile.buffer);
+    const aantalPaginas = paginaBuffers.length;
+    console.log(`[bulk/upload] ${aantalPaginas} paginas`);
+
+    // 3. Sessie aanmaken
     const { data: sessie, error: sessieErr } = await supabase
       .from('nakijk_bulk_sessies')
       .insert({
-        leraar_id:        req.leraar?.id || null,
-        klas_naam,
-        toets_naam:       modelData.toets_naam || 'Onbekende toets',
-        niveau:           modelData.niveau,
-        antwoordmodel_url: antwoordmodelUrl,
-        totaal_paginas:   aantalPaginas,
-        max_score:        modelData.max_score,
-        aantal_vragen:    modelData.aantal_vragen,
-        status:           'segmenting',
+        leraar_id:     req.leraar?.id || null,
+        klas_naam:     klas_naam || 'Onbekend',
+        toets_naam:    modelData.toets_naam,
+        niveau:        modelData.niveau,
+        max_score:     modelData.max_score,
+        aantal_vragen: modelData.aantal_vragen,
+        totaal_paginas: aantalPaginas,
+        status:        'segmenting',
       })
       .select().single();
-    if (sessieErr) throw sessieErr;
+    if (sessieErr) throw new Error('Sessie aanmaken mislukt: ' + sessieErr.message);
 
-    // 6. Upload pagina's naar Storage + sla metadata op
-    const paginaRijen = [];
+    // 4. Pagina's opslaan in Storage (optioneel — werkt ook zonder)
+    const paginaUrls = [];
     for (let i = 0; i < paginaBuffers.length; i++) {
-      let paginaUrl = null;
-      try {
-        const naam = `bulk/${sessie.id}/pagina-${String(i+1).padStart(3,'0')}.pdf`;
-        const { data: ulData } = await supabase.storage
-          .from('nakijk-toetsen').upload(naam, paginaBuffers[i], { contentType: 'application/pdf' });
-        if (ulData) {
-          const { data: urlData } = supabase.storage.from('nakijk-toetsen').getPublicUrl(naam);
-          paginaUrl = urlData?.publicUrl;
-        }
-      } catch(e) { console.warn(`pagina ${i+1} opslaan mislukt`); }
+      const pad = `bulk/${sessie.id}/pagina-${String(i+1).padStart(3,'0')}.pdf`;
+      const url = await slaOpInStorage(supabase, pad, paginaBuffers[i], 'application/pdf');
+      paginaUrls.push(url);
+    }
 
-      paginaRijen.push({
+    // 5. Pagina-records aanmaken
+    await supabase.from('nakijk_bulk_paginas').insert(
+      paginaBuffers.map((_, i) => ({
         bulk_sessie_id: sessie.id,
         pagina_nr:      i + 1,
-        pagina_url:     paginaUrl,
-      });
-    }
+        pagina_url:     paginaUrls[i] || null,
+      }))
+    );
 
-    const { error: paginaErr } = await supabase
-      .from('nakijk_bulk_paginas').insert(paginaRijen);
-    if (paginaErr) throw paginaErr;
-
-    res.json({
-      success: true,
-      sessie_id:      sessie.id,
-      totaal_paginas: aantalPaginas,
-      model_data:     modelData,
-      // Stuur pagina buffers terug als base64 voor de segmentatie call
-      pagina_buffers: paginaBuffers.map((b,i) => ({ nr: i+1, data: b.toString('base64') })),
-    });
-  } catch(err) {
-    console.error('[bulk/upload]', err);
-    res.status(500).json({ error: 'Upload mislukt', details: err.message });
-  }
-});
-
-
-// ════════════════════════════════════════════════════════════
-// ROUTE 2 — POST /api/nakijk/bulk/segmenteren
-// Lees elke pagina uit (parallel, in batches)
-// ════════════════════════════════════════════════════════════
-router.post('/segmenteren', async (req, res) => {
-  try {
-    optionalAuth(req);
-    const { supabase, anthropic } = clients(req);
-    const { sessie_id } = req.body;
-    if (!sessie_id) return res.status(400).json({ error: 'sessie_id verplicht' });
-
-    // Haal pagina URLs op
-    const { data: paginas } = await supabase
-      .from('nakijk_bulk_paginas').select('*')
-      .eq('bulk_sessie_id', sessie_id).order('pagina_nr');
-
-    if (!paginas?.length) return res.status(404).json({ error: 'Geen paginas gevonden' });
-
-    // Download pagina's en segmenteer in batches van 8
+    // 6. Segmentatie — parallel in batches van 8
+    console.log('[bulk/upload] segmentatie starten...');
     const BATCH = 8;
-    const resultaten = [];
-
-    for (let i = 0; i < paginas.length; i += BATCH) {
-      const batch = paginas.slice(i, i + BATCH);
-
-      const batchResultaten = await Promise.all(batch.map(async (p) => {
-        // Download de pagina PDF
-        let pdfBuffer;
-        try {
-          const resp = await fetch(p.pagina_url);
-          const ab = await resp.arrayBuffer();
-          pdfBuffer = Buffer.from(ab);
-        } catch(e) {
-          return { pagina_nr: p.pagina_nr, fout: 'Download mislukt: ' + e.message };
-        }
-        return segmenteerPagina(p.pagina_nr, pdfBuffer, anthropic);
-      }));
-
-      // Sla resultaten op in Supabase
-      for (const r of batchResultaten) {
-        await supabase.from('nakijk_bulk_paginas')
-          .update({
-            naam_gelezen:    r.naam || null,
-            naam_zekerheid:  r.naam_zekerheid || 'geen',
-            vraagnummers:    r.vraagnummers || [],
-            is_eerste_pagina: r.is_eerste_pagina || false,
-          })
-          .eq('bulk_sessie_id', sessie_id)
-          .eq('pagina_nr', r.pagina_nr);
+    const segResultaten = [];
+    for (let i = 0; i < paginaBuffers.length; i += BATCH) {
+      const batch = paginaBuffers.slice(i, i + BATCH);
+      const batchRes = await Promise.all(
+        batch.map((buf, j) => segmenteerPagina(i + j + 1, buf, anthropic))
+      );
+      // Sla op in DB
+      for (const r of batchRes) {
+        await supabase.from('nakijk_bulk_paginas').update({
+          naam_gelezen:     r.naam || null,
+          naam_zekerheid:   r.naam_zekerheid || 'geen',
+          vraagnummers:     r.vraagnummers || [],
+          is_eerste_pagina: r.is_eerste_pagina || false,
+        }).eq('bulk_sessie_id', sessie.id).eq('pagina_nr', r.pagina_nr);
       }
+      segResultaten.push(...batchRes);
+    }
+    console.log('[bulk/upload] segmentatie klaar');
 
-      resultaten.push(...batchResultaten);
+    // 7. Leerlingen ophalen voor groepering
+    let leerlingen = [];
+    try {
+      let q = supabase.from('leerlingen_import')
+        .select('id, roepnaam, tussenvoegsel, achternaam, klas, stamnummer');
+      if (klas_naam) q = q.eq('klas', klas_naam);
+      if (lesperiode) q = q.eq('lesperiode', lesperiode);
+      const { data } = await q;
+      leerlingen = data || [];
+    } catch(e) { console.warn('[bulk] leerlingen ophalen mislukt:', e.message); }
+
+    // 8. Groepering
+    console.log('[bulk/upload] groepering starten...');
+    let groepering = { groepen: [], niet_herkend: [] };
+    try {
+      groepering = await groepeerPaginas(
+        segResultaten.map(r => ({
+          pagina_nr:        r.pagina_nr,
+          naam_gevonden:    !!r.naam,
+          naam:             r.naam,
+          naam_zekerheid:   r.naam_zekerheid,
+          vraagnummers:     r.vraagnummers,
+          is_eerste_pagina: r.is_eerste_pagina,
+        })),
+        leerlingen,
+        anthropic
+      );
+    } catch(e) { console.warn('[bulk] groepering mislukt:', e.message); }
+
+    // 9. Koppelingen opslaan
+    for (const groep of (groepering.groepen || [])) {
+      const match = matchLeerling(groep.leerling_naam, leerlingen);
+      const leerlingId = match?.leerling?.id || null;
+      const zekerheid = match?.score >= 85 ? (groep.zekerheid || 'hoog')
+                      : match?.score >= 60 ? 'middel' : 'laag';
+      for (let idx = 0; idx < groep.paginas.length; idx++) {
+        await supabase.from('nakijk_bulk_paginas').update({
+          leerling_id:         leerlingId,
+          volgorde_in_toets:   groep.volgorde?.[idx] ?? (idx + 1),
+          koppeling_zekerheid: leerlingId ? zekerheid : 'laag',
+        }).eq('bulk_sessie_id', sessie.id).eq('pagina_nr', groep.paginas[idx]);
+      }
+    }
+    for (const nr of (groepering.niet_herkend || [])) {
+      await supabase.from('nakijk_bulk_paginas').update({
+        leerling_id: null, koppeling_zekerheid: 'onbekend',
+      }).eq('bulk_sessie_id', sessie.id).eq('pagina_nr', nr);
     }
 
-    res.json({ success: true, resultaten });
-  } catch(err) {
-    console.error('[bulk/segmenteren]', err);
-    res.status(500).json({ error: 'Segmentatie mislukt', details: err.message });
-  }
-});
+    // 10. Status bijwerken
+    await supabase.from('nakijk_bulk_sessies')
+      .update({ status: 'verificatie' }).eq('id', sessie.id);
 
-
-// ════════════════════════════════════════════════════════════
-// ROUTE 3 — POST /api/nakijk/bulk/groeperen
-// Groepeer pagina's per leerling via Claude
-// ════════════════════════════════════════════════════════════
-router.post('/groeperen', async (req, res) => {
-  try {
-    optionalAuth(req);
-    const { supabase, anthropic } = clients(req);
-    const { sessie_id, lesperiode } = req.body;
-    if (!sessie_id) return res.status(400).json({ error: 'sessie_id verplicht' });
-
-    // Haal pagina metadata op
+    // 11. Volledige pagina-data ophalen voor response
     const { data: paginas } = await supabase
       .from('nakijk_bulk_paginas').select('*')
-      .eq('bulk_sessie_id', sessie_id).order('pagina_nr');
+      .eq('bulk_sessie_id', sessie.id).order('pagina_nr');
 
-    // Haal sessie op voor klas_naam
-    const { data: sessie } = await supabase
-      .from('nakijk_bulk_sessies').select('*').eq('id', sessie_id).single();
-
-    // Haal leerlingen op
-    let leerlingenQuery = supabase.from('leerlingen_import')
-      .select('id, roepnaam, tussenvoegsel, achternaam, klas, stamnummer');
-    if (sessie?.klas_naam) leerlingenQuery = leerlingenQuery.eq('klas', sessie.klas_naam);
-    if (lesperiode) leerlingenQuery = leerlingenQuery.eq('lesperiode', lesperiode);
-    const { data: leerlingen } = await leerlingenQuery;
-
-    const paginaMetadata = paginas.map(p => ({
-      pagina_nr:        p.pagina_nr,
-      naam_gevonden:    !!p.naam_gelezen,
-      naam:             p.naam_gelezen,
-      naam_zekerheid:   p.naam_zekerheid,
-      vraagnummers:     p.vraagnummers || [],
-      is_eerste_pagina: p.is_eerste_pagina,
-    }));
-
-    const groepering = await groepeerPaginas(paginaMetadata, leerlingen || [], anthropic);
-
-    // Koppel leerling-IDs en sla op
-    for (const groep of (groepering.groepen || [])) {
-      const match = matchLeerlingId(groep.leerling_naam, leerlingen || []);
-      const leerlingId = match?.leerling?.id || null;
-      const zekerheid = match?.score >= 85 ? groep.zekerheid || 'hoog'
-                      : match?.score >= 60 ? 'middel' : 'laag';
-
-      for (let idx = 0; idx < groep.paginas.length; idx++) {
-        await supabase.from('nakijk_bulk_paginas')
-          .update({
-            leerling_id:         leerlingId,
-            volgorde_in_toets:   groep.volgorde?.[idx] ?? (idx + 1),
-            koppeling_zekerheid: leerlingId ? zekerheid : 'laag',
-          })
-          .eq('bulk_sessie_id', sessie_id)
-          .eq('pagina_nr', groep.paginas[idx]);
-      }
-    }
-
-    // Pagina's die niet herkend zijn krijgen koppeling_zekerheid = 'onbekend'
-    for (const nr of (groepering.niet_herkend || [])) {
-      await supabase.from('nakijk_bulk_paginas')
-        .update({ leerling_id: null, koppeling_zekerheid: 'onbekend' })
-        .eq('bulk_sessie_id', sessie_id).eq('pagina_nr', nr);
-    }
-
-    // Update status
-    await supabase.from('nakijk_bulk_sessies')
-      .update({ status: 'verificatie' }).eq('id', sessie_id);
-
-    // Haal bijgewerkte paginas op voor de response
-    const { data: bijgewerkt } = await supabase
-      .from('nakijk_bulk_paginas').select('*')
-      .eq('bulk_sessie_id', sessie_id).order('pagina_nr');
-
-    // Bouw leerling-overzicht
-    const leerlingMap = {};
-    for (const p of bijgewerkt) {
-      if (!p.leerling_id) {
-        if (!leerlingMap['__onbekend__']) leerlingMap['__onbekend__'] = [];
-        leerlingMap['__onbekend__'].push(p);
-        continue;
-      }
-      if (!leerlingMap[p.leerling_id]) leerlingMap[p.leerling_id] = [];
-      leerlingMap[p.leerling_id].push(p);
-    }
+    console.log('[bulk/upload] klaar');
 
     res.json({
-      success: true,
-      sessie_id,
+      success:       true,
+      sessie_id:     sessie.id,
+      totaal_paginas: aantalPaginas,
+      model_data:    modelData,
+      leerlingen,
+      paginas:       paginas || [],
       groepering,
-      leerling_map: leerlingMap,
-      leerlingen:   leerlingen || [],
     });
+
   } catch(err) {
-    console.error('[bulk/groeperen]', err);
-    res.status(500).json({ error: 'Groeperen mislukt', details: err.message });
+    console.error('[bulk/upload] FOUT:', err);
+    res.status(500).json({ error: err.message, stack: err.stack?.split('\n')[0] });
   }
 });
 
 
 // ════════════════════════════════════════════════════════════
-// ROUTE 4 — PATCH /api/nakijk/bulk/pagina/:id
-// Wijs een pagina toe aan een andere leerling (handmatig)
+// ROUTE 2 — PATCH /api/nakijk/bulk/pagina/:id
+// Wijs een pagina handmatig toe aan leerling
 // ════════════════════════════════════════════════════════════
 router.patch('/pagina/:id', async (req, res) => {
   try {
     const { supabase } = clients(req);
     const { leerling_id, volgorde_in_toets } = req.body;
-
-    const { error } = await supabase
-      .from('nakijk_bulk_paginas')
-      .update({
-        leerling_id,
-        volgorde_in_toets: volgorde_in_toets || null,
-        handmatig_toegewezen: true,
-        koppeling_zekerheid: leerling_id ? 'hoog' : 'onbekend',
-      })
-      .eq('id', req.params.id);
-
+    const { error } = await supabase.from('nakijk_bulk_paginas').update({
+      leerling_id,
+      volgorde_in_toets: volgorde_in_toets || null,
+      handmatig_toegewezen: true,
+      koppeling_zekerheid: leerling_id ? 'hoog' : 'onbekend',
+    }).eq('id', req.params.id);
     if (error) throw error;
     res.json({ success: true });
   } catch(err) {
-    console.error('[bulk/pagina PATCH]', err);
-    res.status(500).json({ error: 'Bijwerken mislukt', details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
 
 // ════════════════════════════════════════════════════════════
-// ROUTE 5 — POST /api/nakijk/bulk/nakijken
-// Kijk alle leerlingen na (parallel)
+// ROUTE 3 — POST /api/nakijk/bulk/nakijken
+// Kijk alle leerlingen na
 // ════════════════════════════════════════════════════════════
 router.post('/nakijken', async (req, res) => {
   try {
@@ -469,7 +377,6 @@ router.post('/nakijken', async (req, res) => {
     const { data: bulkSessie } = await supabase
       .from('nakijk_bulk_sessies').select('*').eq('id', sessie_id).single();
 
-    // Haal alle paginas op, gegroepeerd per leerling
     const { data: paginas } = await supabase
       .from('nakijk_bulk_paginas').select('*')
       .eq('bulk_sessie_id', sessie_id)
@@ -478,50 +385,48 @@ router.post('/nakijken', async (req, res) => {
 
     // Groepeer per leerling
     const perLeerling = {};
-    for (const p of paginas) {
+    for (const p of (paginas || [])) {
       if (!perLeerling[p.leerling_id]) perLeerling[p.leerling_id] = [];
       perLeerling[p.leerling_id].push(p);
     }
 
-    // Haal antwoordmodel op
+    // Antwoordmodel tekst ophalen
     let antwoordmodelTekst = '';
-    if (bulkSessie.antwoordmodel_url) {
+    if (bulkSessie?.antwoordmodel_url) {
       try {
         const resp = await fetch(bulkSessie.antwoordmodel_url);
         const buf = Buffer.from(await resp.arrayBuffer());
         antwoordmodelTekst = (await pdfParse(buf)).text;
-      } catch(e) { console.warn('antwoordmodel laden mislukt'); }
+      } catch(e) { console.warn('[bulk/nakijken] antwoordmodel laden mislukt'); }
     }
 
-    const NAKIJK_SYSTEM = `Je bent een ervaren economiedocent die toetsen nauwkeurig nakijkt.
-Beoordeel inhoudelijk — antwoord hoeft niet letterlijk overeen te komen als de strekking klopt.
-Gedeeltelijke punten zijn mogelijk. Leeg of null antwoord → score 0.
-Cijfer: (score/max)*9 + 1, afgerond op 1 decimaal.
-Reageer UITSLUITEND met geldig JSON. Geen markdown, geen backticks.`;
+    const NAKIJK_SYSTEM = `Je bent een ervaren economiedocent die toetsen nakijkt.
+Beoordeel inhoudelijk — strekking telt. Gedeeltelijke punten zijn mogelijk.
+Cijfer: (score/max)*9+1, afgerond op 1 decimaal. Reageer ALLEEN met geldige JSON.`;
 
     const resultaten = [];
-    const BATCH = 5; // Nakijken is zwaarder, kleinere batches
+    const BATCH = 5;
     const leerlingIds = Object.keys(perLeerling);
 
     for (let i = 0; i < leerlingIds.length; i += BATCH) {
       const batch = leerlingIds.slice(i, i + BATCH);
-
-      const batchResultaten = await Promise.all(batch.map(async (leerlingId) => {
-        const llPaginas = perLeerling[leerlingId].sort((a,b) => a.volgorde_in_toets - b.volgorde_in_toets);
-
+      const batchRes = await Promise.all(batch.map(async (leerlingId) => {
+        const llPaginas = perLeerling[leerlingId]
+          .sort((a,b) => (a.volgorde_in_toets||0) - (b.volgorde_in_toets||0));
         try {
           // Download pagina's
           const paginaContent = [];
           for (const p of llPaginas) {
-            const pResp = await fetch(p.pagina_url);
-            const pBuf = Buffer.from(await pResp.arrayBuffer());
+            if (!p.pagina_url) continue;
+            const pRes = await fetch(p.pagina_url);
+            const pBuf = Buffer.from(await pRes.arrayBuffer());
             paginaContent.push({
               type: 'document',
               source: { type: 'base64', media_type: 'application/pdf', data: pBuf.toString('base64') },
             });
           }
+          if (!paginaContent.length) throw new Error('Geen paginas beschikbaar');
 
-          // Lees antwoorden uit + kijk na in één call
           const claudeResp = await anthropic.messages.create({
             model: 'claude-sonnet-4-20250514',
             max_tokens: 4000,
@@ -530,115 +435,78 @@ Reageer UITSLUITEND met geldig JSON. Geen markdown, geen backticks.`;
               role: 'user',
               content: [
                 ...paginaContent,
-                {
-                  type: 'text',
-                  text: `Dit zijn de toetspagina's van één leerling.
-
-ANTWOORDMODEL:
-${antwoordmodelTekst}
-
-Lees de antwoorden van de leerling uit en kijk ze direct na.
-Geef terug als JSON:
-{
-  "leerling_naam": "naam van de toets",
-  "vragen": [
-    {
-      "vraagnummer": 1,
-      "antwoord_leerling": "uitgelezen antwoord",
-      "leeszekerheid": "zeker/twijfelachtig/onleesbaar",
-      "score": 2,
-      "max_score": 3,
-      "behaalde_punten": [{"onderdeel":"...","behaald":true}],
-      "feedback": "feedback voor leerling",
-      "argumentatie": "toelichting voor docent"
-    }
-  ],
-  "totaal_score": 13,
-  "max_score": 20,
-  "cijfer_suggestie": 6.8,
-  "algemene_opmerking": "algemeen beeld"
-}`,
-                },
+                { type: 'text', text: `Antwoordmodel:\n${antwoordmodelTekst}\n\nGeef JSON:\n{"leerling_naam":"...","vragen":[{"vraagnummer":1,"antwoord_leerling":"...","leeszekerheid":"zeker","score":2,"max_score":3,"behaalde_punten":[{"onderdeel":"...","behaald":true}],"feedback":"...","argumentatie":"..."}],"totaal_score":13,"max_score":20,"cijfer_suggestie":6.8,"algemene_opmerking":"..."}` },
               ],
             }],
           });
 
           const beoordeling = parseClaudeJSON(claudeResp.content[0].text);
 
-          // Maak nakijk_sessie aan voor deze leerling
-          const { data: sessie, error: sessieErr } = await supabase
-            .from('nakijk_sessies')
-            .insert({
-              naam_op_toets:      beoordeling.leerling_naam || null,
-              naam_zekerheid:     'hoog',
-              toets_naam:         bulkSessie.toets_naam,
-              vak:                bulkSessie.vak,
-              niveau:             bulkSessie.niveau,
-              aantal_vragen:      beoordeling.vragen.length,
-              max_score:          beoordeling.max_score,
-              totaal_score:       beoordeling.totaal_score,
-              cijfer_suggestie:   beoordeling.cijfer_suggestie,
-              algemene_opmerking: beoordeling.algemene_opmerking,
-              status:             'nagekeken',
-              leerling_id:        leerlingId,
-              leraar_id:          req.leraar?.id || null,
-              bulk_sessie_id:     sessie_id,
-              toets_url:          llPaginas[0]?.pagina_url || null,
-            })
-            .select().single();
+          const { data: sessie } = await supabase.from('nakijk_sessies').insert({
+            naam_op_toets:      beoordeling.leerling_naam || null,
+            naam_zekerheid:     'hoog',
+            toets_naam:         bulkSessie.toets_naam,
+            vak:                bulkSessie.vak,
+            niveau:             bulkSessie.niveau,
+            aantal_vragen:      beoordeling.vragen?.length || 0,
+            max_score:          beoordeling.max_score,
+            totaal_score:       beoordeling.totaal_score,
+            cijfer_suggestie:   beoordeling.cijfer_suggestie,
+            algemene_opmerking: beoordeling.algemene_opmerking,
+            status:             'nagekeken',
+            leerling_id:        leerlingId,
+            leraar_id:          req.leraar?.id || null,
+            bulk_sessie_id:     sessie_id,
+            toets_url:          llPaginas[0]?.pagina_url || null,
+          }).select().single();
 
-          if (sessieErr) throw sessieErr;
-
-          // Sla antwoorden op
-          await supabase.from('nakijk_antwoorden').insert(
-            beoordeling.vragen.map(v => ({
-              sessie_id:       sessie.id,
-              vraagnummer:     v.vraagnummer,
-              vraag_tekst:     v.vraag_tekst || null,
-              max_score:       v.max_score,
-              antwoord_rauw:   v.antwoord_leerling,
-              antwoord_finaal: v.antwoord_leerling,
-              leeszekerheid:   v.leeszekerheid || 'zeker',
-              score:           v.score,
-              behaalde_punten: v.behaalde_punten,
-              feedback:        v.feedback,
-              argumentatie:    v.argumentatie,
-            }))
-          );
-
-          return { leerling_id: leerlingId, sessie_id: sessie.id, beoordeling, ok: true };
-
+          if (sessie) {
+            await supabase.from('nakijk_antwoorden').insert(
+              (beoordeling.vragen || []).map(v => ({
+                sessie_id:       sessie.id,
+                vraagnummer:     v.vraagnummer,
+                max_score:       v.max_score,
+                antwoord_rauw:   v.antwoord_leerling,
+                antwoord_finaal: v.antwoord_leerling,
+                leeszekerheid:   v.leeszekerheid || 'zeker',
+                score:           v.score,
+                behaalde_punten: v.behaalde_punten,
+                feedback:        v.feedback,
+                argumentatie:    v.argumentatie,
+              }))
+            );
+          }
+          return { leerling_id: leerlingId, sessie_id: sessie?.id, ok: true };
         } catch(e) {
-          console.error(`Nakijken leerling ${leerlingId} mislukt:`, e.message);
+          console.error(`[bulk/nakijken] leerling ${leerlingId}:`, e.message);
           return { leerling_id: leerlingId, ok: false, fout: e.message };
         }
       }));
-
-      resultaten.push(...batchResultaten);
+      resultaten.push(...batchRes);
     }
 
-    // Update bulk sessie status
     await supabase.from('nakijk_bulk_sessies')
       .update({ status: 'afgerond' }).eq('id', sessie_id);
 
-    const gelukt = resultaten.filter(r => r.ok).length;
-    res.json({ success: true, sessie_id, gelukt, totaal: leerlingIds.length, resultaten });
-
+    res.json({
+      success: true,
+      gelukt:  resultaten.filter(r => r.ok).length,
+      totaal:  leerlingIds.length,
+      resultaten,
+    });
   } catch(err) {
     console.error('[bulk/nakijken]', err);
-    res.status(500).json({ error: 'Nakijken mislukt', details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
 
 // ════════════════════════════════════════════════════════════
-// ROUTE 6 — GET /api/nakijk/bulk/sessie/:id
-// Volledige bulk sessie ophalen (paginas + leerlinginformatie)
+// ROUTE 4 — GET /api/nakijk/bulk/sessie/:id
 // ════════════════════════════════════════════════════════════
 router.get('/sessie/:id', async (req, res) => {
   try {
     const { supabase } = clients(req);
-
     const { data: sessie, error } = await supabase
       .from('nakijk_bulk_sessies').select('*').eq('id', req.params.id).single();
     if (error) throw error;
@@ -647,80 +515,62 @@ router.get('/sessie/:id', async (req, res) => {
       .from('nakijk_bulk_paginas').select('*')
       .eq('bulk_sessie_id', req.params.id).order('pagina_nr');
 
-    // Nakijk sessies die aan deze bulk sessie zijn gekoppeld
     const { data: nakijkSessies } = await supabase
       .from('nakijk_sessies')
-      .select('id, leerling_id, naam_op_toets, totaal_score, max_score, cijfer_suggestie, cijfer_definitief, status, algemene_opmerking')
+      .select('id, leerling_id, naam_op_toets, totaal_score, max_score, cijfer_suggestie, status')
       .eq('bulk_sessie_id', req.params.id);
 
-    // Leerlinginformatie ophalen
-    const leerlingIds = [...new Set(paginas.filter(p => p.leerling_id).map(p => p.leerling_id))];
+    const leerlingIds = [...new Set((paginas || []).filter(p => p.leerling_id).map(p => p.leerling_id))];
     let leerlingen = [];
     if (leerlingIds.length) {
-      const { data: ll } = await supabase
-        .from('leerlingen_import')
+      const { data } = await supabase.from('leerlingen_import')
         .select('id, roepnaam, tussenvoegsel, achternaam, klas, stamnummer')
         .in('id', leerlingIds);
-      leerlingen = ll || [];
+      leerlingen = data || [];
     }
 
     res.json({ success: true, sessie, paginas: paginas || [], nakijk_sessies: nakijkSessies || [], leerlingen });
   } catch(err) {
-    console.error('[bulk/sessie GET]', err);
-    res.status(500).json({ error: 'Laden mislukt', details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
 
 // ════════════════════════════════════════════════════════════
-// ROUTE 7 — GET /api/nakijk/bulk/overzicht
-// Lijst van bulk sessies van deze leraar
+// ROUTE 5 — GET /api/nakijk/bulk/overzicht
 // ════════════════════════════════════════════════════════════
 router.get('/overzicht', async (req, res) => {
   try {
     optionalAuth(req);
     const { supabase } = clients(req);
-    const leraarId = req.leraar?.id || null;
-
-    let query = supabase
-      .from('nakijk_bulk_sessies')
+    let q = supabase.from('nakijk_bulk_sessies')
       .select('id, klas_naam, toets_naam, niveau, totaal_paginas, status, created_at')
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    if (leraarId) query = query.eq('leraar_id', leraarId);
-
-    const { data: sessies, error } = await query;
+      .order('created_at', { ascending: false }).limit(20);
+    if (req.leraar?.id) q = q.eq('leraar_id', req.leraar.id);
+    const { data: sessies, error } = await q;
     if (error) throw error;
     res.json({ success: true, sessies: sessies || [] });
   } catch(err) {
-    console.error('[bulk/overzicht]', err);
-    res.status(500).json({ error: 'Laden mislukt', details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
 
 // ════════════════════════════════════════════════════════════
-// ROUTE 8 — GET /api/nakijk/bulk/resultaten/:id
-// Nakijkresultaten per leerling voor een bulk sessie
+// ROUTE 6 — GET /api/nakijk/bulk/resultaten/:id
 // ════════════════════════════════════════════════════════════
 router.get('/resultaten/:id', async (req, res) => {
   try {
     const { supabase } = clients(req);
-
     const { data: nakijkSessies, error } = await supabase
       .from('nakijk_sessies')
       .select('*, antwoorden:nakijk_antwoorden(*)')
-      .eq('bulk_sessie_id', req.params.id)
-      .order('created_at');
-
+      .eq('bulk_sessie_id', req.params.id);
     if (error) throw error;
 
-    // Verrijk met leerlingdata
     const resultaten = await Promise.all((nakijkSessies || []).map(async s => {
       if (s.leerling_id) {
-        const { data: ll } = await supabase
-          .from('leerlingen_import')
+        const { data: ll } = await supabase.from('leerlingen_import')
           .select('id, roepnaam, tussenvoegsel, achternaam, klas, stamnummer')
           .eq('id', s.leerling_id).single();
         s.leerling = ll;
@@ -728,28 +578,24 @@ router.get('/resultaten/:id', async (req, res) => {
       return s;
     }));
 
-    // Bereken statistieken
     const cijfers = resultaten
       .map(r => r.cijfer_definitief ?? r.cijfer_suggestie)
       .filter(c => c !== null && c !== undefined);
     const gemiddeld = cijfers.length
-      ? Math.round(cijfers.reduce((a,b) => a+b, 0) / cijfers.length * 10) / 10
-      : null;
-    const geslaagd = cijfers.filter(c => c >= 5.5).length;
+      ? Math.round(cijfers.reduce((a,b) => a+b, 0) / cijfers.length * 10) / 10 : null;
 
     res.json({
       success: true,
       resultaten,
       statistieken: {
         gemiddeld_cijfer: gemiddeld,
-        geslaagd,
+        geslaagd: cijfers.filter(c => c >= 5.5).length,
         totaal: resultaten.length,
         cijfers,
       },
     });
   } catch(err) {
-    console.error('[bulk/resultaten]', err);
-    res.status(500).json({ error: 'Laden mislukt', details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
