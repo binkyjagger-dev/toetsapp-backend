@@ -571,4 +571,75 @@ router.get('/overzicht', async (req, res) => {
   }
 });
 
+
+// ════════════════════════════════════════════════════════════
+// ROUTE 9 — DELETE /api/nakijk/sessie/:id
+// Verwijder een nakijk-sessie inclusief alle antwoorden
+// ════════════════════════════════════════════════════════════
+router.delete('/sessie/:id', async (req, res) => {
+  try {
+    optionalAuth(req);
+    const { supabase } = clients(req);
+    const sessieId = req.params.id;
+
+    // Verwijder antwoorden eerst (cascade zou ook werken maar expliciet is veiliger)
+    const { error: antErr } = await supabase
+      .from('nakijk_antwoorden')
+      .delete()
+      .eq('sessie_id', sessieId);
+    if (antErr) throw antErr;
+
+    // Verwijder sessie
+    const { error: sessieErr } = await supabase
+      .from('nakijk_sessies')
+      .delete()
+      .eq('id', sessieId);
+    if (sessieErr) throw sessieErr;
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[nakijk/sessie DELETE]', err);
+    res.status(500).json({ error: 'Verwijderen mislukt', details: err.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+// ROUTE 10 — GET /api/nakijk/leerling/:id
+// Alle afgeronde sessies voor één leerling
+// ════════════════════════════════════════════════════════════
+router.get('/leerling/:id', async (req, res) => {
+  try {
+    const { supabase } = clients(req);
+    const leerlingId = req.params.id;
+
+    const { data: sessies, error } = await supabase
+      .from('nakijk_sessies')
+      .select(`
+        id, toets_naam, vak, niveau, totaal_score, max_score,
+        cijfer_suggestie, cijfer_definitief, algemene_opmerking,
+        status, created_at, naam_op_toets
+      `)
+      .eq('leerling_id', leerlingId)
+      .in('status', ['nagekeken', 'afgerond'])
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Bereken gemiddelde
+    const afgerond = (sessies || []).filter(s => s.cijfer_definitief || s.cijfer_suggestie);
+    const gemiddeld = afgerond.length
+      ? (afgerond.reduce((s, r) => s + (r.cijfer_definitief || r.cijfer_suggestie || 0), 0) / afgerond.length)
+      : null;
+
+    res.json({
+      success: true,
+      sessies: sessies || [],
+      gemiddeld_cijfer: gemiddeld ? Math.round(gemiddeld * 10) / 10 : null,
+    });
+  } catch (err) {
+    console.error('[nakijk/leerling]', err);
+    res.status(500).json({ error: 'Laden mislukt', details: err.message });
+  }
+});
+
 module.exports = router;

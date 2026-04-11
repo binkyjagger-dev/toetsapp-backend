@@ -2083,6 +2083,20 @@ function annuleerLdImport() {
     </div>
 
   </div><!-- /view-nakijken -->
+  <!-- ═══════════════════════════════════════════════════════
+       LEERLING DETAIL VIEW
+  ════════════════════════════════════════════════════════ -->
+  <div id="view-leerling-detail" style="display:none;" class="main-content">
+    <div id="ll-detail-inhoud"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       TOETS DETAIL VIEW (vanuit leerlingpagina)
+  ════════════════════════════════════════════════════════ -->
+  <div id="view-toets-detail-ll" style="display:none;" class="main-content">
+    <div id="toets-detail-ll-inhoud"></div>
+  </div>
+
 
 </div><!-- /main-area -->
 </div><!-- /screen-teacher -->
@@ -3666,7 +3680,7 @@ function navNaar(view) {
   huidigView = view;
   huidigKlasId = null;
   // Sidebar active
-  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken'].forEach(v => {
+  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll'].forEach(v => {
     const el = document.getElementById('nav-' + v);
     if (el) el.classList.toggle('active', v === view);
   });
@@ -3674,7 +3688,7 @@ function navNaar(view) {
   const klasHeader = document.getElementById('klas-header');
   if (klasHeader) klasHeader.style.display = 'none';
   // Views
-  const views = ['klassen','klas-detail','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken'];
+  const views = ['klassen','klas-detail','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll'];
   views.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.style.display = 'none';
@@ -3682,7 +3696,11 @@ function navNaar(view) {
   const target = document.getElementById('view-' + view);
   if (target) target.style.display = view === 'klas-detail' ? 'flex' : 'block';
   // Breadcrumb + acties
-  setBreadcrumb([{ label: navLabel(view) }]);
+  if (view === 'leerling-detail' || view === 'toets-detail-ll') {
+    // Breadcrumb wordt gezet door openLeerlingDetail / openToetsDetail
+  } else {
+    setBreadcrumb([{ label: navLabel(view) }]);
+  }
   setMainActions(view);
   // Sluit sidebar op mobiel
   toggleSidebar(false);
@@ -3694,10 +3712,12 @@ function navNaar(view) {
   if (view === 'analyse')   { vulAnalyseFilters(); runAnalyse(); }
   if (view === 'socratisch') { vulClassFilter(); loadLessonsForTeacher(); }
   if (view === 'nakijken')   { initNakijkView(); }
+  if (view === 'leerling-detail') { /* geladen via openLeerlingDetail */ }
+  if (view === 'toets-detail-ll') { /* geladen via openToetsDetail */ }
 }
 
 function navLabel(view) {
-  const map = { klassen:'Mijn klassen', leerlingen:'Leerlingen', lessen:'Lessen', analyse:'Analyse', socratisch:'Socratische toets', nakijken:'Nakijk-assistent' };
+  const map = { klassen:'Mijn klassen', leerlingen:'Leerlingen', lessen:'Lessen', analyse:'Analyse', socratisch:'Socratische toets', nakijken:'Nakijk-assistent', 'leerling-detail':'Leerling', 'toets-detail-ll':'Toetsdetails' };
   return map[view] || view;
 }
 
@@ -3994,7 +4014,11 @@ async function laadKlasLlHuidig(klas) {
       const naam = [l.roepnaam, l.tussenvoegsel, l.achternaam].filter(Boolean).join(' ');
       return `<tr>
         <td style="font-size:0.78rem;color:var(--muted);padding:0.6rem 0.75rem;">${l.stamnummer || '—'}</td>
-        <td style="padding:0.6rem 0.75rem;font-weight:500;">${naam}</td>
+        <td style="padding:0.6rem 0.75rem;font-weight:500;">
+          <button onclick="openLeerlingDetail('${l.id}')" style="background:none;border:none;cursor:pointer;
+            color:var(--navy);font-weight:500;font-size:0.85rem;padding:0;text-align:left;
+            font-family:inherit;text-decoration:underline;text-underline-offset:2px;">${naam}</button>
+        </td>
         <td style="padding:0.6rem 0.75rem;">
           ${l.leerniveau ? `<span style="font-size:0.68rem;background:var(--navy-glow);color:var(--navy);padding:1px 6px;border-radius:4px;">${l.leerniveau}</span>` : '—'}
         </td>
@@ -5534,7 +5558,11 @@ function renderLeerlingenTabel(leerlingen) {
     const safeNaam = naam.replace(/'/g, "\'");
     return `<tr>
       <td style="font-size:0.78rem;color:var(--muted);padding:0.55rem 0.5rem;">${l.stamnummer || '—'}</td>
-      <td style="font-weight:600;padding:0.55rem 0.5rem;">${naam}</td>
+      <td style="font-weight:600;padding:0.55rem 0.5rem;">
+        <button onclick="openLeerlingDetail('${safeId}')" style="background:none;border:none;cursor:pointer;
+          color:var(--navy);font-weight:600;font-size:0.83rem;padding:0;text-align:left;
+          font-family:inherit;text-decoration:underline;text-underline-offset:2px;">${naam}</button>
+      </td>
       <td style="padding:0.55rem 0.5rem;">
         <span style="font-size:0.75rem;background:rgba(79,163,232,0.12);color:var(--blue);
           padding:0.1rem 0.4rem;border-radius:4px;">${l.klas || '—'}</span>
@@ -5740,18 +5768,29 @@ async function nkLaadOverzicht() {
       const statusLabel = s.status === 'afgerond' ? '✅ Afgerond' : '⏳ Concept';
       const naam = s.leerling_naam || s.naam_op_toets || 'Onbekend';
       const cijfer = s.cijfer_definitief ?? s.cijfer_suggestie;
-      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;
-          background:var(--surface);border:1px solid var(--border);border-radius:9px;margin-bottom:7px;cursor:pointer;
-          transition:border-color .15s;" onmouseover="this.style.borderColor='var(--navy)'"
-          onmouseout="this.style.borderColor='var(--border)'" onclick="nkHerstelSessie('${s.id}')">
-        <div style="width:36px;height:36px;border-radius:8px;background:var(--navy-glow);
-          color:var(--navy);font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✍️</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${naam}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:1px;">${s.toets_naam||'—'} · ${s.niveau||''} · ${new Date(s.created_at).toLocaleDateString('nl-NL')}</div>
+      return `<div id="nk-overzicht-kaart-${s.id}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;
+          background:var(--surface);border:1px solid var(--border);border-radius:9px;margin-bottom:7px;
+          transition:border-color .15s;">
+        <div onclick="nkHerstelSessie('${s.id}')" style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer;"
+          onmouseover="this.closest('[id^=nk-overzicht-kaart]').style.borderColor='var(--navy)'"
+          onmouseout="this.closest('[id^=nk-overzicht-kaart]').style.borderColor='var(--border)'">
+          <div style="width:36px;height:36px;border-radius:8px;background:var(--navy-glow);
+            color:var(--navy);font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✍️</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${naam}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px;">${s.toets_naam||'—'} · ${s.niveau||''} · ${new Date(s.created_at).toLocaleDateString('nl-NL')}</div>
+          </div>
+          ${cijfer ? `<div style="font-size:18px;font-weight:900;color:var(--navy);">${Number(cijfer).toFixed(1)}</div>` : ''}
+          <span style="font-size:11px;font-weight:700;color:${statusColor};">${statusLabel}</span>
         </div>
-        ${cijfer ? `<div style="font-size:18px;font-weight:900;color:var(--navy);">${Number(cijfer).toFixed(1)}</div>` : ''}
-        <span style="font-size:11px;font-weight:700;color:${statusColor};">${statusLabel}</span>
+        <button onclick="nkVerwijderSessie('${s.id}', document.getElementById('nk-overzicht-kaart-${s.id}'))"
+          style="background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;
+            color:var(--muted);font-size:11px;padding:4px 9px;flex-shrink:0;font-family:inherit;
+            transition:all .15s;white-space:nowrap;"
+          onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+          onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+          Verwijderen
+        </button>
       </div>`;
     }).join('');
   } catch(e) {
@@ -6430,6 +6469,336 @@ function nkReset() {
   });
   document.getElementById('nk-btn-inlezen').disabled = true;
   nkGoStep(0);
+}
+
+
+// ════════════════════════════════════════════════════════════
+// LEERLING DETAIL + TOETSRESULTATEN
+// ════════════════════════════════════════════════════════════
+
+let llDetailVorigeView = 'leerlingen';  // voor terugknop
+let llDetailLeerlingId = null;
+
+async function openLeerlingDetail(leerlingId, vorigeView) {
+  llDetailLeerlingId = leerlingId;
+  llDetailVorigeView = vorigeView || huidigView || 'leerlingen';
+
+  // Navigeer naar de view
+  huidigView = 'leerling-detail';
+  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll'].forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) el.style.display = 'none';
+  });
+  document.getElementById('view-leerling-detail').style.display = 'block';
+
+  // Sidebar actief item
+  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken'].forEach(v => {
+    const el = document.getElementById('nav-' + v);
+    if (el) el.classList.remove('active');
+  });
+
+  // Toon laadspinner
+  document.getElementById('ll-detail-inhoud').innerHTML =
+    '<div style="padding:3rem;text-align:center;color:var(--muted);"><span class="spinner" style="border-top-color:var(--navy);display:inline-block;"></span></div>';
+
+  toggleSidebar(false);
+
+  try {
+    // Laad leerlingdata
+    const leerlingData = (window._alleLeerlingenCache || []).find(l => l.id === leerlingId);
+    let leerling = leerlingData || {};
+
+    // Als niet in cache: haal op via API
+    if (!leerlingData) {
+      const data = await apiFetch('/api/leerlingen?id=' + encodeURIComponent(leerlingId)).catch(() => []);
+      leerling = Array.isArray(data) ? (data.find(l => l.id === leerlingId) || {}) : {};
+    }
+
+    // Laad toetsresultaten voor deze leerling
+    const toetsData = await apiFetch('/api/nakijk/leerling/' + encodeURIComponent(leerlingId))
+      .catch(() => ({ sessies: [], gemiddeld_cijfer: null }));
+
+    const naam = [leerling.roepnaam, leerling.tussenvoegsel, leerling.achternaam].filter(Boolean).join(' ') || 'Onbekende leerling';
+    const initialen = ((leerling.roepnaam||'?')[0] + (leerling.achternaam||'?')[0]).toUpperCase();
+    const sessies = toetsData.sessies || [];
+    const gemiddeld = toetsData.gemiddeld_cijfer;
+    const totaalPunten = sessies.reduce((s, r) => s + (r.totaal_score || 0), 0);
+    const totaalMax = sessies.reduce((s, r) => s + (r.max_score || 0), 0);
+
+    setBreadcrumb([
+      { label: llDetailVorigeView === 'klas-leerlingen' ? 'Klas' : 'Leerlingen',
+        onclick: `navNaar('${llDetailVorigeView === 'klas-leerlingen' ? 'klassen' : 'leerlingen'}')` },
+      { label: naam },
+    ]);
+
+    const cijferKleur = (c) => !c ? 'var(--muted)' : c >= 5.5 ? 'var(--green)' : 'var(--orange)';
+
+    const sessieKaarten = sessies.length ? sessies.map(s => {
+      const cijfer = s.cijfer_definitief ?? s.cijfer_suggestie;
+      const pct = s.totaal_score && s.max_score ? Math.round(s.totaal_score / s.max_score * 100) : 0;
+      const barKleur = pct >= 70 ? 'var(--green)' : pct >= 50 ? 'var(--orange)' : 'var(--red)';
+      const statusLabel = s.status === 'afgerond' ? '✅ Afgerond' : '⏳ Concept';
+      const statusKleur = s.status === 'afgerond' ? 'var(--green)' : 'var(--orange)';
+      const datum = new Date(s.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+      return `
+        <div onclick="openToetsDetailLl('${s.id}', '${leerlingId}')"
+          style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;
+            padding:14px 18px;margin-bottom:10px;cursor:pointer;transition:border-color .15s;"
+          onmouseover="this.style.borderColor='var(--navy)'"
+          onmouseout="this.style.borderColor='var(--border)'">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:180px;">
+              <div style="font-weight:700;font-size:14px;color:var(--text);">${s.toets_naam || 'Onbekende toets'}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px;">${datum} · ${s.vak || 'Economie'} · ${s.niveau || ''}</div>
+              <div style="background:var(--border);border-radius:99px;height:5px;overflow:hidden;margin-top:7px;width:140px;">
+                <div style="width:${pct}%;background:${barKleur};height:100%;border-radius:99px;"></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0;">
+              <div style="text-align:center;">
+                <div style="font-size:22px;font-weight:800;color:${cijferKleur(cijfer)};">${cijfer ? Number(cijfer).toFixed(1) : '—'}</div>
+                <div style="font-size:10px;color:var(--muted);">cijfer</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:15px;font-weight:700;color:var(--text2);">${s.totaal_score ?? '—'}/${s.max_score ?? '—'}</div>
+                <div style="font-size:10px;color:var(--muted);">punten</div>
+              </div>
+              <span style="font-size:11px;font-weight:700;color:${statusKleur};">${statusLabel}</span>
+              <span style="color:var(--muted2);font-size:14px;">›</span>
+            </div>
+          </div>
+          ${s.algemene_opmerking ? `<div style="margin-top:10px;font-size:12px;color:var(--muted);
+            padding:8px 10px;background:var(--surface2);border-radius:7px;line-height:1.5;">
+            ${s.algemene_opmerking}</div>` : ''}
+        </div>`;
+    }).join('') : `
+      <div style="text-align:center;padding:2.5rem;color:var(--muted);">
+        <div style="font-size:32px;margin-bottom:10px;">📝</div>
+        <div style="font-weight:600;font-size:14px;color:var(--text2);">Nog geen nagekeken toetsen</div>
+        <div style="font-size:13px;margin-top:5px;">Kijk een toets na via de nakijk-assistent om resultaten hier te zien.</div>
+        <button class="btn btn-primary btn-sm" style="margin-top:14px;" onclick="navNaar('nakijken')">
+          ✍️ Naar nakijk-assistent
+        </button>
+      </div>`;
+
+    document.getElementById('ll-detail-inhoud').innerHTML = `
+      <!-- Header leerling -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.5rem;flex-wrap:wrap;">
+        <button class="btn-page-ghost" onclick="navNaar('${llDetailVorigeView === 'klas-leerlingen' ? 'klassen' : 'leerlingen'}')">← Terug</button>
+        <div style="display:flex;align-items:center;gap:12px;flex:1;">
+          <div style="width:48px;height:48px;border-radius:50%;background:var(--navy-glow);
+            color:var(--navy);font-weight:800;font-size:16px;display:flex;align-items:center;
+            justify-content:center;flex-shrink:0;border:2px solid var(--navy-light);">${initialen}</div>
+          <div>
+            <div style="font-weight:800;font-size:18px;color:var(--navy);">${naam}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">
+              ${leerling.klas || '—'} · Nr. ${leerling.stamnummer || '—'}
+              ${leerling.email ? ' · ' + leerling.email : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:1.5rem;">
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;
+          padding:14px;text-align:center;">
+          <div style="font-size:26px;font-weight:800;color:var(--navy);">${sessies.length}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">Toetsen</div>
+        </div>
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;
+          padding:14px;text-align:center;">
+          <div style="font-size:26px;font-weight:800;color:${cijferKleur(gemiddeld)};">
+            ${gemiddeld ? Number(gemiddeld).toFixed(1) : '—'}
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">Gemiddeld cijfer</div>
+        </div>
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;
+          padding:14px;text-align:center;">
+          <div style="font-size:26px;font-weight:800;color:var(--navy);">
+            ${totaalMax ? totaalPunten + '/' + totaalMax : '—'}
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">Totaal punten</div>
+        </div>
+      </div>
+
+      <!-- Toetsen -->
+      <div style="font-weight:700;font-size:13px;color:var(--muted);text-transform:uppercase;
+        letter-spacing:0.1em;margin-bottom:12px;">Nagekeken toetsen</div>
+      ${sessieKaarten}
+    `;
+  } catch(e) {
+    document.getElementById('ll-detail-inhoud').innerHTML =
+      `<div style="color:var(--red);padding:2rem;">Laden mislukt: ${e.message}</div>`;
+  }
+}
+
+// ── Toetsdetail vanuit leerlingpagina ─────────────────────
+async function openToetsDetailLl(sessieId, leerlingId) {
+  huidigView = 'toets-detail-ll';
+
+  ['klassen','leerlingen','leerdoelen','lessen','analyse','socratisch','nakijken','leerling-detail','toets-detail-ll'].forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) el.style.display = 'none';
+  });
+  document.getElementById('view-toets-detail-ll').style.display = 'block';
+  document.getElementById('toets-detail-ll-inhoud').innerHTML =
+    '<div style="padding:3rem;text-align:center;color:var(--muted);"><span class="spinner" style="border-top-color:var(--navy);display:inline-block;"></span></div>';
+
+  try {
+    const data = await apiFetch('/api/nakijk/sessie/' + sessieId);
+    const s = data.sessie;
+    const antwoorden = (s.antwoorden || []).sort((a, b) => a.vraagnummer - b.vraagnummer);
+
+    const leerling = (window._alleLeerlingenCache || []).find(l => l.id === leerlingId) || {};
+    const naam = [leerling.roepnaam, leerling.tussenvoegsel, leerling.achternaam].filter(Boolean).join(' ') || s.naam_op_toets || '—';
+    const cijfer = s.cijfer_definitief ?? s.cijfer_suggestie;
+    const datum = new Date(s.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+    const pct = s.totaal_score && s.max_score ? Math.round(s.totaal_score / s.max_score * 100) : 0;
+
+    setBreadcrumb([
+      { label: 'Leerlingen', onclick: "navNaar('leerlingen')" },
+      { label: naam, onclick: `openLeerlingDetail('${leerlingId}')` },
+      { label: s.toets_naam || 'Toets' },
+    ]);
+
+    const scoreKleur = (sc, mx) => {
+      const p = sc / mx;
+      return p >= .8 ? 'var(--green)' : p >= .5 ? 'var(--orange)' : 'var(--red)';
+    };
+    const scoreBg = (sc, mx) => {
+      const p = sc / mx;
+      return p >= .8 ? 'rgba(42,138,90,.12)' : p >= .5 ? 'rgba(212,130,10,.12)' : 'rgba(192,57,43,.12)';
+    };
+
+    const vraagKaarten = antwoorden.map(a => {
+      const sc = a.score ?? 0;
+      const pctV = a.max_score ? Math.round(sc / a.max_score * 100) : 0;
+      const kleur = scoreKleur(sc, a.max_score || 1);
+      const bg = scoreBg(sc, a.max_score || 1);
+      const behaaldItems = (a.behaalde_punten || []).map(p =>
+        `<span style="background:${p.behaald ? 'rgba(42,138,90,.1)' : 'rgba(192,57,43,.1)'};
+          color:${p.behaald ? 'var(--green)' : 'var(--red)'};border-radius:4px;
+          padding:1px 8px;font-size:11px;font-weight:700;margin:2px;display:inline-block;">
+          ${p.behaald ? '✓' : '✗'} ${p.onderdeel}
+        </span>`
+      ).join('');
+
+      return `
+        <div style="background:var(--surface);border:1.5px solid var(--border);
+          border-radius:12px;overflow:hidden;margin-bottom:10px;">
+          <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'"
+            style="display:flex;align-items:center;gap:10px;padding:12px 16px;
+              cursor:pointer;background:var(--surface2);">
+            <div style="width:30px;height:30px;border-radius:7px;background:var(--navy);
+              color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;
+              justify-content:center;flex-shrink:0;">${a.vraagnummer}</div>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:600;color:var(--text2);">
+                ${a.vraag_tekst || 'Vraag ' + a.vraagnummer}
+              </div>
+              <div style="background:var(--border);border-radius:99px;height:5px;overflow:hidden;margin-top:5px;width:120px;">
+                <div style="width:${pctV}%;background:${kleur};height:100%;border-radius:99px;"></div>
+              </div>
+            </div>
+            <div style="background:${bg};color:${kleur};border-radius:7px;
+              padding:3px 11px;font-weight:700;font-size:13px;white-space:nowrap;">
+              ${a.score !== null && a.score !== undefined ? a.score : '—'}/${a.max_score}
+            </div>
+            <span style="color:var(--muted2);font-size:12px;">▼</span>
+          </div>
+          <div style="display:none;padding:14px 16px;border-top:1px solid var(--border);">
+            ${a.antwoord_finaal ? `
+              <div style="margin-bottom:12px;">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Antwoord leerling</div>
+                <div style="font-size:13px;color:var(--text2);line-height:1.6;background:var(--surface2);
+                  padding:10px 12px;border-radius:8px;">${a.antwoord_finaal}</div>
+              </div>` : ''}
+            ${behaaldItems ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Behaalde punten</div>
+                <div>${behaaldItems}</div>
+              </div>` : ''}
+            ${a.feedback ? `
+              <div style="background:var(--navy-glow);border-left:3px solid var(--navy);
+                border-radius:0 8px 8px 0;padding:10px 12px;font-size:13px;color:var(--text2);line-height:1.6;">
+                <div style="font-size:10px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Feedback</div>
+                ${a.feedback}
+              </div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('toets-detail-ll-inhoud').innerHTML = `
+      <!-- Terug -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap;">
+        <button class="btn-page-ghost" onclick="openLeerlingDetail('${leerlingId}')">← ${naam}</button>
+        <div style="flex:1;">
+          <div style="font-weight:800;font-size:17px;color:var(--navy);">${s.toets_naam || 'Toets'}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">${datum} · ${s.vak || 'Economie'}</div>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:${s.status === 'afgerond' ? 'var(--green)' : 'var(--orange)'};">
+          ${s.status === 'afgerond' ? '✅ Afgerond' : '⏳ Concept'}
+        </span>
+      </div>
+
+      <!-- Score header -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;margin-bottom:1.5rem;">
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:14px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:${cijfer && cijfer >= 5.5 ? 'var(--green)' : cijfer ? 'var(--orange)' : 'var(--muted)'};">
+            ${cijfer ? Number(cijfer).toFixed(1) : '—'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Cijfer</div>
+        </div>
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:14px;text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:var(--navy);">${s.totaal_score ?? '—'}/${s.max_score ?? '—'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Punten</div>
+        </div>
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:14px;text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:var(--navy);">${pct}%</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Behaald</div>
+        </div>
+      </div>
+
+      ${s.algemene_opmerking ? `
+        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;
+          font-size:13px;color:var(--text2);line-height:1.55;margin-bottom:1.25rem;">
+          📝 ${s.algemene_opmerking}
+        </div>` : ''}
+
+      <!-- Vragen -->
+      <div style="font-weight:700;font-size:13px;color:var(--muted);text-transform:uppercase;
+        letter-spacing:0.1em;margin-bottom:12px;">Per vraag</div>
+      ${vraagKaarten}
+
+      <!-- Actieknop -->
+      <div style="display:flex;gap:10px;margin-top:1.25rem;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="nkHerstelSessie('${sessieId}');navNaar('nakijken');">
+          ✍️ Open in nakijk-assistent
+        </button>
+        <button class="btn btn-ghost-navy btn-sm" onclick="openLeerlingDetail('${leerlingId}')">
+          ← Terug naar leerling
+        </button>
+      </div>
+    `;
+  } catch(e) {
+    document.getElementById('toets-detail-ll-inhoud').innerHTML =
+      `<div style="color:var(--red);padding:2rem;">Laden mislukt: ${e.message}</div>`;
+  }
+}
+
+// ── Verwijder nakijk sessie ───────────────────────────────
+async function nkVerwijderSessie(sessieId, kaartEl) {
+  if (!confirm('Weet je zeker dat je deze beoordeling wil verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  try {
+    await apiFetch('/api/nakijk/sessie/' + sessieId, { method: 'DELETE' });
+    // Fade out kaart
+    kaartEl.style.transition = 'opacity .3s';
+    kaartEl.style.opacity = '0';
+    setTimeout(() => { kaartEl.remove(); }, 320);
+    showToast('✓ Beoordeling verwijderd');
+  } catch(e) {
+    showToast('Verwijderen mislukt: ' + e.message);
+  }
 }
 
 </script>
