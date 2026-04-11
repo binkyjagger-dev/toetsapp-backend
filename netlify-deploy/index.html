@@ -2077,17 +2077,6 @@ function annuleerLdImport() {
       </div>
     </div>
 
-    <!-- LOADING OVERLAY (binnen view) -->
-    <div id="nk-loading" style="display:none;position:fixed;inset:0;background:rgba(27,58,107,.65);
-      z-index:999;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:16px;padding:32px 36px;text-align:center;max-width:340px;width:90%;">
-        <div style="font-size:32px;margin-bottom:12px;">⏳</div>
-        <div id="nk-load-titel" style="font-weight:800;font-size:16px;color:var(--navy);margin-bottom:6px;"></div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Even geduld...</div>
-        <div id="nk-load-stappen" style="display:flex;flex-direction:column;gap:6px;text-align:left;"></div>
-      </div>
-    </div>
-
   </div><!-- /view-nakijken -->
   <!-- ═══ BULK NAKIJK PANELS ═══════════════════════════════════ -->
   <div id="view-bulk" style="display:none;" class="main-content">
@@ -7118,7 +7107,20 @@ function bulkHandleModel(input) {
 
 function bulkCheckReady() {
   const btn = document.getElementById('bulk-btn-start');
-  if (btn) btn.disabled = !(bulkToetsenFile && bulkModelFile && bulkGekozenKlas);
+  if (!btn) return;
+  const klaarZonderKlas = bulkToetsenFile && bulkModelFile;
+  btn.disabled = !klaarZonderKlas;
+  // Toon waarschuwing als geen klas gekozen
+  const info = document.getElementById('bulk-klas-info');
+  if (info) {
+    if (!bulkGekozenKlas && klaarZonderKlas) {
+      info.textContent = '⚠️ Geen klas geselecteerd — leerlingkoppeling wordt handmatig';
+      info.style.color = 'var(--orange)';
+    } else if (bulkGekozenKlas) {
+      info.textContent = bulkGekozenKlas + ' geselecteerd';
+      info.style.color = 'var(--muted)';
+    }
+  }
 }
 
 // ── Stap navigatie ────────────────────────────────────────
@@ -7144,6 +7146,10 @@ function bulkGoStep(n) {
 
 // ── STAP 1: Upload + segmenteren + groeperen ──────────────
 async function bulkStart() {
+  // Zet knop op laden-staat zodat gebruiker weet dat er iets gebeurt
+  const startBtn = document.getElementById('bulk-btn-start');
+  if (startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳ Bezig...'; }
+
   nkLoading(true, 'PDF wordt geanalyseerd…', [
     'Antwoordmodel verwerken',
     'PDF splitsen in losse pagina\'s',
@@ -7197,7 +7203,10 @@ async function bulkStart() {
 
   } catch(e) {
     nkLoading(false);
-    showToast('Fout: ' + e.message);
+    const btn = document.getElementById('bulk-btn-start');
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Analyseren met Claude →'; }
+    showToast('Fout bij analyseren: ' + e.message);
+    console.error('[bulkStart]', e);
   }
 }
 
@@ -7697,5 +7706,16 @@ function exporteerBulkCSV() {
 }
 
 </script>
+
+<!-- GLOBAL LOADING OVERLAY — werkt vanuit elke view -->
+<div id="nk-loading" style="display:none;position:fixed;inset:0;background:rgba(27,58,107,.65);
+  z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:32px 36px;text-align:center;max-width:340px;width:90%;">
+    <div style="font-size:32px;margin-bottom:12px;">⏳</div>
+    <div id="nk-load-titel" style="font-weight:800;font-size:16px;color:var(--navy);margin-bottom:6px;"></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Even geduld...</div>
+    <div id="nk-load-stappen" style="display:flex;flex-direction:column;gap:6px;text-align:left;"></div>
+  </div>
+</div>
 </body>
 </html>
