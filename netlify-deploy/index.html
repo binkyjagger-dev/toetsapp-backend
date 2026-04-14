@@ -4273,38 +4273,33 @@ async function loadTeacherLessons() {
   if (noMsg) noMsg.style.display = 'none';
 
   grid.innerHTML = lessonsCache.map(l => {
-    const datum = l.created_at
-      ? new Date(l.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+    const datum    = l.created_at
+      ? new Date(l.created_at).toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' })
       : '';
-    const code = getLesCode(l.id);
+    const code     = getLesCode(l.id);
     const klasNaam = l.class_id
       ? (classesCache.find(c => c.id === l.class_id)?.name || '')
       : '';
-    // Leerdoelen tellen uit content
-    const kennenCount = (l.content?.match(/^- .+/gm) || []).length;
-    const safeId = l.id.replace(/'/g, "\\'");
-    const safeName = (l.name || '').replace(/'/g, "\\'");
+    const safeId   = (l.id   || '').replace(/'/g, "\'");
+    const safeName = (l.name || '').replace(/'/g, "\'");
+    const aantalLd = (l.content?.match(/^- .+/gm) || []).length;
 
-    // Tel leerdoelen uit content
-    const kennen = (l.content?.match(/^- .+/gm) || []);
-    const aantalLd = kennen.length;
     return `<div class="lesson-card" style="display:flex;flex-direction:column;gap:0;cursor:pointer;"
       onclick="openLesDetail('${safeId}')">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
         <div class="lesson-card-name" style="font-size:15px;font-weight:700;color:var(--navy);">${l.name}</div>
         <span style="font-family:'DM Mono',monospace;font-size:0.68rem;background:var(--navy-glow);
-          color:var(--navy);padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0;">
-          ${code}
-        </span>
+          color:var(--navy);padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0;">${code}</span>
       </div>
-      ${datum ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:3px;">📅 ${datum}</div>` : ''}
+      ${datum    ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:3px;">📅 ${datum}</div>` : ''}
       ${klasNaam ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:2px;">🏫 ${klasNaam}</div>` : ''}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
         ${aantalLd ? `<span class="ld-badge ld-badge-niveau">${aantalLd} leerdoelen</span>` : ''}
         <span class="ld-badge" style="background:rgba(46,107,62,0.1);color:#1a6a40;">💬 Socratisch</span>
-        <span class="ld-badge" style="background:rgba(200,169,81,0.1);color:#8a6200;">🕵️ Wie is de Mol</span>
+        <span class="ld-badge" style="background:rgba(200,169,81,0.1);color:#8a6200;">🕵️ Mol</span>
       </div>
-      <div style="font-size:0.72rem;color:var(--muted);margin-top:8px;">Klik voor details →</div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:8px;padding-top:8px;
+        border-top:1px solid var(--border);">Klik voor details →</div>
     </div>`;
   }).join('');
 }
