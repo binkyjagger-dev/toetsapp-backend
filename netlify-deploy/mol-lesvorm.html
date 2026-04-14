@@ -945,6 +945,17 @@ select { cursor: pointer; }
     <div class="page-eyebrow">Stap 1 van 3 — Configuratie</div>
     <h2 class="page-title">Spelconfiguratie</h2>
 
+    <!-- Les uit leerplatform -->
+    <div class="form-section" id="les-kiezer-sectie">
+      <label>Kies een les uit het leerplatform</label>
+      <select id="setup-les-kiezer" onchange="onMolLesKeuze()" style="width:100%;">
+        <option value="">— Handmatig invullen —</option>
+      </select>
+      <div id="setup-les-preview" style="display:none;margin-top:8px;padding:8px 12px;
+        background:rgba(200,169,81,0.08);border:1px solid rgba(200,169,81,0.25);border-radius:8px;
+        font-size:0.78rem;color:var(--gold-dark,#8a6200);" id="les-kiezer-preview"></div>
+    </div>
+
     <div class="form-section">
       <label>Lesnaam</label>
       <input id="setup-les-naam" type="text" placeholder="bijv. Monetaire Zaken H4 — Inflatie">
@@ -1471,12 +1482,24 @@ function genereerGroepsindeling() {
   const geshuffled = [...leerlingen].sort(() => Math.random() - 0.5);
   groepsindeling = [];
   const labels = 'ABCDEFGHIJ'.split('');
-  for (let i = 0; i < geshuffled.length; i += gs) {
-    const leden = geshuffled.slice(i, i + gs).map((naam, idx) => ({
-      naam,
-      isMol: idx === 0, // standaard: eerste leerling is Mol (docent kan aanpassen)
+  const aantalVolledigeGroepen = Math.floor(geshuffled.length / gs);
+
+  // Maak volledige groepen
+  for (let i = 0; i < aantalVolledigeGroepen; i++) {
+    const leden = geshuffled.slice(i * gs, (i + 1) * gs).map((naam, idx) => ({
+      naam, isMol: idx === 0,
     }));
-    groepsindeling.push({ naam: 'Groep ' + labels[groepsindeling.length], leden });
+    groepsindeling.push({ naam: 'Groep ' + labels[i], leden });
+  }
+
+  // Verdeel resterende leerlingen over bestaande groepen
+  const rest = geshuffled.slice(aantalVolledigeGroepen * gs);
+  rest.forEach((naam, idx) => {
+    groepsindeling[idx % groepsindeling.length].leden.push({ naam, isMol: false });
+  });
+
+  if (rest.length > 0) {
+    toast(`${rest.length} leerling${rest.length>1?'en zijn':' is'} verdeeld over bestaande groepen.`);
   }
   renderGroepsindeling();
 }
@@ -3188,8 +3211,34 @@ window.addEventListener('DOMContentLoaded', async () => {
   // open_sessie: ga direct naar resultaten van een sessie
   const openSessieId = params.get('open_sessie');
 
-  showScreen('screen-docent-login');
-  await laadSessieLijst();
+  // Verwerk URL-params voor directe koppeling vanuit leerplatform
+  const lesNaamParam    = params.get('les_naam')    ? decodeURIComponent(params.get('les_naam'))    : '';
+  const lesContentParam = params.get('les_content') ? decodeURIComponent(params.get('les_content')) : '';
+  const directSetup     = params.get('direct_setup') === '1';
+
+  if (directSetup && lesNaamParam) {
+    // Direct naar setup met les al ingevuld
+    showScreen('screen-docent-setup');
+    setTimeout(() => {
+      const naamEl    = document.getElementById('setup-les-naam');
+      const contentEl = document.getElementById('setup-les-content');
+      if (naamEl)    naamEl.value    = lesNaamParam;
+      if (contentEl) contentEl.value = lesContentParam;
+      // Toon badge
+      const preview = document.getElementById('les-kiezer-preview');
+      if (preview) {
+        preview.textContent = '✓ Gekoppeld vanuit leerplatform: ' + lesNaamParam;
+        preview.style.display = 'block';
+      }
+    }, 200);
+    // Laad ook les-lijst op de achtergrond voor dropdown
+    laadMolLessenDropdown();
+  } else {
+    showScreen('screen-docent-login');
+    await laadSessieLijst();
+    // Laad les-dropdown op de achtergrond
+    laadMolLessenDropdown();
+  }
 
   if (openSessieId) {
     // Open direct de resultaten voor deze sessie
@@ -3754,6 +3803,48 @@ function bevestigLeerlingenKeuze() {
 function sluitLeerlingenPicker() {
   const modal = document.getElementById('ll-picker-modal');
   if (modal) modal.style.display = 'none';
+}
+
+
+// ── Les-koppeling vanuit leerplatform ────────────────────────
+let molLessenCache = [];
+
+async function laadMolLessenDropdown() {
+  if (!docentToken) return;
+  try {
+    const lessen = await apiFetch('/api/lessons');
+    molLessenCache = lessen || [];
+    const sel = document.getElementById('setup-les-kiezer');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Handmatig invullen —</option>'
+      + molLessenCache.map(l =>
+          `<option value="${l.id}">${l.name}</option>`
+        ).join('');
+  } catch(e) { /* stil falen */ }
+}
+
+function onMolLesKeuze() {
+  const sel = document.getElementById('setup-les-kiezer');
+  const lesId = sel?.value;
+  if (!lesId) {
+    // Reset naar handmatig
+    document.getElementById('setup-les-naam').value    = '';
+    document.getElementById('setup-les-content').value = '';
+    const prev = document.getElementById('les-kiezer-preview');
+    if (prev) prev.style.display = 'none';
+    return;
+  }
+  const les = molLessenCache.find(l => l.id === lesId);
+  if (!les) return;
+  document.getElementById('setup-les-naam').value    = les.name;
+  document.getElementById('setup-les-content').value = les.content || '';
+  // Tel leerdoelen
+  const aantalLd = (les.content?.match(/^- .+/gm) || []).length;
+  const prev = document.getElementById('les-kiezer-preview');
+  if (prev) {
+    prev.textContent = '✓ ' + les.name + (aantalLd ? ' · ' + aantalLd + ' leerdoelen' : '');
+    prev.style.display = 'block';
+  }
 }
 
 </script>
