@@ -904,23 +904,57 @@
 // ════════════════════════════════════════════════════════════
 //  LES DETAIL
 // ════════════════════════════════════════════════════════════
-function openLesDetail(lesId) {
-  const les = lessonsCache.find(l => l.id === lesId);
-  if (!les) return;
+async function openLesDetail(lesId) {
+  // Zoek in cache, anders haal op van server
+  let les = lessonsCache.find(l => l.id === lesId);
+  if (!les) {
+    try {
+      const alle = await apiFetch('/api/lessons');
+      lessonsCache = alle || [];
+      les = lessonsCache.find(l => l.id === lesId);
+    } catch(e) { console.error('openLesDetail fetch fout:', e); }
+  }
+  if (!les) {
+    showToast('Les niet gevonden (id: ' + lesId + ')');
+    console.error('openLesDetail: les niet gevonden', lesId, 'cache:', lessonsCache.length);
+    return;
+  }
+
+  // Verberg alle views
+  ['klassen','klas-detail','leerlingen','leerdoelen','lessen',
+   'les-detail-standalone','analyse','socratisch'].forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) el.style.display = 'none';
+  });
+
   // Toon detail view
-  document.querySelectorAll('[id^="view-"]').forEach(el => el.style.display = 'none');
   const dv = document.getElementById('view-les-detail-standalone');
-  if (dv) dv.style.display = 'block';
+  if (dv) {
+    dv.style.display = 'block';
+  } else {
+    console.error('view-les-detail-standalone niet gevonden in DOM');
+    return;
+  }
+
+  // Klas-header verbergen
+  const kh = document.getElementById('klas-header');
+  if (kh) kh.style.display = 'none';
+
+  // Sidebar + breadcrumb
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   document.getElementById('nav-lessen')?.classList.add('active');
   huidigView = 'les-detail-standalone';
-  const kh = document.getElementById('klas-header');
-  if (kh) kh.style.display = 'none';
+  huidigKlasId = null;
+
   setBreadcrumb([
     { label: 'Lessen', onclick: "navNaar('lessen')" },
     { label: les.name }
   ]);
-  setMainActions('les-detail-standalone');
+
+  const ma = document.getElementById('main-actions');
+  if (ma) ma.innerHTML = '';
+
+  toggleSidebar(false);
   renderLesDetail(les);
 }
 
