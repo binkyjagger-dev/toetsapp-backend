@@ -3803,11 +3803,36 @@ async function renderKlasActiviteiten(klas, wrap) {
 
   // Sorteer alle activiteiten op datum (nieuwste eerst)
   const activiteiten = [
-    ...klasLessen.map(l => ({ type: 'socratisch', id: l.id, naam: l.name, datum: l.created_at, status: 'klaar', data: l })),
+    ...klasLessen.map(l => ({ type: 'socratisch', id: l.id, naam: l.name, datum: l.lesson_date || l.created_at, status: 'klaar', data: l })),
     ...molSessies.map(s => ({ type: 'mol', id: s.id, naam: s.les_naam, datum: s.created_at, status: s.status, data: s })),
   ].sort((a, b) => (b.datum || 0) - (a.datum || 0));
 
-  let html = '';
+  // Beschikbare lessen: nog niet aan deze klas gekoppeld
+  const beschikbareLessen = (lessonsCache || []).filter(l => !(l.class_ids || []).includes(klas?.id));
+
+  let html = `<div style="margin-bottom:1rem;">
+    <button class="btn btn-ghost-navy btn-sm" onclick="document.getElementById('plan-form-${klas?.id}').style.display=
+      document.getElementById('plan-form-${klas?.id}').style.display==='none'?'block':'none'">
+      + Les toevoegen
+    </button>
+    <div id="plan-form-${klas?.id}" style="display:none;margin-top:10px;background:#fff;border:1.5px solid var(--border);
+      border-radius:10px;padding:1rem;">
+      <label style="font-size:0.78rem;font-weight:600;color:var(--text2);">Les</label>
+      <select id="plan-les-${klas?.id}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;
+        margin:4px 0 10px;font-size:0.85rem;">
+        ${beschikbareLessen.length
+          ? beschikbareLessen.map(l => '<option value="' + l.id + '">' + l.name + '</option>').join('')
+          : '<option disabled>Geen beschikbare lessen</option>'}
+      </select>
+      <label style="font-size:0.78rem;font-weight:600;color:var(--text2);">Datum</label>
+      <input type="date" id="plan-datum-${klas?.id}" style="width:100%;padding:6px 8px;border:1px solid var(--border);
+        border-radius:6px;margin:4px 0 10px;font-size:0.85rem;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-primary btn-sm" onclick="planLesOpslaan('${klas?.id}')">Opslaan</button>
+        <span id="plan-status-${klas?.id}" style="font-size:0.78rem;color:var(--green);"></span>
+      </div>
+    </div>
+  </div>`;
 
   if (activiteiten.length === 0) {
     html += `<div class="empty-state" style="padding:2rem 0;">
@@ -3826,17 +3851,37 @@ async function renderKlasActiviteiten(klas, wrap) {
       const resultatenLink = isMol
         ? `onclick="bekijkMolResultaten('${act.id}')" style="cursor:pointer;"`
         : `onclick="openLesResultaten('${act.id}')" style="cursor:pointer;"`;
-      html += `<div class="act-kaart" ${resultatenLink}>
-        <div class="act-icon ${isMol ? 'act-icon-mol' : 'act-icon-socratisch'}">${isMol ? '🕵️' : '💬'}</div>
-        <div class="act-info">
-          <div class="act-naam">${act.naam || '—'}</div>
-          <div class="act-meta">${isMol ? 'Wie is de Mol' : 'Socratische toets'} · ${datumStr}
-            ${!isMol ? `<span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--navy);
-              background:var(--navy-glow);padding:1px 5px;border-radius:3px;margin-left:4px;">
-              code: ${getLesCode(act.id)}</span>` : ''}
+      const safeActId = (act.id || '').replace(/'/g, "\\'");
+      const safeKlasId = (klas?.id || '').replace(/'/g, "\\'");
+      html += `<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+        <div class="act-kaart" ${resultatenLink} style="border:none;margin:0;">
+          <div class="act-icon ${isMol ? 'act-icon-mol' : 'act-icon-socratisch'}">${isMol ? '🕵️' : '💬'}</div>
+          <div class="act-info">
+            <div class="act-naam">${act.naam || '—'}</div>
+            <div class="act-meta">${isMol ? 'Wie is de Mol' : 'Socratische toets'} · ${datumStr}
+              ${!isMol ? `<span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--navy);
+                background:var(--navy-glow);padding:1px 5px;border-radius:3px;margin-left:4px;">
+                code: ${getLesCode(act.id)}</span>` : ''}
+            </div>
           </div>
+          <div class="act-status ${statusCls}">${statusLabel}</div>
         </div>
-        <div class="act-status ${statusCls}">${statusLabel}</div>
+        ${!isMol ? `<div style="padding:0 12px 10px;border-top:1px solid var(--border);">
+          <button class="btn btn-ghost-navy btn-sm" style="margin-top:8px;font-size:0.75rem;"
+            onclick="event.stopPropagation();var s=document.getElementById('fb-${safeActId}');s.style.display=s.style.display==='none'?'block':'none'">
+            Reflectie
+          </button>
+          <div id="fb-${safeActId}" style="display:none;margin-top:8px;">
+            <textarea id="fb-text-${safeActId}" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);
+              border-radius:6px;font-size:0.82rem;font-family:inherit;resize:vertical;"
+              onclick="event.stopPropagation()">${act.data?.feedback || ''}</textarea>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+              <button class="btn btn-primary btn-sm" style="font-size:0.75rem;"
+                onclick="event.stopPropagation();saveFeedback('${safeActId}','${safeKlasId}')">Opslaan</button>
+              <span id="fb-status-${safeActId}" style="font-size:0.75rem;color:var(--green);"></span>
+            </div>
+          </div>
+        </div>` : ''}
       </div>`;
     });
     html += '</div>';
@@ -3867,6 +3912,45 @@ async function renderKlasActiviteiten(klas, wrap) {
     </div>
   </div>`;
   wrap.innerHTML = html;
+}
+
+async function saveFeedback(lesId, klasId) {
+  const text = document.getElementById('fb-text-' + lesId)?.value || '';
+  const statusEl = document.getElementById('fb-status-' + lesId);
+  try {
+    await apiFetch('/api/lesson_classes/' + lesId + '/' + klasId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feedback: text }),
+    });
+    if (statusEl) { statusEl.textContent = 'Opgeslagen \u2713'; statusEl.style.color = 'var(--green)'; }
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = e.message || 'Fout'; statusEl.style.color = 'var(--red)'; }
+  }
+}
+
+async function planLesOpslaan(klasId) {
+  const lesId = document.getElementById('plan-les-' + klasId)?.value;
+  const datum = document.getElementById('plan-datum-' + klasId)?.value || null;
+  const statusEl = document.getElementById('plan-status-' + klasId);
+  if (!lesId) return;
+  try {
+    await apiFetch('/api/lesson_classes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lesson_id: lesId, class_id: klasId, lesson_date: datum }),
+    });
+    if (statusEl) statusEl.textContent = '';
+    document.getElementById('plan-form-' + klasId).style.display = 'none';
+    const lessen = await apiFetch('/api/lessons');
+    lessonsCache = lessen || [];
+    const wrap = document.getElementById('klas-activiteiten');
+    const klas = classesCache.find(c => c.id === klasId);
+    if (wrap && klas) renderKlasActiviteiten(klas, wrap);
+  } catch(e) {
+    if (statusEl) statusEl.textContent = e.message || 'Fout bij opslaan';
+    if (statusEl) statusEl.style.color = 'var(--red)';
+  }
 }
 
 function openMolAppVoorKlas(klasId, klasNaam) {
