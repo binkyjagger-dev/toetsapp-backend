@@ -5,8 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "jest --verbose",
-    "test:watch": "jest --watchAll"
+    "test": "jest --verbose && npm run lint:html",
+    "test:watch": "jest --watchAll",
+    "lint:html": "node scripts/lint-html.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.0",

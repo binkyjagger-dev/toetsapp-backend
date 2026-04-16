@@ -380,11 +380,23 @@ app.delete('/api/leerdoelen/:id', verifyToken, async (req, res) => {
 
 // LESSEN
 app.get('/api/lessons', optionalToken, async (req, res) => {
+  // Filter via junction table als class_id query param aanwezig
+  let lessonIdFilter = null;
+  if (req.query.class_id) {
+    const { data: jRows } = await supabase
+      .from('lesson_classes').select('lesson_id').eq('class_id', req.query.class_id);
+    lessonIdFilter = (jRows || []).map(j => j.lesson_id);
+  }
+
   let query = supabase.from('lessons').select('*').order('created_at', { ascending: false });
   if (req.leraar?.id) query = query.eq('leraar_id', req.leraar.id);
-  if (req.query.class_id) query = query.eq('class_id', req.query.class_id);
+  if (lessonIdFilter !== null) query = query.in('id', lessonIdFilter);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
+
+  // Haal junction rows op voor class_ids enrichment
+  const { data: allJunction } = await supabase.from('lesson_classes').select('*');
+  const junctionRows = allJunction || [];
 
   // Verrijk met klassen-info
   const classIds = [...new Set((data || []).map(l => l.class_id).filter(Boolean))];
@@ -396,21 +408,19 @@ app.get('/api/lessons', optionalToken, async (req, res) => {
 
   const enriched = (data || []).map(l => ({
     ...l,
-    klassen:  l.class_id && classesMap[l.class_id]
-              ? [{ id: classesMap[l.class_id].id, name: classesMap[l.class_id].name }]
-              : [],
-    werkvorm: l.toegestane_lesvormen?.[0] || null,
+    klassen:   l.class_id && classesMap[l.class_id]
+               ? [{ id: classesMap[l.class_id].id, name: classesMap[l.class_id].name }]
+               : [],
+    werkvorm:  l.toegestane_lesvormen?.[0] || null,
+    class_ids: junctionRows.filter(j => j.lesson_id === l.id).map(j => j.class_id),
   }));
 
   res.json(enriched);
 });
 app.post('/api/lessons', optionalToken, async (req, res) => {
   const { id, name, content, leerdoelen, chapter_val, created_at, class_id,
-          toegestane_lesvormen, lesvorm_mode } = req.body;
+          toegestane_lesvormen, lesvorm_mode, class_ids } = req.body;
   if (!id || !name || !content) return res.status(400).json({ error: 'Velden ontbreken' });
-  // SQL MIGRATIE (optioneel, voor later):
-  // alter table lessons add column if not exists leerdoelen jsonb;
-  // alter table lessons add column if not exists chapter_val text;
   const record = {
     id, name, content, created_at,
     chapter_val: chapter_val || null,
@@ -421,7 +431,39 @@ app.post('/api/lessons', optionalToken, async (req, res) => {
   };
   const { data, error } = await supabase.from('lessons').insert([record]).select();
   if (error) return res.status(500).json({ error: error.message });
+
+  // Junction table: lesson_classes
+  const uniqueClassIds = [...new Set((class_ids || []).filter(Boolean))];
+  if (uniqueClassIds.length) {
+    const rows = uniqueClassIds.map(cid => ({ lesson_id: id, class_id: cid }));
+    await supabase.from('lesson_classes').insert(rows);
+    return res.status(201).json({ ...data[0], class_ids: uniqueClassIds });
+  }
+
   res.json(data[0]);
+});
+app.patch('/api/lessons/:id', optionalToken, async (req, res) => {
+  try {
+    const { class_ids } = req.body;
+    const lessonId = req.params.id;
+
+    // Verwijder oude koppelingen
+    await supabase.from('lesson_classes').delete().eq('lesson_id', lessonId);
+
+    // Voeg nieuwe koppelingen in
+    const uniqueClassIds = [...new Set((class_ids || []).filter(Boolean))];
+    if (uniqueClassIds.length) {
+      await supabase.from('lesson_classes').insert(
+        uniqueClassIds.map(cid => ({ lesson_id: lessonId, class_id: cid }))
+      );
+    }
+
+    // Haal de les op
+    const { data: les, error } = await supabase.from('lessons').select('*').eq('id', lessonId).single();
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ ...les, class_ids: uniqueClassIds });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/api/lessons/:id', async (req, res) => {
   await supabase.from('results').delete().eq('lesson_id', req.params.id);
