@@ -900,7 +900,8 @@
   .les-leerdoel-rij:last-child { border-bottom:none; }
 
 </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
 // ════════════════════════════════════════════════════════════
 //  LES DETAIL
 // ════════════════════════════════════════════════════════════
@@ -4409,9 +4410,6 @@ async function loadTeacherDashboard() {
 
     // ── Acties voor klassen-view ──────────────────────────
     setMainActions('klassen');
-
-    // ── Analyse-dropdowns vullen (achtergrond) ────────────
-    vulAnalyseFilters();
 
     // ── Socratisch-filters vullen ─────────────────────────
     vulClassFilter();
