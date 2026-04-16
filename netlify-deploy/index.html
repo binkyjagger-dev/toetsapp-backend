@@ -901,6 +901,7 @@
 
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="js/state.js"></script>
   <script>
 // ════════════════════════════════════════════════════════════
 //  LES DETAIL
@@ -1093,8 +1094,6 @@ function getLesCode(lesId) {
 // ════════════════════════════════════════════════════════════
 //  LEERDOELEN MODULE
 // ════════════════════════════════════════════════════════════
-let alleLeerdoelen = [];
-let ldImportBuffer = [];
 
 // ── Laden ──────────────────────────────────────────────────
 async function laadLeerdoelenTab() {
@@ -2399,33 +2398,6 @@ function annuleerLdImport() {
 
 <script>
 // ═══════════════════════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════════════════════
-// ── Auth state ───────────────────────────────────────────────
-let leraarToken  = localStorage.getItem('leraar_token') || null;
-let leraarProfiel = null; // { id, naam, email }
-let currentRole  = 'student';
-let studentName = '';
-let selectedClass = null; // { id, name }
-let selectedLesson = null;
-let chatMessages = []; // {role, content}
-let questionCount = 0;
-const MAX_QUESTIONS = 3;
-let resultsCache    = []; // globally stored results for safe detail view
-let classesCache    = []; // globally stored classes
-let lessonsCache    = []; // globally stored lessons
-let currentResultId = null; // ID of saved result, so we can PATCH it later with opgaven
-let currentUnderstanding = 'matig';
-let currentReflGoed = '';
-let currentReflVerbeteren = '';
-let opgavenData = null; // { context, vragen: [{vraag, modelantwoord}] }
-let studentScores = []; // array of {score:int, motivatie:str, leerdoel?} per question
-let selectedLesvorm = 'socratisch'; // actieve lesvorm voor huidige sessie
-let chatPhase = 'opening'; // 'opening' | 'socratic' | 'summary'
-let socraticAnswerCount = 0; // how many socratic answers given
-let currentLeerdoelen = null; // {kennen:[], kunnen:[]} van de actieve les
-let vraagLeerdoelen = []; // [{type, tekst}] per socratische vraag
-
 // ═══════════════════════════════════════════════════════════
 //  API BASE URL — wijzig dit naar jouw Railway URL na deployment
 // ═══════════════════════════════════════════════════════════
@@ -3268,34 +3240,6 @@ async function submitOpgaven() {
 
 
 // ═══════════════════════════════════════════════════════════
-//  LESVORMEN REGISTRY — voeg hier nieuwe lesvormen toe
-// ═══════════════════════════════════════════════════════════
-const LESVORMEN_REGISTRY = {
-
-  'socratisch': {
-    id:           'socratisch',
-    naam:         'Socratisch gesprek',
-    beschrijving: 'Voer een Socratisch gesprek over de lesstof en krijg per antwoord een score.',
-    icoon:        '💬',
-    duur:         '10–15 min',
-    kleur:        'student',
-    start:        () => { showScreen('screen-explain'); },
-  },
-
-  'mol': {
-    id:           'mol',
-    naam:         'Wie is de Mol?',
-    beschrijving: 'Werk samen aan economische cases — maar pas op voor de saboteur in jouw groep.',
-    icoon:        '🕵️',
-    duur:         '25–40 min',
-    kleur:        'red',
-    start:        () => { window.open('mol-lesvorm.html?rol=speler', '_blank'); },
-  },
-
-  // ── Voeg hier toekomstige lesvormen toe ─────────────────
-
-};
-
 // ── Hulpfunctie: geef beschikbare lesvormen voor een les ──
 function getBeschikbareLesvormen(lesson) {
   const toegestaan = lesson?.toegestane_lesvormen;
@@ -3340,9 +3284,6 @@ async function saveUniformResult({ lesvorm, scoreNorm, lesvormData, extraFields 
 
 
 
-// ── State voor lesvorminstellingen ──────────────────────────────────────────
-let selectedLesvormen = ['socratisch']; // standaard: socratisch aangevinkt
-let lesvormMode       = 'locked';       // 'locked' | 'free'
 
 function renderLesvormCheckboxes() {
   const container = document.getElementById('lesvormen-checkboxes');
@@ -3407,10 +3348,7 @@ function updateModeBtns() {
 
 
 
-// ── Leerdoelen voor les-aanmaken ──────────────────────────────
-let lesLdAlle       = [];   // alle leerdoelen uit DB
-let lesLdGefilterd  = [];   // na filter
-let lesLdGeselecteerd = new Set();
+
 
 async function openCreateLesson() {
   // Reset
@@ -3655,10 +3593,7 @@ async function onClassFilterChange() {
   document.getElementById('student-results-area').innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>Selecteer een les om de resultaten te zien.</p></div>';
 }
 
-// ── Navigatie ─────────────────────────────────────────────
-let huidigView = 'klassen';
-let huidigKlasId = null;
-let huidigKlasTab = 'activiteiten';
+
 
 function navNaar(view) {
   huidigView = view;
@@ -4106,8 +4041,6 @@ async function laadKlasLlHuidig(klas) {
 }
 
 // Klas leerlingen kiezer state
-let klasLlKiezerAlle = [];
-let klasLlKiezerGeselecteerd = new Set();
 
 function toggleLlToevoegSectie() {
   const s = document.getElementById('ll-toevoeg-sectie');
@@ -4239,7 +4172,6 @@ function renderKlasResultaten(klas, wrap) {
   }
 }
 
-let _klasResultatenCache = [];
 
 async function laadKlasResultaten() {
   const lesId = document.getElementById('klas-res-les')?.value;
@@ -4760,7 +4692,6 @@ function switchTab(tab) {
 // ═══════════════════════════════════════════════════════════
 //  ANALYSE-TAB
 // ═══════════════════════════════════════════════════════════
-let analyseData = null; // alle resultaten, gecached
 
 async function initAnalyseTab() {
   document.getElementById('an-loading').style.display = 'block';
@@ -5059,13 +4990,8 @@ function renderHiatenKaart(data, f) {
 // ═══════════════════════════════════════════════════════════
 //  KLASBEHEER
 // ═══════════════════════════════════════════════════════════
-let modalLlGeselecteerd = new Set();
-let modalLlAlle = [];
 
-// ── Klas modal state ─────────────────────────────────────────
-let klasModalLlAlle = [];
-let klasModalLlGeselecteerd = new Set();
-let klasModalEditId = null;
+
 
 async function openCreateClass() {
   klasModalEditId = null;
@@ -5456,8 +5382,6 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
 // ════════════════════════════════════════════════════════════
 // LEERLINGEN TAB
 // ════════════════════════════════════════════════════════════
-let xlsxImportData = null;  // { leerlingen: [], periodeVoorstel: '' }
-let alleLeerlingen = [];     // huidige view
 
 async function laadLeerlingenTab() {
   // Toon loader direct — niet wachten
