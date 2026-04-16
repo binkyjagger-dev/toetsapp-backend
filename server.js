@@ -398,14 +398,21 @@ app.get('/api/lessons', verifyToken, async (req, res) => {
     (classes || []).forEach(c => { classesMap[c.id] = c; });
   }
 
-  const enriched = (data || []).map(l => ({
-    ...l,
-    klassen:   l.class_id && classesMap[l.class_id]
-               ? [{ id: classesMap[l.class_id].id, name: classesMap[l.class_id].name }]
-               : [],
-    werkvorm:  l.toegestane_lesvormen?.[0] || null,
-    class_ids: junctionRows.filter(j => j.lesson_id === l.id).map(j => j.class_id),
-  }));
+  const classIdParam = req.query.class_id || null;
+  const enriched = (data || []).map(l => {
+    const jRows = junctionRows.filter(j => j.lesson_id === l.id);
+    const matchingJunction = classIdParam ? jRows.find(j => j.class_id === classIdParam) : null;
+    return {
+      ...l,
+      klassen:      l.class_id && classesMap[l.class_id]
+                    ? [{ id: classesMap[l.class_id].id, name: classesMap[l.class_id].name }]
+                    : [],
+      werkvorm:     l.toegestane_lesvormen?.[0] || null,
+      class_ids:    jRows.map(j => j.class_id),
+      lesson_date:  matchingJunction?.lesson_date ?? null,
+      feedback:     matchingJunction?.feedback ?? null,
+    };
+  });
 
   res.json(enriched);
 });
@@ -455,6 +462,31 @@ app.patch('/api/lessons/:id', optionalToken, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
 
     res.json({ ...les, class_ids: uniqueClassIds });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/lesson_classes', verifyToken, async (req, res) => {
+  try {
+    const { lesson_id, class_id, lesson_date } = req.body;
+    const row = { lesson_id, class_id, lesson_date: lesson_date || null, feedback: null };
+    const { data, error } = await supabase.from('lesson_classes').insert([row]).select().single();
+    if (error) {
+      if (error.code === '23505') return res.status(409).json({ error: 'Koppeling bestaat al' });
+      return res.status(500).json({ error: error.message });
+    }
+    res.status(201).json(data);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+app.patch('/api/lesson_classes/:lesson_id/:class_id', verifyToken, async (req, res) => {
+  try {
+    const { lesson_id, class_id } = req.params;
+    const updates = {};
+    if (req.body.lesson_date !== undefined) updates.lesson_date = req.body.lesson_date;
+    if (req.body.feedback !== undefined) updates.feedback = req.body.feedback;
+    const { data, error } = await supabase.from('lesson_classes')
+      .update(updates).eq('lesson_id', lesson_id).eq('class_id', class_id)
+      .select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/api/lessons/:id', async (req, res) => {
