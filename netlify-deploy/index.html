@@ -966,7 +966,10 @@ function renderLesDetail(les) {
   const datum = les.created_at
     ? new Date(les.created_at).toLocaleDateString('nl-NL', { day:'numeric', month:'long', year:'numeric' })
     : '';
-  const klassen = les.klassen || [];
+  const klasNamen = (les.class_ids || [])
+    .map(id => classesCache.find(c => c.id === id)?.name)
+    .filter(Boolean);
+  const klasNaam = klasNamen.join(', ');
 
   // Parse leerdoelen uit content
   const content = les.content || '';
@@ -1002,10 +1005,8 @@ function renderLesDetail(les) {
         <div class="page-eyebrow">Les</div>
         <h2 class="page-title" style="margin-bottom:4px;">${les.name}</h2>
         ${datum ? `<div style="font-size:0.82rem;color:var(--muted);">📅 ${datum}</div>` : ''}
-        ${klassen.length
-          ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">${klassen.map(k =>
-              `<span class="ld-badge" style="background:var(--navy-glow);color:var(--navy);">🏫 ${k.name}</span>`
-            ).join('')}</div>`
+        ${klasNaam
+          ? `<div style="font-size:0.82rem;color:var(--muted);margin-top:2px;">🏫 ${klasNaam}</div>`
           : `<div style="font-size:0.82rem;color:var(--muted);margin-top:2px;">Geen klas gekoppeld</div>`}
       </div>
       <div style="text-align:right;">
@@ -2491,7 +2492,10 @@ async function startStudentMetCode() {
     if (!gevonden) { err.textContent = 'Geen les gevonden voor code "' + code + '". Controleer de code bij je leraar.'; err.style.display = 'block'; return; }
     studentName   = name;
     selectedLesson = gevonden;
-    selectedClass  = classesCache.find(c => c.id === gevonden.class_id) || { id: gevonden.class_id || '', name: gevonden.class_id || '—' };
+    const eersteKlasId = (gevonden.class_ids || [])[0] || null;
+    selectedClass = eersteKlasId
+      ? (classesCache.find(c => c.id === eersteKlasId) || { id: eersteKlasId, name: '—' })
+      : null;
     document.getElementById('topbar-student-name').textContent = name;
     showScreen('screen-kies-lesvorm');
     renderLesvormKeuze(gevonden);
@@ -3640,7 +3644,9 @@ async function onClassFilterChange() {
   const allLessons = await apiFetch('/api/lessons');
   const sel = document.getElementById('teacher-lesson-select');
   sel.innerHTML = '<option value="">— Kies een les —</option>';
-  const filtered = classId ? allLessons.filter(l => l.class_id === classId || !l.class_id) : allLessons;
+  const filtered = classId
+    ? allLessons.filter(l => (l.class_ids || []).includes(classId))
+    : allLessons;
   filtered.forEach(l => {
     const opt = document.createElement('option');
     opt.value = l.id; opt.textContent = l.name;
@@ -3786,7 +3792,7 @@ function renderKlasTabContent(tab) {
 
 async function renderKlasActiviteiten(klas, wrap) {
   // Lessen voor deze klas
-  const klasLessen = (lessonsCache || []).filter(l => l.class_id === klas?.id);
+  const klasLessen = (lessonsCache || []).filter(l => (l.class_ids || []).includes(klas?.id));
 
   // Mol-sessies voor deze klas ophalen
   let molSessies = [];
@@ -4127,7 +4133,7 @@ async function verwijderLlUitKlas(llId, klasId, klasNaam) {
 }
 
 function renderKlasResultaten(klas, wrap) {
-  const klasLessen = (lessonsCache || []).filter(l => l.class_id === klas?.id);
+  const klasLessen = (lessonsCache || []).filter(l => (l.class_ids || []).includes(klas?.id));
 
   wrap.innerHTML = `<div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end;">
     <div style="flex:1;min-width:180px;"><label>Filter op les</label>
@@ -4249,7 +4255,7 @@ function renderClassenGrid(klassen) {
     const nv     = k.niveau   || '';
     const lj     = k.leerjaar || detecteerLeerjaar(k.name) || '';
     const meta   = [nv, lj ? 'Leerjaar ' + lj : ''].filter(Boolean).join(' · ');
-    const lessen = (lessonsCache || []).filter(l => l.class_id === k.id);
+    const lessen = (lessonsCache || []).filter(l => (l.class_ids || []).includes(k.id));
     return `<div class="class-card">
       <div class="class-card-naam" onclick="openKlas('${k.id}')" style="cursor:pointer;">${k.name}</div>
       ${meta ? `<div class="class-card-meta">${meta}</div>` : ''}
@@ -4319,9 +4325,10 @@ async function loadTeacherLessons() {
       ? new Date(l.created_at).toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' })
       : '';
     const code     = getLesCode(l.id);
-    const klasNaam = l.class_id
-      ? (classesCache.find(c => c.id === l.class_id)?.name || '')
-      : '';
+    const klasNaam = (l.class_ids || [])
+      .map(id => classesCache.find(c => c.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
     const safeId   = (l.id   || '').replace(/'/g, "\'");
     const safeName = (l.name || '').replace(/'/g, "\'");
     const aantalLd = (l.content?.match(/^- .+/gm) || []).length;
