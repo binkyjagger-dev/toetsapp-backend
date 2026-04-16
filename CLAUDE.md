@@ -14,6 +14,8 @@
 
 ## Na elke sessie
 - Draai npm test — alle tests groen?
+- npm test draait automatisch lint:html mee
+- Een syntaxfout in index.html laat npm test nu falen voor je deployt
 - git add . && git commit -m "beschrijving"
 
 ## Nooit
