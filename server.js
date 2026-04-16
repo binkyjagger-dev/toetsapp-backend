@@ -217,21 +217,13 @@ app.delete('/api/leerlingen/periode/:lesperiode', verifyToken, async (req, res) 
 });
 
 // KLASSEN
-app.get('/api/classes', optionalToken, async (req, res) => {
+app.get('/api/classes', verifyToken, async (req, res) => {
   try {
-    // Probeer met leraar_id filter
-    if (req.leraar?.id) {
-      const { data, error } = await supabase.from('classes').select('*')
-        .or('leraar_id.eq.' + req.leraar.id + ',leraar_id.is.null')
-        .order('name');
-      if (!error) return res.json(data || []);
-      // Als de kolom niet bestaat: val terug op alles ophalen
-      console.warn('leraar_id filter mislukt (kolom bestaat mogelijk niet):', error.message);
-    }
-    // Fallback: alle klassen (of filter op naam als dat niet werkt)
-    const { data, error } = await supabase.from('classes').select('*').order('name');
+    const { data, error } = await supabase.from('classes').select('*')
+      .eq('leraar_id', req.leraar.id)
+      .order('name');
     if (error) return res.status(500).json({ error: error.message });
-    res.json(data || []);
+    res.json((data || []).filter(c => c.leraar_id === req.leraar.id));
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/api/classes', optionalToken, async (req, res) => {
@@ -379,7 +371,7 @@ app.delete('/api/leerdoelen/:id', verifyToken, async (req, res) => {
 });
 
 // LESSEN
-app.get('/api/lessons', optionalToken, async (req, res) => {
+app.get('/api/lessons', verifyToken, async (req, res) => {
   // Filter via junction table als class_id query param aanwezig
   let lessonIdFilter = null;
   if (req.query.class_id) {
