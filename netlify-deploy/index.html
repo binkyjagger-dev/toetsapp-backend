@@ -965,9 +965,7 @@ function renderLesDetail(les) {
   const datum = les.created_at
     ? new Date(les.created_at).toLocaleDateString('nl-NL', { day:'numeric', month:'long', year:'numeric' })
     : '';
-  const klasNaam = les.class_id
-    ? (classesCache.find(c => c.id === les.class_id)?.name || '')
-    : '';
+  const klassen = les.klassen || [];
 
   // Parse leerdoelen uit content
   const content = les.content || '';
@@ -1003,7 +1001,11 @@ function renderLesDetail(les) {
         <div class="page-eyebrow">Les</div>
         <h2 class="page-title" style="margin-bottom:4px;">${les.name}</h2>
         ${datum ? `<div style="font-size:0.82rem;color:var(--muted);">📅 ${datum}</div>` : ''}
-        ${klasNaam ? `<div style="font-size:0.82rem;color:var(--muted);margin-top:2px;">🏫 Gekoppeld aan ${klasNaam}</div>` : ''}
+        ${klassen.length
+          ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">${klassen.map(k =>
+              `<span class="ld-badge" style="background:var(--navy-glow);color:var(--navy);">🏫 ${k.name}</span>`
+            ).join('')}</div>`
+          : `<div style="font-size:0.82rem;color:var(--muted);margin-top:2px;">Geen klas gekoppeld</div>`}
       </div>
       <div style="text-align:right;">
         <div class="les-detail-code">${code}</div>
@@ -1025,6 +1027,10 @@ function renderLesDetail(les) {
         <div class="stat-val">${secties.kunnen.length}</div>
         <div class="stat-lbl">Kunnen</div>
       </div>
+      ${les.werkvorm ? `<div class="stat-card" style="flex:1;min-width:120px;">
+        <div class="stat-val">${les.werkvorm === 'mol' ? '🕵️' : '💬'}</div>
+        <div class="stat-lbl">${les.werkvorm === 'mol' ? 'Wie is de Mol' : 'Socratisch'}</div>
+      </div>` : ''}
     </div>
 
     <!-- Wervormen -->
