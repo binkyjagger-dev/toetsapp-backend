@@ -3690,7 +3690,7 @@ function navNaar(view) {
   if (view === 'leerdoelen') laadLeerdoelenTab();
   if (view === 'lessen')    laadLessenView();
   if (view === 'analyse')   { vulAnalyseFilters(); runAnalyse(); }
-  if (view === 'socratisch') { vulClassFilter(); loadLessonsForTeacher(); }
+  if (view === 'socratisch') { vulClassFilter(); loadTeacherLessons(); }
 }
 
 function navLabel(view) {
@@ -3920,7 +3920,6 @@ async function saveFeedback(lesId, klasId) {
   try {
     await apiFetch('/api/lesson_classes/' + lesId + '/' + klasId, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ feedback: text }),
     });
     if (statusEl) { statusEl.textContent = 'Opgeslagen \u2713'; statusEl.style.color = 'var(--green)'; }
@@ -3937,7 +3936,6 @@ async function planLesOpslaan(klasId) {
   try {
     await apiFetch('/api/lesson_classes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lesson_id: lesId, class_id: klasId, lesson_date: datum }),
     });
     if (statusEl) statusEl.textContent = '';
@@ -4504,7 +4502,7 @@ async function loadTeacherDashboard() {
 
     // ── Socratisch-filters vullen ─────────────────────────
     vulClassFilter();
-    loadLessonsForTeacher();
+    loadTeacherLessons();
 
   } catch(e) {
     console.error('loadTeacherDashboard fout:', e);
