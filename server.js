@@ -385,7 +385,24 @@ app.get('/api/lessons', optionalToken, async (req, res) => {
   if (req.query.class_id) query = query.eq('class_id', req.query.class_id);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+
+  // Verrijk met klassen-info
+  const classIds = [...new Set((data || []).map(l => l.class_id).filter(Boolean))];
+  let classesMap = {};
+  if (classIds.length) {
+    const { data: classes } = await supabase.from('classes').select('id,name');
+    (classes || []).forEach(c => { classesMap[c.id] = c; });
+  }
+
+  const enriched = (data || []).map(l => ({
+    ...l,
+    klassen:  l.class_id && classesMap[l.class_id]
+              ? [{ id: classesMap[l.class_id].id, name: classesMap[l.class_id].name }]
+              : [],
+    werkvorm: l.toegestane_lesvormen?.[0] || null,
+  }));
+
+  res.json(enriched);
 });
 app.post('/api/lessons', optionalToken, async (req, res) => {
   const { id, name, content, leerdoelen, chapter_val, created_at, class_id,
