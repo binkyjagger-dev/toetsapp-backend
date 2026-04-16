@@ -1751,5 +1751,9 @@ app.post('/api/mol/bereken-scores', async (req, res) => {
 });
 
 // START
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
+if (require.main === module) {
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
+}
+
+module.exports = app;
