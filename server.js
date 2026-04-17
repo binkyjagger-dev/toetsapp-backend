@@ -1863,11 +1863,23 @@ async function runMigrations() {
       continue;
     }
 
-    console.log('[migrations] markeer als uitgevoerd:', file);
+    const sql = fs.readFileSync(path.join(dir, file), 'utf8')
+      .split('\n')
+      .filter(l => !l.trim().startsWith('--') && l.trim())
+      .join('\n');
+
+    const { error } = await supabase.rpc('exec_sql', { query: sql });
+
+    if (error) {
+      console.error('[migrations] FOUT in', file, error.message);
+      process.exit(1);
+    }
+
     await supabase
       .from('schema_migrations')
       .insert({ filename: file });
-    console.log('[migrations] gemarkeerd:', file);
+
+    console.log('[migrations] uitgevoerd:', file);
   }
   console.log('[migrations] klaar.');
 }
