@@ -1,3 +1,11 @@
+function selectRole(role) {
+  currentRole = role;
+  document.getElementById('role-student').className = 'role-card' + (role === 'student' ? ' active-student' : '');
+  document.getElementById('role-teacher').className = 'role-card' + (role === 'teacher' ? ' active-teacher' : '');
+  document.getElementById('student-form').style.display = role === 'student' ? 'block' : 'none';
+  document.getElementById('teacher-form').style.display = role === 'teacher' ? 'block' : 'none';
+}
+
 async function loginTeacher() {
   const email = document.getElementById('teacher-email').value.trim();
   const pw    = document.getElementById('teacher-password').value;

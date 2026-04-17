@@ -901,6 +901,7 @@
 
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="js/utils.js"></script>
   <script src="js/state.js"></script>
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
@@ -910,9 +911,6 @@
   <script src="js/leerlingen.js"></script>
   <script src="js/student.js"></script>
   <script src="js/analyse.js"></script>
-  <script>
-
-</script>
 <script>
 
 
@@ -2222,82 +2220,5 @@ function annuleerLdImport() {
 <!-- TOAST -->
 <div class="toast" id="toast" style="display:none"></div>
 
-<script>
-
-// ═══════════════════════════════════════════════════════════
-//  SCREEN MANAGEMENT
-// ═══════════════════════════════════════════════════════════
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  window.scrollTo(0,0);
-}
-
-// ═══════════════════════════════════════════════════════════
-//  LANDING
-// ═══════════════════════════════════════════════════════════
-function selectRole(role) {
-  currentRole = role;
-  document.getElementById('role-student').className = 'role-card' + (role === 'student' ? ' active-student' : '');
-  document.getElementById('role-teacher').className = 'role-card' + (role === 'teacher' ? ' active-teacher' : '');
-  document.getElementById('student-form').style.display = role === 'student' ? 'block' : 'none';
-  document.getElementById('teacher-form').style.display = role === 'teacher' ? 'block' : 'none';
-}
-
-
-// ═══════════════════════════════════════════════════════════
-//  TABS
-// ═══════════════════════════════════════════════════════════
-
-
-
-
-// ═══════════════════════════════════════════════════════════
-//  MODALS
-// ═══════════════════════════════════════════════════════════
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-// ═══════════════════════════════════════════════════════════
-//  UTILS
-// ═══════════════════════════════════════════════════════════
-function escHtml(text) {
-  return (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-}
-function escAttr(text) {
-  return (text || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-}
-function escHtmlAttr(text) {
-  return (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
-}
-function formatDate(ts) {
-  const d = new Date(ts);
-  return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.style.display = 'block';
-  setTimeout(() => { t.style.display = 'none'; }, 3000);
-}
-
-// Close modals on overlay click
-document.querySelectorAll('.modal-overlay').forEach(o => {
-  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
-});
-
-// Init — load classes then select student role
-(async () => {
-  try {
-    classesCache = await getClasses();
-    populateStudentClassDropdown();
-  } catch(e) { console.error('Klassen laden mislukt:', e); }
-  selectRole('student');
-})();
-
-// ════════════════════════════════════════════════════════════
-// LEERLINGEN TAB
-// ════════════════════════════════════════════════════════════
-
-</script>
 </body>
 </html>
