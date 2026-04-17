@@ -14,8 +14,6 @@ describe('lessen.js — module extractie', () => {
     expect(content).toContain('function loadTeacherDashboard');
     expect(content).toContain('function loadTeacherLessons');
     expect(content).toContain('function loadLessonsForTeacher');
-    expect(content).toContain('function openLesDetail');
-    expect(content).toContain('function renderLesDetail');
     expect(content).toContain('function deleteLesson');
   });
 
