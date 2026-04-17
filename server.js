@@ -1682,32 +1682,110 @@ async function berekenScoresIntern(sessie_id) {
 // MOL MULTI-GROEP FLOW — groep-onafhankelijke fase-tracking
 // ═══════════════════════════════════════════════════════════════
 
-// ── POST /api/mol/sessies — nieuwe sessie met leraar_id ──
+// ── POST /api/mol/sessies — nieuwe sessie met leraar_id + vragen/opties ──
 app.post('/api/mol/sessies', verifyToken, async (req, res) => {
   try {
-    const { les_naam, leerlingen = [], groep_grootte = 3, n_rondes = 3 } = req.body;
-    const sessieId = 'mol_' + Date.now();
+    const { les_naam, les_content, leerlingen = [], groep_grootte = 3, n_rondes = 3, vragen = [], naam } = req.body;
+    const sessieId   = 'mol_' + Date.now();
+    const sessieCode = randCode(4);
+    const docentCode = randCode(6);
     const record = {
       id: sessieId,
-      les_naam: les_naam || '',
+      les_naam: les_naam || naam || '',
+      les_content: les_content || '',
       leraar_id: req.leraar.id,
-      n_rondes, groep_grootte,
+      n_rondes: n_rondes || (vragen.length || 3),
+      groep_grootte,
       status: 'setup',
+      sessie_code: sessieCode,
+      docent_code: docentCode,
       created_at: Date.now(),
     };
-    const { data, error } = await supabase.from('mol_sessies').insert([record]).select().single();
+    const { data: sessieData, error } = await supabase.from('mol_sessies').insert([record]).select().single();
     if (error) return res.status(500).json({ error: error.message });
-    const sessie = Array.isArray(data) ? data[0] : data;
-    res.status(201).json({ ...(sessie || record), leraar_id: req.leraar.id });
+    const sessie = Array.isArray(sessieData) ? sessieData[0] : sessieData;
+
+    // Sla vragen op als mol_cases met mc_opties (incl. feedback + punten)
+    let savedVragen = [];
+    if (vragen.length > 0) {
+      const caseRows = vragen.map((v, i) => ({
+        id: `case_${sessieId}_r${i + 1}`,
+        sessie_id: sessieId,
+        ronde_nr: i + 1,
+        vraag: v.vraag || '',
+        vraagtype: 'mc',
+        mc_opties: (v.opties || []).map((o, oi) => ({
+          id: o.id || `opt_${i + 1}_${oi + 1}`,
+          tekst: o.tekst,
+          punten: o.punten || 0,
+          feedback: o.feedback || '',
+          correct: !!o.correct,
+        })),
+      }));
+      const { data: caseResult } = await supabase.from('mol_cases').insert(caseRows).select();
+      savedVragen = (caseResult || caseRows).map(c => ({
+        vraag: c.vraag,
+        ronde_nr: c.ronde_nr,
+        opties: c.mc_opties || [],
+      }));
+    }
+
+    res.status(201).json({
+      ...(sessie || record),
+      leraar_id: req.leraar.id,
+      sessie_code: sessie?.sessie_code || sessieCode,
+      vragen: savedVragen,
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── GET /api/mol/sessies/:id/state — volledige sessie-state ──
+// ── POST /api/mol/sessies/:id/login — speler login via sessie_code + speler_code ──
+app.post('/api/mol/sessies/:id/login', async (req, res) => {
+  try {
+    const { sessiecode, spelcode } = req.body;
+    const { data: sessie } = await supabase.from('mol_sessies')
+      .select('*').eq('id', req.params.id).single();
+    if (!sessie || sessie.sessie_code !== sessiecode) {
+      return res.status(404).json({ error: 'Sessie of sessiecode niet gevonden' });
+    }
+    const { data: speler } = await supabase.from('mol_leerlingen')
+      .select('*').eq('sessie_id', req.params.id).eq('speler_code', spelcode).maybeSingle();
+    if (!speler) return res.status(404).json({ error: 'Spelcode niet gevonden' });
+    res.json({
+      id: speler.id,
+      naam: speler.naam,
+      groep_id: speler.groep_id,
+      groep_naam: speler.groep_naam,
+      is_mol: !!speler.is_mol,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── GET /api/mol/sessies/:id/state — volledige sessie-state (feedback/punten verwijderd) ──
 app.get('/api/mol/sessies/:id/state', verifyToken, async (req, res) => {
   try {
-    const { data: sessie } = await supabase.from('mol_sessies').select('*').eq('id', req.params.id).single();
+    const [r0, r1] = (await Promise.all([
+      supabase.from('mol_sessies').select('*').eq('id', req.params.id).single(),
+      supabase.from('mol_cases').select('*').eq('sessie_id', req.params.id).order('ronde_nr'),
+    ])).map(r => r || {});
+    const sessie = r0.data;
+    const cases  = r1.data;
     if (!sessie) return res.status(404).json({ error: 'Sessie niet gevonden' });
-    res.json(sessie);
+
+    const stripOpties = (opties) => (opties || []).map(o => ({
+      id: o.id, tekst: o.tekst, correct: o.correct,
+    }));
+    const stripVraag = (v) => ({
+      ...v,
+      mc_opties: stripOpties(v?.mc_opties),
+      opties:    stripOpties(v?.opties),
+    });
+
+    const response = { ...sessie };
+    if (response.vragen) response.vragen = response.vragen.map(stripVraag);
+    if (cases) response.cases = cases.map(stripVraag);
+
+    res.json(response);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1952,6 +2030,98 @@ app.get('/api/mol/sessies/:id/resultaten', verifyToken, async (req, res) => {
     const winnaar_id = winnaars[0]?.leerling_id || null;
 
     res.json({ mol_id, scores, winnaar_id });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── GET /api/mol/sessies/:id/ronde-feedback — feedback na ronde afgerond ──
+app.get('/api/mol/sessies/:id/ronde-feedback', async (req, res) => {
+  try {
+    const { leerling_id, groep_id, ronde_nr } = req.query;
+    const r = parseInt(ronde_nr, 10) || 1;
+    const groepStatus = await bepaalGroepStatus(req.params.id, groep_id);
+    if (groepStatus.fase !== 'resultaat') {
+      return res.status(403).json({ error: 'Ronde is nog niet afgerond' });
+    }
+    const [a, b, c] = (await Promise.all([
+      supabase.from('mol_cases').select('*').eq('sessie_id', req.params.id).eq('ronde_nr', r).single(),
+      supabase.from('mol_antwoorden').select('*').eq('sessie_id', req.params.id).eq('ronde_nr', r),
+      supabase.from('mol_groep_stemmen').select('*').eq('sessie_id', req.params.id).eq('ronde_nr', r),
+    ])).map(x => x || {});
+    const caseData = Array.isArray(a.data) ? a.data[0] : a.data;
+    const antwoorden = a.data == null ? [] : (b.data || []);
+    const groepStemmen = c.data || [];
+
+    const eigenAntw = antwoorden.find(x => x.leerling_id === leerling_id);
+    const groepStem = groepStemmen.find(x => x.groep_id === groep_id);
+    const eigenOptieId = eigenAntw?.mc_optie_id;
+    const groepOptieId = groepStem?.gekozen_argument;
+
+    const opties = (caseData?.mc_opties || []).map(o => ({
+      id: o.id,
+      tekst: o.tekst,
+      feedback: o.feedback || '',
+      punten: o.punten || 0,
+      correct: !!o.correct,
+      is_eigen_antwoord: o.id === eigenOptieId,
+      is_groepsantwoord: o.id === groepOptieId,
+    }));
+    const eigenOptie = (caseData?.mc_opties || []).find(o => o.id === eigenOptieId);
+    const eigen_score = eigenOptie?.punten || 0;
+
+    res.json({
+      vraag_tekst: caseData?.vraag || '',
+      opties,
+      eigen_score,
+      groepsantwoord_punten: groepStem?.punten || 0,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── POST /api/mol/genereer-feedback — AI-feedback per antwoordoptie ──
+app.post('/api/mol/genereer-feedback', verifyToken, async (req, res) => {
+  try {
+    const { vraag, optie, correct, les_content } = req.body;
+    const oordeel = correct ? 'juist' : 'onjuist';
+    const prompt = `Je bent een ervaren economieleraar. Geef korte feedback (maximaal 2 zinnen) aan een leerling die bij de vraag "${vraag}" het antwoord "${optie}" koos. Dit antwoord is ${oordeel}. Lescontext: ${les_content || ''}. Leg uit waarom dit antwoord ${oordeel} is.`;
+    const result = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 300,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const text = result?.content?.[0]?.text || '';
+    res.json({ feedback: text });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── GET /api/mol/sessies/:id/mol-voorstel — willekeurige Mol-suggestie ──
+app.get('/api/mol/sessies/:id/mol-voorstel', verifyToken, async (req, res) => {
+  try {
+    const { groep_id } = req.query;
+    const { data: all } = await supabase.from('mol_leerlingen')
+      .select('*').eq('sessie_id', req.params.id);
+    const leden = (all || []).filter(l => l.groep_id === groep_id);
+    if (leden.length === 0) return res.status(404).json({ error: 'Geen leerlingen in groep' });
+    const keuze = leden[Math.floor(Math.random() * leden.length)];
+    res.json({ voorstel_id: keuze.id, voorstel_naam: keuze.naam });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── POST /api/mol/sessies/:id/genereer-spelcodes ──
+app.post('/api/mol/sessies/:id/genereer-spelcodes', verifyToken, async (req, res) => {
+  try {
+    const { data: leerlingen } = await supabase.from('mol_leerlingen')
+      .select('*').eq('sessie_id', req.params.id);
+    const gebruikt = new Set();
+    const spelcodes = (leerlingen || []).map(l => {
+      let code;
+      do { code = randCode(4); } while (gebruikt.has(code));
+      gebruikt.add(code);
+      return { leerling_id: l.id, naam: l.naam, spelcode: code };
+    });
+    for (const s of spelcodes) {
+      await supabase.from('mol_leerlingen').update({ speler_code: s.spelcode }).eq('id', s.leerling_id);
+    }
+    res.json({ spelcodes });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
