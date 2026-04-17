@@ -1036,17 +1036,12 @@ app.post('/api/mol/sessie', optionalToken, async (req, res) => {
 
 
 // ── GET /api/mol/sessies — docent haalt lijst van alle sessies op ────────────
-app.get('/api/mol/sessies', optionalToken, async (req, res) => {
+app.get('/api/mol/sessies', verifyToken, async (req, res) => {
   try {
-    const { docent_token } = req.query;
-    // Geen auth → lege lijst teruggeven (nieuwe gebruiker)
-    const geldig = docent_token === 'leraar123' || docent_token === process.env.TEACHER_TOKEN || !!req.leraar;
-    if (!geldig) return res.json([]);
-    let q = supabase.from('mol_sessies')
-      .select('id, les_naam, status, created_at, sessie_code, docent_code, n_rondes, groep_grootte')
+    const { data, error } = await supabase.from('mol_sessies')
+      .select('id, les_naam, status, created_at, sessie_code, docent_code, n_rondes, groep_grootte, leraar_id')
+      .eq('leraar_id', req.leraar.id)
       .order('created_at', { ascending: false });
-    if (req.leraar?.id) q = q.eq('leraar_id', req.leraar.id);
-    const { data, error } = await q;
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
   } catch (e) {
@@ -1682,6 +1677,283 @@ async function berekenScoresIntern(sessie_id) {
 
 
 
+
+// ═══════════════════════════════════════════════════════════════
+// MOL MULTI-GROEP FLOW — groep-onafhankelijke fase-tracking
+// ═══════════════════════════════════════════════════════════════
+
+// ── POST /api/mol/sessies — nieuwe sessie met leraar_id ──
+app.post('/api/mol/sessies', verifyToken, async (req, res) => {
+  try {
+    const { les_naam, leerlingen = [], groep_grootte = 3, n_rondes = 3 } = req.body;
+    const sessieId = 'mol_' + Date.now();
+    const record = {
+      id: sessieId,
+      les_naam: les_naam || '',
+      leraar_id: req.leraar.id,
+      n_rondes, groep_grootte,
+      status: 'setup',
+      created_at: Date.now(),
+    };
+    const { data, error } = await supabase.from('mol_sessies').insert([record]).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    const sessie = Array.isArray(data) ? data[0] : data;
+    res.status(201).json({ ...(sessie || record), leraar_id: req.leraar.id });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── GET /api/mol/sessies/:id/state — volledige sessie-state ──
+app.get('/api/mol/sessies/:id/state', verifyToken, async (req, res) => {
+  try {
+    const { data: sessie } = await supabase.from('mol_sessies').select('*').eq('id', req.params.id).single();
+    if (!sessie) return res.status(404).json({ error: 'Sessie niet gevonden' });
+    res.json(sessie);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Helper: bepaal fase en wacht_op voor een groep ──
+async function bepaalGroepStatus(sessie_id, groep_id) {
+  const results = await Promise.all([
+    supabase.from('mol_sessies').select('*').eq('id', sessie_id).single(),
+    supabase.from('mol_leerlingen').select('*').eq('sessie_id', sessie_id),
+    supabase.from('mol_briefing_klaar').select('*').eq('sessie_id', sessie_id),
+    supabase.from('mol_antwoorden').select('*').eq('sessie_id', sessie_id),
+    supabase.from('mol_groep_stemmen').select('*').eq('sessie_id', sessie_id),
+    supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sessie_id),
+  ]);
+  const [r0, r1, r2, r3, r4, r5] = results.map(r => r || {});
+  const sessie        = r0.data;
+  const allLeerlingen = r1.data;
+  const briefing      = r2.data;
+  const antwoorden    = r3.data;
+  const groepStemmen  = r4.data;
+  const testAntw      = r5.data;
+
+  const leerlingen = (allLeerlingen || []).filter(l => l.groep_id === groep_id);
+  const leerlingIds = leerlingen.map(l => l.id);
+  const status = sessie?.status || 'setup';
+  const ronde_nr = sessie?.huidige_ronde || parseInt((status.match(/^ronde_(\d+)/) || [])[1]) || 1;
+
+  // Briefing fase
+  if (status === 'briefing') {
+    const klaarIds = new Set((briefing || []).map(b => b.leerling_id));
+    const wacht_op = leerlingIds.filter(id => !klaarIds.has(id));
+    return { fase: wacht_op.length === 0 ? 'ronde_1' : 'briefing', ronde_nr: 1, wacht_op };
+  }
+
+  // Rondes
+  if (status.startsWith('ronde_')) {
+    const r = ronde_nr;
+    const ronde_fase = sessie?.ronde_fase || 'invoer';
+
+    if (ronde_fase === 'invoer') {
+      const antIds = new Set((antwoorden || []).filter(a => a.ronde_nr === r).map(a => a.leerling_id));
+      const wacht_op = leerlingIds.filter(id => !antIds.has(id));
+      return { fase: wacht_op.length === 0 ? 'discussie' : 'invoer', ronde_nr: r, wacht_op };
+    }
+    if (ronde_fase === 'discussie') {
+      const heeftStem = (groepStemmen || []).some(s => s.groep_id === groep_id && s.ronde_nr === r);
+      if (heeftStem) {
+        const nextFase = r < (sessie?.n_rondes || 1) ? 'resultaat' : 'resultaat';
+        return { fase: nextFase, ronde_nr: r, wacht_op: [] };
+      }
+      const groepshoofd = leerlingen.find(l => l.is_groepshoofd);
+      return { fase: 'discussie', ronde_nr: r, wacht_op: groepshoofd ? [groepshoofd.id] : [] };
+    }
+    return { fase: ronde_fase, ronde_nr: r, wacht_op: [] };
+  }
+
+  // Test fase
+  if (status === 'test') {
+    const testIds = new Set((testAntw || []).map(t => t.leerling_id));
+    const wacht_op = leerlingIds.filter(id => !testIds.has(id));
+    return { fase: wacht_op.length === 0 ? 'reveal' : 'test', ronde_nr, wacht_op };
+  }
+
+  // Reveal / afgelopen
+  if (status === 'reveal' || status === 'afgelopen') {
+    return { fase: 'reveal', ronde_nr, wacht_op: [] };
+  }
+
+  return { fase: status, ronde_nr, wacht_op: [] };
+}
+
+// ── GET /api/mol/sessies/:id/groep-status ──
+app.get('/api/mol/sessies/:id/groep-status', verifyToken, async (req, res) => {
+  try {
+    const { groep_id } = req.query;
+    if (!groep_id) return res.status(400).json({ error: 'groep_id verplicht' });
+    const result = await bepaalGroepStatus(req.params.id, groep_id);
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── POST /api/mol/sessies/:id/briefing-start ──
+app.post('/api/mol/sessies/:id/briefing-start', async (req, res) => {
+  try {
+    const { leerling_id, groepshoofd_stem } = req.body;
+    if (!groepshoofd_stem) return res.status(400).json({ error: 'groepshoofd_stem verplicht' });
+    await supabase.from('mol_leerlingen').update({ groepshoofd_stem }).eq('id', leerling_id);
+    await supabase.from('mol_briefing_klaar').upsert([{
+      id: `bk_${req.params.id}_${leerling_id}`,
+      sessie_id: req.params.id, leerling_id, klaar_op: Date.now(),
+    }]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── POST /api/mol/sessies/:id/bepaal-groepshoofd ──
+app.post('/api/mol/sessies/:id/bepaal-groepshoofd', async (req, res) => {
+  try {
+    const { groep_id } = req.body;
+    const { data: all } = await supabase.from('mol_leerlingen').select('*').eq('sessie_id', req.params.id);
+    const leden = (all || []).filter(l => l.groep_id === groep_id);
+    const tally = {};
+    leden.forEach(l => {
+      if (l.groepshoofd_stem) tally[l.groepshoofd_stem] = (tally[l.groepshoofd_stem] || 0) + 1;
+    });
+    const maxStemmen = Math.max(0, ...Object.values(tally));
+    const koplopers = Object.keys(tally).filter(k => tally[k] === maxStemmen);
+    const winnaar_id = koplopers[Math.floor(Math.random() * koplopers.length)];
+    const winnaar = leden.find(l => l.id === winnaar_id);
+    await supabase.from('mol_leerlingen').update({ is_groepshoofd: false })
+      .eq('sessie_id', req.params.id).eq('groep_id', groep_id);
+    if (winnaar_id) {
+      await supabase.from('mol_leerlingen').update({ is_groepshoofd: true }).eq('id', winnaar_id);
+    }
+    res.json({ groepshoofd_id: winnaar_id, groepshoofd_naam: winnaar?.naam || '' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── POST /api/mol/sessies/:id/antwoord ──
+app.post('/api/mol/sessies/:id/antwoord', async (req, res) => {
+  try {
+    const { leerling_id, ronde_nr, antwoord, argument, mc_optie_id } = req.body;
+    await supabase.from('mol_antwoorden').upsert([{
+      id: `antw_${req.params.id}_r${ronde_nr}_${leerling_id}`,
+      sessie_id: req.params.id, ronde_nr, leerling_id, antwoord,
+      argument: argument || '',
+      mc_optie_id: mc_optie_id || null,
+      submitted_at: Date.now(),
+    }]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── GET /api/mol/sessies/:id/discussie-data ──
+app.get('/api/mol/sessies/:id/discussie-data', verifyToken, async (req, res) => {
+  try {
+    const { leerling_id, groep_id } = req.query;
+    const [r0, r1] = (await Promise.all([
+      supabase.from('mol_leerlingen').select('*').eq('sessie_id', req.params.id),
+      supabase.from('mol_antwoorden').select('*').eq('sessie_id', req.params.id),
+    ])).map(r => r || {});
+    const all = r0.data;
+    const antw = r1.data;
+    const leden = (all || []).filter(l => l.groep_id === groep_id);
+    const mij = leden.find(l => l.id === leerling_id);
+    const hoofd = leden.find(l => l.is_groepshoofd);
+    const eigen_antwoord = (antw || []).find(a => a.leerling_id === leerling_id) || null;
+    res.json({
+      eigen_antwoord,
+      andere_antwoorden: [],
+      groepshoofd_id:    hoofd?.id || '',
+      groepshoofd_naam:  hoofd?.naam || '',
+      is_groepshoofd:    !!mij?.is_groepshoofd,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── POST /api/mol/sessies/:id/groepsantwoord ──
+app.post('/api/mol/sessies/:id/groepsantwoord', async (req, res) => {
+  try {
+    const { leerling_id, groep_id, antwoord, ronde_nr } = req.body;
+    const { data: lrln } = await supabase.from('mol_leerlingen').select('*')
+      .eq('id', leerling_id).maybeSingle();
+    const speler = Array.isArray(lrln) ? lrln[0] : lrln;
+    if (!speler?.is_groepshoofd) {
+      return res.status(403).json({ error: 'Alleen het groepshoofd kan een groepsantwoord indienen' });
+    }
+    await supabase.from('mol_groep_stemmen').upsert([{
+      id: `stem_${req.params.id}_r${ronde_nr}_${groep_id}`,
+      sessie_id: req.params.id, ronde_nr, groep_id,
+      gekozen_leerling_id: leerling_id,
+      gekozen_argument: antwoord,
+      submitted_at: Date.now(),
+    }]);
+    res.json({ groepsantwoord: antwoord });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── POST /api/mol/sessies/:id/test ──
+app.post('/api/mol/sessies/:id/test', async (req, res) => {
+  try {
+    const { leerling_id, verdachte_id } = req.body;
+    await supabase.from('mol_test_antwoorden').upsert([{
+      id: `test_${req.params.id}_${leerling_id}`,
+      sessie_id: req.params.id, leerling_id,
+      verdachte_id, submitted_at: Date.now(),
+    }]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── GET /api/mol/sessies/:id/test-vragen ──
+app.get('/api/mol/sessies/:id/test-vragen', verifyToken, async (req, res) => {
+  try {
+    const { leerling_id } = req.query;
+    const { data: lrln } = await supabase.from('mol_leerlingen').select('*')
+      .eq('id', leerling_id).maybeSingle();
+    const speler = Array.isArray(lrln) ? lrln[0] : lrln;
+    if (speler?.is_mol) {
+      return res.json({
+        is_mol: true,
+        vragen: [
+          { id: 'mol_1', vraag: 'Wie dacht je dat jou zou verdenken?' },
+          { id: 'mol_2', vraag: 'Welke strategie heb je gebruikt om onopgemerkt te blijven?' },
+        ],
+      });
+    }
+    res.json({
+      is_mol: false,
+      vragen: [
+        { id: 'test_1', vraag: 'Wie is volgens jou de Mol?' },
+      ],
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── GET /api/mol/sessies/:id/resultaten ──
+app.get('/api/mol/sessies/:id/resultaten', verifyToken, async (req, res) => {
+  try {
+    const { groep_id } = req.query;
+    const [r0, r1, r2] = (await Promise.all([
+      supabase.from('mol_leerlingen').select('*').eq('sessie_id', req.params.id),
+      supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', req.params.id),
+      supabase.from('mol_scores').select('*').eq('sessie_id', req.params.id),
+    ])).map(r => r || {});
+    const all = r0.data;
+    const testAntw = r1.data;
+    const scoresData = r2.data;
+    const leden = (all || []).filter(l => l.groep_id === groep_id);
+    const mol = leden.find(l => l.is_mol);
+    const mol_id = mol?.id || null;
+
+    const ledenIds = new Set(leden.map(l => l.id));
+    const correctGeraden = new Set(
+      (testAntw || [])
+        .filter(t => ledenIds.has(t.leerling_id) && t.verdachte_id === mol_id)
+        .map(t => t.leerling_id)
+    );
+    const scores = (scoresData || []).filter(s => ledenIds.has(s.leerling_id));
+    const winnaars = scores
+      .filter(s => correctGeraden.has(s.leerling_id))
+      .sort((a, b) => (b.totaal || 0) - (a.totaal || 0));
+    const winnaar_id = winnaars[0]?.leerling_id || null;
+
+    res.json({ mol_id, scores, winnaar_id });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // ── POST /api/mol/genereer-cases-preview — genereert zonder op te slaan ──────
 app.post('/api/mol/genereer-cases-preview', async (req, res) => {
