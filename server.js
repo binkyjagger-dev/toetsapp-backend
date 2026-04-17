@@ -11,6 +11,7 @@ const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
+const { Pool } = require('pg');
 
 const app = express();
 app.use(cors());
@@ -18,6 +19,10 @@ app.use(express.json({ limit: '10mb' }));
 
 const anthropic  = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase   = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+const pgPool     = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
 const JWT_SECRET = process.env.JWT_SECRET || 'stanislascollege_mol_secret_2025';
 
 // ── Nakijk-assistent ──────────────────────────────────────────
@@ -1847,8 +1852,6 @@ app.post('/api/mol/bereken-scores', async (req, res) => {
 async function runMigrations() {
   console.log('[migrations] controleren...');
   const dir = path.join(__dirname, 'migrations');
-  if (!fs.existsSync(dir)) { console.log('[migrations] map niet gevonden, overslaan.'); return; }
-
   const files = fs.readdirSync(dir)
     .filter(f => f.endsWith('.sql') && f !== '000_migration_runner.sql')
     .sort();
@@ -1858,27 +1861,23 @@ async function runMigrations() {
       .from('schema_migrations')
       .select('filename')
       .eq('filename', file)
-      .single();
+      .maybeSingle();
 
     if (data) {
       console.log('[migrations] al uitgevoerd:', file);
       continue;
     }
 
-    const sql = fs.readFileSync(path.join(dir, file), 'utf8')
-      .split('\n')
-      .filter(l => !l.trim().startsWith('--') && l.trim())
-      .join('\n');
+    const sql = fs.readFileSync(path.join(dir, file), 'utf8');
 
-    const { error } = await supabase.rpc('exec_sql', { query: sql });
-    if (error) {
-      console.error('[migrations] FOUT in', file + ':', error.message);
-      console.warn('[migrations] exec_sql RPC niet beschikbaar? Sla over en ga verder.');
-      continue;
+    try {
+      await pgPool.query(sql);
+      await supabase.from('schema_migrations').insert({ filename: file });
+      console.log('[migrations] uitgevoerd:', file);
+    } catch(err) {
+      console.error('[migrations] FOUT in', file, err.message);
+      process.exit(1);
     }
-
-    await supabase.from('schema_migrations').insert({ filename: file });
-    console.log('[migrations] uitgevoerd:', file);
   }
   console.log('[migrations] klaar.');
 }
@@ -1886,14 +1885,14 @@ async function runMigrations() {
 // START
 if (require.main === module) {
   const PORT = process.env.PORT || 8080;
-  runMigrations()
-    .then(() => {
-      app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
-    })
-    .catch(err => {
-      console.error('[migrations] Mislukt:', err.message);
-      app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT} (migrations overgeslagen)`));
-    });
+  (async () => {
+    if (!process.env.DATABASE_URL) {
+      console.error('[migrations] DATABASE_URL niet ingesteld — migraties overgeslagen.');
+    } else {
+      await runMigrations();
+    }
+    app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
+  })();
 }
 
 module.exports = app;
