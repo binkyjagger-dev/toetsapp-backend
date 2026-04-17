@@ -38,6 +38,7 @@ async function spelerLogin() {
 
 async function spelerAanmelden() {
   if (!speler) return;
+  // Verlaat screen-speler-login en start de speler-flow
   localStorage.setItem('mol_speler_id', speler.id);
   localStorage.setItem('mol_sessie_id', sessieId);
   initSpelerFlow();
@@ -112,10 +113,11 @@ async function pollSpelerStatus() {
     const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
     const nu3 = Date.now();
     const onlineInGroep = mijnGroep.filter(l => l.online_at && (nu3 - l.online_at) < 90000).length;
-    const wTitle = document.querySelector('#screen-speler-wacht .page-title');
-    const wSub   = document.querySelector('#screen-speler-wacht .page-sub');
+    const wTitle = document.querySelector('#screen-speler-wacht-briefing .page-title');
+    const wSub   = document.querySelector('#screen-speler-wacht-briefing .page-sub');
     if (wTitle) wTitle.textContent = 'Wachten op groepsleden...';
-    if (wSub)   wSub.textContent  = `${onlineInGroep} van ${mijnGroep.length} groepsleden online. Het spel start automatisch zodra iedereen ingelogd is.`;
+    if (wSub)   wSub.textContent  = `${onlineInGroep} van ${mijnGroep.length} groepsleden online.`;
+    showScreen('screen-speler-wacht-briefing');
     return;
   }
 
@@ -123,10 +125,11 @@ async function pollSpelerStatus() {
     const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
     if (!briefingGedrukt) {
       renderSpelerBriefing(leerlingen, groepen, sessie);
+      showScreen('screen-speler-briefing');
     } else {
       updateBriefingWachtGrid(mijnGroep, briefingKlaar);
+      showScreen('screen-speler-wacht-briefing');
     }
-    showScreen('screen-speler-wacht');
     return;
   }
 
@@ -159,6 +162,11 @@ async function pollSpelerStatus() {
     return;
   }
 
+  if (fase === 'resultaat') {
+    await renderFeedbackScherm();
+    return;
+  }
+
   if (fase === 'test') {
     if (!testIngediend) {
       lastRenderedFase = null;
@@ -172,7 +180,7 @@ async function pollSpelerStatus() {
   if (fase === 'reveal' || sessie.status === 'reveal' || sessie.status === 'afgelopen') {
     clearInterval(pollTimer);
     renderSpelerReveal(sessieState, scores || []);
-    showScreen('screen-reveal');
+    showScreen('screen-speler-reveal');
     return;
   }
 }
@@ -184,12 +192,45 @@ async function renderDiscussiescherm() {
     '&groep_id=' + encodeURIComponent(speler.groep_id)
   );
 
+  const vraagEl = document.getElementById('discussie-vraag');
   const eigenEl = document.getElementById('disc-eigen-antwoord');
   const hoofdEl = document.getElementById('disc-groepshoofd-naam');
   const instrEl = document.getElementById('disc-instructie');
   const btnEl   = document.getElementById('disc-groepsantwoord-knop');
+  const container = document.getElementById('disc-vraag-container');
 
+  const vraagTekst = res.vraag?.vraag || res.vraag_tekst || '';
+  const opties     = res.opties || res.vraag?.opties || [];
+  const eigenId    = res.eigen_antwoord?.mc_optie_id || res.eigen_antwoord?.antwoord;
+
+  if (vraagEl) vraagEl.textContent = vraagTekst;
   if (eigenEl) eigenEl.textContent = res.eigen_antwoord?.antwoord || '';
+
+  if (container) {
+    if (res.is_groepshoofd) {
+      // Groepshoofd: opties klikbaar in discussie-gh-opties
+      container.innerHTML = `
+        <div id="discussie-vraag" class="card" style="margin-bottom:1rem;">${escH(vraagTekst)}</div>
+        <div id="discussie-gh-opties">` +
+        opties.map(o => `
+          <div class="gh-optie" data-optie="${escH(o.id || o.tekst)}" style="cursor:pointer;padding:0.65rem 0.85rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.4rem;" onclick="geselecteerdeOptie='${escH(o.id || o.tekst)}'">
+            <span>${escH(o.tekst)}</span>
+            ${(o.id === eigenId || o.tekst === eigenId) ? '<span class="tag-jij" style="margin-left:0.5rem;color:var(--gold);">jij</span>' : ''}
+          </div>`).join('') +
+        `</div>`;
+    } else {
+      // Gewone speler: discussie-opties niet klikbaar
+      container.innerHTML = `
+        <div id="discussie-vraag" class="card" style="margin-bottom:1rem;">${escH(vraagTekst)}</div>
+        <div id="discussie-opties">` +
+        opties.map(o => `
+          <div class="discussie-optie" style="padding:0.65rem 0.85rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.4rem;opacity:0.85;">
+            <span>${escH(o.tekst)}</span>
+            ${(o.id === eigenId || o.tekst === eigenId) ? '<span class="tag-jij" style="margin-left:0.5rem;color:var(--gold);">jij</span>' : ''}
+          </div>`).join('') +
+        `</div>`;
+    }
+  }
 
   if (res.is_groepshoofd) {
     if (instrEl) instrEl.textContent = 'Kies het groepsantwoord en druk op Groepsantwoord';
@@ -200,6 +241,46 @@ async function renderDiscussiescherm() {
     if (btnEl) btnEl.style.display = 'none';
   }
   showScreen('screen-speler-discussie');
+}
+
+async function renderFeedbackScherm() {
+  const data = await apiFetch(
+    '/api/mol/sessies/' + sessieId +
+    '/ronde-feedback?leerling_id=' + encodeURIComponent(speler.id) +
+    '&groep_id=' + encodeURIComponent(speler.groep_id) +
+    '&ronde_nr=' + (speler.ronde_nr || 1)
+  );
+
+  const scoreVal = document.getElementById('feedback-score-val');
+  if (scoreVal) scoreVal.textContent = (data.eigen_score || 0) + ' punten';
+
+  const content = document.getElementById('feedback-content');
+  if (content) {
+    content.innerHTML = `
+      <div class="card" style="margin-bottom:1rem;">
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.3rem;">Vraag</div>
+        <div>${escH(data.vraag_tekst || '')}</div>
+      </div>
+      ${(data.opties || []).map(opt => `
+        <div class="feedback-optie ${opt.correct ? 'correct' : ''} ${opt.is_eigen_antwoord ? 'eigen' : ''}"
+          style="padding:0.85rem 1rem;border:1px solid var(--border);border-radius:10px;margin-bottom:0.5rem;">
+          <div class="feedback-optie-rij" style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
+            <span>${escH(opt.tekst)}</span>
+            <span>
+              ${opt.correct ? '<span class="tag-correct" style="color:var(--green);">✓ correct</span>' : ''}
+              ${opt.is_eigen_antwoord && opt.correct ? '<span class="tag-jij-correct" style="color:var(--green);">jij · correct</span>' : ''}
+              ${opt.is_eigen_antwoord && !opt.correct ? '<span class="tag-jij-fout" style="color:var(--red-l);">jij</span>' : ''}
+              ${opt.is_groepsantwoord ? '<span class="tag-groep" style="color:var(--gold);">👑 groep</span>' : ''}
+            </span>
+          </div>
+          <div class="feedback-uitleg" style="font-size:0.82rem;color:var(--muted);margin-top:0.35rem;">${escH(opt.feedback || '')}</div>
+        </div>`).join('')}`;
+  }
+  showScreen('screen-speler-feedback');
+}
+
+async function naarVolgendeRondeOfTest() {
+  // Noop: server bepaalt fase, poll zal automatisch naar volgende scherm schakelen
 }
 
 async function submitGroepsantwoord() {
@@ -258,13 +339,12 @@ function renderSpelerBriefing(leerlingen, groepen, sessie) {
       + '<p style="font-size:0.75rem;color:var(--text2);margin-bottom:0.75rem;">'
       + 'Het groepshoofd dient namens de groep het antwoord in. Je kunt niet op jezelf stemmen.</p>'
       + '<div id="gh-keuze-lijst">';
-    mijnGroep.forEach(l => {
-      const isZelf = l.id === speler.id;
-      html += '<div class="gh-kandidaat" id="gh-' + l.id + '"'
-        + (isZelf ? ' style="cursor:default;opacity:0.5;"' : ' data-kandidaat="' + l.id + '" style="cursor:pointer;"') + '>'
+    // Je kunt niet op jezelf stemmen — filter eigen speler uit
+    const kiesbaar = mijnGroep.filter(l => l.id !== speler.id);
+    kiesbaar.forEach(l => {
+      html += '<div class="gh-kandidaat" id="gh-' + l.id + '" data-kandidaat="' + l.id + '" style="cursor:pointer;">'
         + '<span style="font-size:1.1rem;">🎓</span>'
         + '<span style="font-weight:600;font-size:0.88rem;">' + escH(l.naam) + '</span>'
-        + (isZelf ? '<span style="font-size:0.68rem;color:var(--muted);margin-left:0.3rem;">(jij)</span>' : '')
         + '</div>';
     });
     html += '</div>'
@@ -635,7 +715,6 @@ function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngedie
     // FASE D: Stem ingediend — resultaat tonen
     faseLabel.textContent = `Ronde ${rondeNr} — Resultaat`;
     const isCorrect = groepStem.is_correct;
-    const punten    = groepStem.punten;
 
     content.innerHTML = `
       <div class="card ${isCorrect ? 'highlight-green' : 'highlight-red'}" style="text-align:center;padding:2rem 1.5rem;margin-bottom:1rem;">
@@ -643,7 +722,6 @@ function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngedie
         <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:${isCorrect ? 'var(--green-l)' : 'var(--red-l)'};margin-bottom:0.3rem;">
           ${isCorrect ? 'Goed!' : 'Helaas — fout antwoord'}
         </div>
-        <div style="font-size:1.8rem;font-weight:800;color:${punten > 0 ? 'var(--green-l)' : 'var(--red-l)'};">${punten > 0 ? '+' : ''}${punten} pt</div>
       </div>
       <div class="card">
         <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--green);margin-bottom:0.4rem;">✅ Correct antwoord</div>

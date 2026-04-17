@@ -11,7 +11,7 @@ function goToLeerlingenSetup() {
   setupData.groepGrootte  = parseInt(document.getElementById('setup-groep-grootte').value);
   setupData.timerDiscussie = 0; // discussiefase niet meer gebruikt
   setupData.timerStem      = parseInt(document.getElementById('setup-timer-stem').value) || 60;
-  showScreen('screen-docent-leerlingen');
+  showScreen('screen-sessie-stap2');
 }
 
 function parseLeerlingen() {
@@ -103,7 +103,7 @@ async function naarVragenEditor() {
   err.style.display = 'none';
   setupData.leerlingen    = leerlingen;
   setupData.groepsindeling = groepsindeling; // met Mol-keuzes
-  showScreen('screen-docent-vragen');
+  showScreen('screen-sessie-stap4');
   await genereerVragenPreview();
 }
 
@@ -394,3 +394,46 @@ function verwijderMcOptie(rondeNr, optieId) {
   renderVraagKaart(rondeNr);
 }
 
+
+// ── Nieuwe-flow helpers (stap 1-4 + spelcodes + feedback + mol-voorstel) ──
+
+async function laadMolVoorstel(groepId) {
+  // Haal voorstel op voor één groep: GET /api/mol/sessies/:id/mol-voorstel
+  try {
+    return await apiFetch(
+      '/api/mol/sessies/' + sessieId + '/mol-voorstel?groep_id=' +
+      encodeURIComponent(groepId)
+    );
+  } catch(e) { return null; }
+}
+
+async function genereerFeedbackVoorOptie(vraag, optieTekst, correct, lesContent) {
+  // Roept POST /api/mol/genereer-feedback aan, vult .feedback-input textarea
+  const res = await apiFetch('/api/mol/genereer-feedback', {
+    method: 'POST',
+    body: JSON.stringify({
+      vraag, optie: optieTekst, correct, les_content: lesContent || '',
+    }),
+  });
+  return res.feedback || '';
+}
+
+async function laadEnToonSpelcodes() {
+  // Genereer spelcodes en toon screen-spelcodes
+  const res = await apiFetch(
+    '/api/mol/sessies/' + sessieId + '/genereer-spelcodes',
+    { method: 'POST' }
+  );
+  const codeEl = document.getElementById('spelcodes-sessiecode');
+  if (codeEl) codeEl.textContent = sessieCode || '';
+  const container = document.getElementById('spelcodes-groepen-container');
+  if (container && res.spelcodes) {
+    container.innerHTML = res.spelcodes.map(s =>
+      '<div class="spelcode-rij" style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);">' +
+      '<span>' + escH(s.naam) + '</span>' +
+      '<span style="font-family:\'DM Mono\',monospace;font-weight:700;color:var(--gold);">' + escH(s.spelcode) + '</span>' +
+      '</div>'
+    ).join('');
+  }
+  showScreen('screen-spelcodes');
+}
