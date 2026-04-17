@@ -217,6 +217,14 @@ app.delete('/api/leerlingen/periode/:lesperiode', verifyToken, async (req, res) 
 });
 
 // KLASSEN
+app.get('/api/classes/public', async (req, res) => {
+  const { data, error } = await supabase
+    .from('classes')
+    .select('id, name')
+    .order('name');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
 app.get('/api/classes', verifyToken, async (req, res) => {
   try {
     const { data, error } = await supabase.from('classes').select('*')
