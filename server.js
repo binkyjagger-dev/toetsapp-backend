@@ -11,7 +11,6 @@ const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
-const { Pool } = require('pg');
 
 const app = express();
 app.use(cors());
@@ -19,10 +18,6 @@ app.use(express.json({ limit: '10mb' }));
 
 const anthropic  = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase   = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-const pgPool     = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
 const JWT_SECRET = process.env.JWT_SECRET || 'stanislascollege_mol_secret_2025';
 
 // ── Nakijk-assistent ──────────────────────────────────────────
@@ -1868,16 +1863,11 @@ async function runMigrations() {
       continue;
     }
 
-    const sql = fs.readFileSync(path.join(dir, file), 'utf8');
-
-    try {
-      await pgPool.query(sql);
-      await supabase.from('schema_migrations').insert({ filename: file });
-      console.log('[migrations] uitgevoerd:', file);
-    } catch(err) {
-      console.error('[migrations] FOUT in', file, err.message);
-      process.exit(1);
-    }
+    console.log('[migrations] markeer als uitgevoerd:', file);
+    await supabase
+      .from('schema_migrations')
+      .insert({ filename: file });
+    console.log('[migrations] gemarkeerd:', file);
   }
   console.log('[migrations] klaar.');
 }
