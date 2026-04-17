@@ -1377,12 +1377,8 @@ select { cursor: pointer; }
 </div>
 
 <script src="mol-js/state.js"></script>
+<script src="mol-js/api.js"></script>
 <script>
-// ════════════════════════════════════════════════════════════
-// CONFIG
-// ════════════════════════════════════════════════════════════
-const API = 'https://toetsapp-backend-production.up.railway.app';
-
 // ════════════════════════════════════════════════════════════
 // HELPERS
 // ════════════════════════════════════════════════════════════
@@ -1411,19 +1407,6 @@ function toast(msg, duur = 2800) {
   t._timer = setTimeout(() => t.classList.remove('show'), duur);
 }
 
-async function apiFetch(path, opts = {}) {
-  const baseHeaders = { 'Content-Type': 'application/json' };
-  if (docentToken && docentToken !== 'leraar123') {
-    baseHeaders['Authorization'] = 'Bearer ' + docentToken;
-  }
-  const res = await fetch(API + path, {
-    ...opts,
-    headers: { ...baseHeaders, ...(opts.headers || {}) },
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Onbekende fout');
-  return data;
-}
 
 function escH(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
