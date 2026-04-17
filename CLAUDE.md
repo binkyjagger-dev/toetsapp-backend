@@ -57,3 +57,23 @@
 - Vraag altijd om de exacte foutmelding
 - Analyseer volledig voor je een oplossing schrijft
 - Schrijf één oplossing — niet meerdere opties tegelijk
+
+## Checklist voor Claude Code bij elke wijziging
+
+- Heb ik de functie die ik ga aanpassen gelezen
+  en geciteerd (eerste + laatste regel)?
+- Pas ik maar één ding tegelijk aan?
+- Gebruik ik str_replace, niet een hele bestand
+  herschrijven?
+- Heb ik na deze wijziging node --check uitgevoerd?
+- Zijn alle bestaande tests nog groen?
+- Is dit één commit waard?
+
+## Maximale omvang per sessie
+
+- Maximaal 3-4 wijzigingen per Claude Code sessie
+- Meer dan 4 wijzigingen = splitsen in twee sessies
+- Elke wijziging = één str_replace + één test +
+  één commit
+- Nooit een heel bestand herschrijven
+- Nooit bulk-operaties zonder tussendoor te testen
