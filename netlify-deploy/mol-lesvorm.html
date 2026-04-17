@@ -1376,31 +1376,12 @@ select { cursor: pointer; }
   <div class="briefjes-grid" id="briefjes-grid"></div>
 </div>
 
+<script src="mol-js/state.js"></script>
 <script>
 // ════════════════════════════════════════════════════════════
 // CONFIG
 // ════════════════════════════════════════════════════════════
 const API = 'https://toetsapp-backend-production.up.railway.app';
-let docentToken = ''; // gezet vanuit URL-param of localStorage
-
-// ════════════════════════════════════════════════════════════
-// STATE
-// ════════════════════════════════════════════════════════════
-let sessieId    = null;
-let sessieCode  = null;
-let docentCode  = null;
-let speler      = null;   // {id, naam, groep_id, groep_naam, is_mol, speler_code}
-let sessieState = null;   // volledige state van server
-let pollTimer   = null;
-let setupData   = {};     // tijdelijk tijdens setup
-
-// Test-state (speler)
-let testVerdachteId = null;
-let testRondeNr     = null;
-let testIngediend   = false; // voorkomt dat poll de test opnieuw toont na submitten
-
-// Render-state: voorkomt dat poll de UI overschrijft terwijl leerling bezig is
-let lastRenderedFase = null; // bijv. 'ronde_1_invoer' | 'ronde_1_wacht' | 'ronde_1_stem' | 'ronde_1_resultaat'
 
 // ════════════════════════════════════════════════════════════
 // HELPERS
@@ -1473,7 +1454,6 @@ function parseLeerlingen() {
 }
 
 // Groepsindeling state — [{naam, leden:[{naam, isMol}]}]
-let groepsindeling = [];
 
 function genereerGroepsindeling() {
   const leerlingen = parseLeerlingen();
@@ -1540,7 +1520,6 @@ function selecteerMol(groepIdx, lidIdx) {
 // ════════════════════════════════════════════════════════════
 // VRAAG-EDITOR STATE
 // ════════════════════════════════════════════════════════════
-let vragenData = []; // [{ronde_nr, vraag, vraagtype, correct_uitleg, fout_uitleg, mc_opties:[]}]
 
 // ── Stap: leerlingen → vraag-editor ─────────────────────────────────────────
 async function naarVragenEditor() {
@@ -2288,7 +2267,6 @@ async function spelerLogin() {
   }
 }
 
-let heartbeatTimer = null;
 
 function startHeartbeat() {
   stopHeartbeat();
@@ -2421,7 +2399,6 @@ async function pollSpelerStatus() {
   }
 }
 
-let briefingGerenderd = false; // voorkomt volledig herrenderen na eerste keer
 
 function renderSpelerBriefing(leerlingen, groepen, sessie) {
   const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
@@ -2551,7 +2528,6 @@ function updateBriefingDynamisch(mijnGroep, alleLeerlingen) {
   }
 }
 
-let briefingGedrukt = false;
 
 async function drukOpStart() {
   if (briefingGedrukt) return;
@@ -2569,7 +2545,6 @@ async function drukOpStart() {
   } catch(e) { console.error('briefing-klaar fout:', e.message); }
 }
 
-let groepshoofGedrukt = false;
 
 async function stemOpGroepshoofd(kandidaatId) {
   if (groepshoofGedrukt) return;
@@ -2857,8 +2832,6 @@ function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngedie
   }
 }
 
-let geselecteerdeOptie = null;
-let geselecteerdeMcOptieId = null; // ID van gekozen MC optie
 function selecteerOptie(optie) {
   geselecteerdeOptie = optie;
   document.querySelectorAll('.antwoord-optie').forEach(b => b.classList.remove('selected'));
@@ -2880,7 +2853,6 @@ function selecteerMcOptie(optieId, correctheid) {
   document.getElementById('argument-sectie').style.display = 'block';
 }
 
-let geselecteerdeLidId = null;
 function selecteerGroepsLid(id) {
   geselecteerdeLidId = id;
   document.querySelectorAll('.groepslid-btn').forEach(b => b.classList.remove('selected'));
@@ -3295,7 +3267,6 @@ function renderResultaten(data) {
   div.innerHTML=html;
 }
 
-let hergebruikGroepen = [];
 
 function renderHergebruikGroepen() {
   const grid = document.getElementById('hergebruik-groepen-grid');
@@ -3331,8 +3302,6 @@ async function bekijkResultaten(id) {
   }
 }
 
-let hergebruikSessieId   = null;
-let hergebruikDocentCode = null;
 
 async function openHergebruik(id, dCode, lesNaam) {
   hergebruikSessieId   = id;
@@ -3535,7 +3504,6 @@ async function advanceFase(newFase, newStatus) {
   } catch(e) { console.error('advanceFase fout:', e.message); }
 }
 
-let lastAutoAdvance = '';
 
 async function checkAutoAdvance(state) {
   if (!state || !state.sessie) return;
@@ -3680,8 +3648,6 @@ function buildTimerRing(secTotaal, secResterend, type) {
 // ════════════════════════════════════════════════════════════
 // LEERLINGEN PICKER (kies uit klas)
 // ════════════════════════════════════════════════════════════
-let pickerGeselecteerd = new Set();
-let pickerAlleeLeerlingen = [];
 
 async function openLeerlingenPicker(targetTextareaId) {
   // Sla het doel-textarea op zodat bevestig weet waar naartoe
@@ -3715,7 +3681,6 @@ async function openLeerlingenPicker(targetTextareaId) {
   }
 }
 
-let pickerTargetTextarea = 'leerlingen-input';
 
 function selecteerAllePickerLeerlingen() {
   pickerAlleeLeerlingen.forEach(l => pickerGeselecteerd.add(l.id));
@@ -3807,7 +3772,6 @@ function sluitLeerlingenPicker() {
 
 
 // ── Les-koppeling vanuit leerplatform ────────────────────────
-let molLessenCache = [];
 
 async function laadMolLessenDropdown() {
   if (!docentToken) return;
