@@ -1378,14 +1378,11 @@ select { cursor: pointer; }
 
 <script src="mol-js/state.js"></script>
 <script src="mol-js/api.js"></script>
+<script src="mol-js/utils.js"></script>
 <script>
 // ════════════════════════════════════════════════════════════
 // HELPERS
 // ════════════════════════════════════════════════════════════
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
 
 function naarSessieLijst() {
   clearInterval(pollTimer);
@@ -1399,18 +1396,7 @@ function sluitLeerlingAf() {
   showScreen('screen-keuze');
 }
 
-function toast(msg, duur = 2800) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), duur);
-}
 
-
-function escH(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
 
 // ════════════════════════════════════════════════════════════
 // SETUP — DOCENT
@@ -1744,7 +1730,6 @@ function autoResizeAllMcInputs(rondeNr) {
   wrap.querySelectorAll('.mc-optie-input').forEach(ta => autoResizeMcInput(ta));
 }
 
-function uid() { return Math.random().toString(36).substring(2, 9); }
 
 function updateVraag(rondeNr, veld, waarde) {
   const v = vragenData.find(x => x.ronde_nr === rondeNr);
