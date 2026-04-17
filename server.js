@@ -1,4 +1,6 @@
 const express  = require('express');
+const fs       = require('fs');
+const path     = require('path');
 // ══ SQL MIGRATIES IN SUPABASE (éénmalig uitvoeren) ══════════
 // alter table classes add column if not exists niveau text;
 // alter table classes add column if not exists leerjaar text;
@@ -1841,10 +1843,57 @@ app.post('/api/mol/bereken-scores', async (req, res) => {
   }
 });
 
+// ── Migratie-runner ───────────────────────────────────────
+async function runMigrations() {
+  console.log('[migrations] controleren...');
+  const dir = path.join(__dirname, 'migrations');
+  if (!fs.existsSync(dir)) { console.log('[migrations] map niet gevonden, overslaan.'); return; }
+
+  const files = fs.readdirSync(dir)
+    .filter(f => f.endsWith('.sql') && f !== '000_migration_runner.sql')
+    .sort();
+
+  for (const file of files) {
+    const { data } = await supabase
+      .from('schema_migrations')
+      .select('filename')
+      .eq('filename', file)
+      .single();
+
+    if (data) {
+      console.log('[migrations] al uitgevoerd:', file);
+      continue;
+    }
+
+    const sql = fs.readFileSync(path.join(dir, file), 'utf8')
+      .split('\n')
+      .filter(l => !l.trim().startsWith('--') && l.trim())
+      .join('\n');
+
+    const { error } = await supabase.rpc('exec_sql', { query: sql });
+    if (error) {
+      console.error('[migrations] FOUT in', file + ':', error.message);
+      console.warn('[migrations] exec_sql RPC niet beschikbaar? Sla over en ga verder.');
+      continue;
+    }
+
+    await supabase.from('schema_migrations').insert({ filename: file });
+    console.log('[migrations] uitgevoerd:', file);
+  }
+  console.log('[migrations] klaar.');
+}
+
 // START
 if (require.main === module) {
   const PORT = process.env.PORT || 8080;
-  app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
+  runMigrations()
+    .then(() => {
+      app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT}`));
+    })
+    .catch(err => {
+      console.error('[migrations] Mislukt:', err.message);
+      app.listen(PORT, '0.0.0.0', () => console.log(`Toetsapp backend draait op poort ${PORT} (migrations overgeslagen)`));
+    });
 }
 
 module.exports = app;
