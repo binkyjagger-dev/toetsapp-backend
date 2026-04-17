@@ -1,23 +1,47 @@
-async function spelerLogin() {
-  const sc  = document.getElementById('speler-sessie-code').value.trim().toUpperCase();
-  const spc = document.getElementById('speler-speler-code').value.trim().toUpperCase();
-  const err = document.getElementById('speler-login-error');
-  if (sc.length < 4 || spc.length < 5) { err.textContent = 'Vul beide codes volledig in.'; err.style.display='block'; return; }
-  err.style.display = 'none';
-
-  try {
-    const result = await apiFetch(`/api/mol/login?sessie_code=${sc}&speler_code=${spc}`);
-    speler    = result.speler;
-    sessieId  = result.sessieId;
-    sessieCode = sc;
-    localStorage.setItem('mol_speler_id',   speler.id);
-    localStorage.setItem('mol_sessie_id',   sessieId);
-    initSpelerFlow();
-    startHeartbeat();
-  } catch(e) {
-    err.textContent = e.message;
-    err.style.display = 'block';
+// Preview in login-scherm: zoek speler op basis van sessiecode + spelcode
+async function onSpelerLoginInput() {
+  const sc  = (document.getElementById('speler-sessiecode')?.value || '').trim().toUpperCase();
+  const spc = (document.getElementById('speler-spelcode')?.value || '').trim().toUpperCase();
+  const preview = document.getElementById('speler-login-preview');
+  const btn     = document.getElementById('speler-aanmeld-btn');
+  if (sc.length < 4 || spc.length < 4) {
+    if (preview) preview.style.display = 'none';
+    if (btn) btn.disabled = true;
+    return;
   }
+  try {
+    // Zoek sessie via sessiecode — voor nu gebruiken we sessieId uit URL param als fallback
+    const sid = new URLSearchParams(window.location.search).get('sessie') || sessieId;
+    if (!sid) { if (btn) btn.disabled = true; return; }
+    const res = await apiFetch('/api/mol/sessies/' + sid + '/login', {
+      method: 'POST',
+      body: JSON.stringify({ sessiecode: sc, spelcode: spc }),
+    });
+    sessieId = sid;
+    speler = res;
+    if (preview) preview.style.display = 'block';
+    const nEl = document.getElementById('speler-login-naam');
+    const gEl = document.getElementById('speler-login-groep');
+    if (nEl) nEl.textContent = res.naam;
+    if (gEl) gEl.textContent = res.groep_naam || '';
+    if (btn) btn.disabled = false;
+  } catch(e) {
+    if (preview) preview.style.display = 'none';
+    if (btn) btn.disabled = true;
+  }
+}
+
+async function spelerLogin() {
+  await onSpelerLoginInput();
+  if (speler) spelerAanmelden();
+}
+
+async function spelerAanmelden() {
+  if (!speler) return;
+  localStorage.setItem('mol_speler_id', speler.id);
+  localStorage.setItem('mol_sessie_id', sessieId);
+  initSpelerFlow();
+  startHeartbeat();
 }
 
 

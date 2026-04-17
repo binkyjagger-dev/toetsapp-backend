@@ -779,596 +779,338 @@ select { cursor: pointer; }
 <!-- ════════════════════════════════════════════════════════ -->
 
 <!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN: RESULTATEN ARCHIEF                               -->
+<!-- NIEUWE SCHERMEN — per-groep flow + feedback + spelcodes -->
 <!-- ════════════════════════════════════════════════════════ -->
-<div id="screen-resultaten" class="screen">
-  <div class="topbar">
-    <div class="topbar-brand">🕵️ Wie is de Mol — Resultaten</div>
-    <div class="topbar-right">
-      <span class="topbar-tag tag-docent">Leraar</span>
-      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-docent-login');laadSessieLijst();">← Terug</button>
-    </div>
-  </div>
-  <div class="content wide">
-    <div id="resultaten-loading" style="text-align:center;padding:3rem;color:var(--muted);">
-      <span class="spinner"></span> Laden...
-    </div>
-    <div id="resultaten-content" style="display:none;"></div>
-  </div>
-</div>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN: HERGEBRUIK (nieuwe groepen voor bestaande vragen)-->
-<!-- ════════════════════════════════════════════════════════ -->
-<div id="screen-hergebruik" class="screen">
-  <div class="topbar">
-    <div class="topbar-brand">🕵️ Wie is de Mol — Hergebruik</div>
-    <div class="topbar-right">
-      <span class="topbar-tag tag-docent">Leraar</span>
-      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-docent-login');laadSessieLijst();">← Terug</button>
-    </div>
-  </div>
-  <div class="content">
-    <div class="progress-wrap"><div class="progress-fill" style="width:30%"></div></div>
-    <div class="page-eyebrow">Sessie hergebruiken</div>
-    <h2 class="page-title" id="hergebruik-les-naam">Sessie</h2>
-    <p class="page-sub">De vragen blijven bewaard. Voer nieuwe leerlingen in en wijs nieuwe Mollen aan.</p>
-
-    <div class="card" style="margin-bottom:1rem;">
-      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--teal);margin-bottom:0.5rem;">✅ Vragen blijven bewaard</div>
-      <div id="hergebruik-cases-preview" style="font-size:0.8rem;color:var(--text2);"></div>
-    </div>
-
-    <div class="form-section">
-      <label>Nieuwe leerlingennamen (één per regel)</label>
-      <div style="margin-bottom:0.5rem;">
-        <button class="btn btn-ghost btn-sm" onclick="openLeerlingenPicker('hergebruik-leerlingen')" type="button">
-          👥 Kies uit klas
-        </button>
-      </div>
-      <textarea id="hergebruik-leerlingen" rows="8" placeholder="Emma de Vries&#10;Daan Jansen&#10;..."></textarea>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
-      <div class="form-section">
-        <label>Groepsgrootte</label>
-        <select id="hergebruik-groep-grootte">
-          <option value="3">3 leerlingen</option>
-          <option value="4" selected>4 leerlingen</option>
-          <option value="5">5 leerlingen</option>
-        </select>
-      </div>
-    </div>
-
-    <button class="btn btn-ghost" style="margin-bottom:0.75rem;" onclick="genereerHergebruikGroepen()">🎲 Groepen genereren</button>
-
-    <div id="hergebruik-groepen-wrap" style="display:none;margin-bottom:1rem;">
-      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text2);margin-bottom:0.5rem;">
-        Groepsindeling — klik leerling om Mol aan te wijzen
-      </div>
-      <div id="hergebruik-groepen-grid"></div>
-    </div>
-
-    <div id="hergebruik-error" class="error-msg"></div>
-    <button class="btn btn-gold btn-full" id="hergebruik-start-btn" onclick="startHergebruik()">
-      Sessie opnieuw starten →
-    </button>
-  </div>
-</div>
-
-<div id="screen-keuze" class="screen active">
+<!-- SCREEN: SESSIE-LIJST (leraar) -->
+<div id="screen-sessie-lijst" class="screen active">
   <div class="topbar">
     <div class="topbar-brand">🕵️ Wie is de Mol</div>
-    <div class="topbar-right">
-      <span style="font-size:0.75rem;color:var(--text2);">Stanislascollege · Economie</span>
-    </div>
-  </div>
-  <div class="content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding-top:3rem;">
-    <div style="font-size:3.5rem;margin-bottom:1rem;">🕵️</div>
-    <div class="page-eyebrow" style="justify-content:center;">Activerende lesvorm</div>
-    <h1 class="page-title">Wie is de Mol?</h1>
-    <p class="page-sub" style="max-width:420px;margin:0 auto 2rem;">Werk samen aan economische cases — maar pas op voor de saboteur in jouw midden.</p>
-    <div style="display:flex;flex-direction:column;gap:0.75rem;width:100%;max-width:320px;">
-      <button class="btn btn-gold btn-full" style="font-size:1rem;padding:0.85rem;" onclick="showScreen('screen-docent-login')">
-        👩‍🏫 Ik ben de leraar
-      </button>
-      <button class="btn btn-ghost btn-full" style="font-size:1rem;padding:0.85rem;" onclick="showScreen('screen-speler-login')">
-        🎓 Ik ben een leerling
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN 1: DOCENT LOGIN (sessie-code of nieuw)           -->
-<!-- ════════════════════════════════════════════════════════ -->
-<div id="screen-docent-login" class="screen">
-  <div class="topbar">
-    <div class="topbar-brand">🕵️ Wie is de Mol</div>
-    <div class="topbar-right">
-      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-keuze')">← Terug</button>
-    </div>
-  </div>
-  <div class="content" style="max-width:700px;">
-    <div class="page-eyebrow">Leraar</div>
-    <h2 class="page-title">Sessies</h2>
-
-    <div class="login-kaarten-grid">
-      <div class="login-kaart goud" onclick="showScreen('screen-docent-setup')">
-        <div class="login-kaart-icoon">🆕</div>
-        <div class="login-kaart-titel">Nieuwe sessie</div>
-        <div class="login-kaart-sub">Maak een nieuwe sessie aan met nieuwe leerlingen en vragen.</div>
-        <button class="btn btn-gold btn-sm" style="margin-top:auto;align-self:flex-start;">Aanmaken →</button>
-      </div>
-      <div class="login-kaart" onclick="document.getElementById('sessie-lijst-wrap').scrollIntoView({behavior:'smooth'})">
-        <div class="login-kaart-icoon">📋</div>
-        <div class="login-kaart-titel">Mijn sessies</div>
-        <div class="login-kaart-sub">Open, hergebruik of bekijk resultaten van eerdere sessies.</div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:auto;align-self:flex-start;">Bekijken ↓</button>
-      </div>
-    </div>
-
-    <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.16em;color:var(--muted);margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem;">
-      Eerdere sessies
-      <span style="flex:1;height:1px;background:var(--border);"></span>
-      <button class="btn btn-ghost btn-sm" style="font-size:0.68rem;" onclick="laadSessieLijst()">↻ Vernieuwen</button>
-    </div>
-    <div id="sessie-lijst-loading" style="text-align:center;padding:1.5rem;color:var(--muted);font-size:0.82rem;">
-      <span class="spinner"></span> Laden...
-    </div>
-    <div id="sessie-lijst-wrap" style="display:none;"></div>
-    <div id="sessie-lijst-leeg" style="display:none;font-size:0.82rem;color:var(--muted);padding:0.75rem 0;">
-      Geen eerdere sessies gevonden.
-    </div>
-    <div id="hervatten-error" class="error-msg"></div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN 2: DOCENT SETUP                                  -->
-<!-- ════════════════════════════════════════════════════════ -->
-<div id="screen-docent-setup" class="screen">
-  <div class="topbar">
-    <div class="topbar-brand">
-      <nav class="breadcrumb">
-        <button class="breadcrumb-link" onclick="naarSessieLijst()">🕵️ Sessies</button>
-        <span class="breadcrumb-sep">›</span>
-        <span class="breadcrumb-current">Nieuwe sessie</span>
-      </nav>
-    </div>
-    <div class="topbar-right">
-      <span class="topbar-tag tag-docent">Leraar</span>
-      <button class="btn btn-ghost btn-sm" onclick="naarSessieLijst()">← Sessies</button>
-    </div>
+    <div class="topbar-right"><span class="topbar-tag tag-docent">LERAAR</span></div>
   </div>
   <div class="content">
-    <div class="progress-wrap"><div class="progress-fill" style="width:25%"></div></div>
-    <div class="page-eyebrow">Stap 1 van 3 — Configuratie</div>
-    <h2 class="page-title">Spelconfiguratie</h2>
-
-    <!-- Les uit leerplatform -->
-    <div class="form-section" id="les-kiezer-sectie">
-      <label>Kies een les uit het leerplatform</label>
-      <select id="setup-les-kiezer" onchange="onMolLesKeuze()" style="width:100%;">
-        <option value="">— Handmatig invullen —</option>
-      </select>
-      <div id="setup-les-preview" style="display:none;margin-top:8px;padding:8px 12px;
-        background:rgba(200,169,81,0.08);border:1px solid rgba(200,169,81,0.25);border-radius:8px;
-        font-size:0.78rem;color:var(--gold-dark,#8a6200);" id="les-kiezer-preview"></div>
-    </div>
-
-    <div class="form-section">
-      <label>Lesnaam</label>
-      <input id="setup-les-naam" type="text" placeholder="bijv. Monetaire Zaken H4 — Inflatie">
-    </div>
-    <div class="form-section">
-      <label>Kernstof / leerdoelen (voor AI-cases)</label>
-      <textarea id="setup-les-content" rows="4" placeholder="Beschrijf de leerstof. De AI genereert hier de cases op."></textarea>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-      <div class="form-section">
-        <label>Groepsgrootte</label>
-        <select id="setup-groep-grootte">
-          <option value="3">3 leerlingen</option>
-          <option value="4" selected>4 leerlingen</option>
-          <option value="5">5 leerlingen</option>
-        </select>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+      <div>
+        <div class="page-eyebrow">Overzicht</div>
+        <h1 class="page-title">Mijn sessies</h1>
       </div>
-      <div class="form-section">
-        <label>Aantal rondes</label>
-        <select id="setup-n-rondes">
-          <option value="1">1 ronde</option>
-          <option value="2">2 rondes</option>
-          <option value="3" selected>3 rondes</option>
-          <option value="4">4 rondes</option>
-        </select>
+      <button class="btn btn-gold" onclick="nieuweSessie()">+ Nieuwe sessie</button>
+    </div>
+    <div id="sessie-lijst-container">
+      <div class="empty-state" style="padding:3rem 1rem;text-align:center;color:var(--muted);">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">📋</div>
+        <p>Nog geen sessies — klik op "+ Nieuwe sessie" om te beginnen.</p>
       </div>
     </div>
-    <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--teal);margin:0.75rem 0 0.5rem;display:flex;align-items:center;gap:0.5rem;">
-      ⏱ Timer groepsstemming
-      <span style="flex:1;height:1px;background:var(--border);"></span>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-      <div class="form-section">
-        <label>Max. stemtijd per ronde</label>
-        <select id="setup-timer-stem">
-          <option value="30">30 seconden</option>
-          <option value="60" selected>1 minuut</option>
-          <option value="120">2 minuten</option>
-          <option value="300">5 minuten</option>
-        </select>
-      </div>
-    </div>
-    <div style="font-size:0.72rem;color:var(--muted);margin-top:-0.4rem;margin-bottom:0.75rem;">
-      Als de stemtimer afloopt terwijl het groepshoofd nog niet heeft gestemd, dient de meerderheid automatisch in.
-      Rondes lopen automatisch door na de stemming.
-    </div>
-    <div id="setup-error" class="error-msg"></div>
-    <button class="btn btn-gold btn-full" style="margin-top:0.5rem;" onclick="goToLeerlingenSetup()">Volgende: leerlingen invoeren →</button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN 3: LEERLINGEN INVOEREN                           -->
-<!-- ════════════════════════════════════════════════════════ -->
-<div id="screen-docent-leerlingen" class="screen">
+<!-- SCREEN: SESSIE-STAP1 (sessie instellen) -->
+<div id="screen-sessie-stap1" class="screen">
   <div class="topbar">
-    <div class="topbar-brand">
-      <nav class="breadcrumb">
-        <button class="breadcrumb-link" onclick="naarSessieLijst()">🕵️ Sessies</button>
-        <span class="breadcrumb-sep">›</span>
-        <button class="breadcrumb-link" onclick="showScreen('screen-docent-setup')">Setup</button>
-        <span class="breadcrumb-sep">›</span>
-        <span class="breadcrumb-current">Leerlingen</span>
-      </nav>
-    </div>
-    <div class="topbar-right">
-      <span class="topbar-tag tag-docent">Leraar</span>
-      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-docent-setup')">← Terug</button>
-    </div>
+    <div class="topbar-brand">🕵️ Nieuwe sessie</div>
+    <div class="topbar-right"><span class="topbar-tag tag-docent">STAP 1/4</span></div>
   </div>
   <div class="content">
-    <div class="progress-wrap"><div class="progress-fill" style="width:50%"></div></div>
-    <div class="page-eyebrow">Stap 2 van 3 — Leerlingen</div>
-    <h2 class="page-title">Leerlingen invoeren</h2>
-    <p class="page-sub">Voer naam en achternaam in, één per regel. Of plak een komma-gescheiden lijst.</p>
-
+    <div class="page-eyebrow">Stap 1 van 4</div>
+    <h1 class="page-title">Sessie instellen</h1>
     <div class="form-section">
-      <label>Leerlingennamen (één per regel)</label>
-      <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="openLeerlingenPicker('leerlingen-input')" type="button">
-          👥 Kies uit klas
-        </button>
-      </div>
-      <textarea id="leerlingen-input" rows="10" placeholder="Emma de Vries&#10;Daan Jansen&#10;Lotte Bakker&#10;Pieter van der Berg&#10;Sara Mol&#10;..."></textarea>
+      <label>Naam van de sessie</label>
+      <input type="text" id="sessie-naam" placeholder="Bijv. Economie Mol — HAVO 4">
     </div>
-
-    <!-- Leerlingen-picker modal -->
-    <div id="ll-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:flex-end;justify-content:center;">
-      <div style="background:var(--bg2);border-radius:16px 16px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;padding:1.25rem;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-          <div style="font-weight:700;font-size:1rem;color:#fff;">👥 Kies leerlingen</div>
-          <button onclick="sluitLeerlingenPicker()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;">✕</button>
-        </div>
-        <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
-          <select id="picker-periode" onchange="laadPickerLeerlingen()" style="min-width:130px;">
-            <option value="">— Alle periodes —</option>
-          </select>
-          <select id="picker-niveau" onchange="laadPickerLeerlingen()" style="min-width:120px;">
-            <option value="">— Alle niveaus —</option>
-            <option value="Atheneum">Atheneum</option>
-            <option value="Gymnasium">Gymnasium</option>
-            <option value="HAVO">HAVO</option>
-          </select>
-          <select id="picker-leerjaar" onchange="laadPickerLeerlingen()" style="min-width:90px;">
-            <option value="">— Alle jaren —</option>
-            <option value="1">Jaar 1</option>
-            <option value="2">Jaar 2</option>
-            <option value="3">Jaar 3</option>
-            <option value="4">Jaar 4</option>
-            <option value="5">Jaar 5</option>
-            <option value="6">Jaar 6</option>
-          </select>
-          <select id="picker-klas" onchange="laadPickerLeerlingen()" style="min-width:110px;">
-            <option value="">— Alle klassen —</option>
-          </select>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
-          <button onclick="selecteerAllePickerLeerlingen()" class="btn btn-ghost btn-sm"
-            style="font-size:0.72rem;">Alles selecteren</button>
-          <button onclick="deselecteerAllePickerLeerlingen()" class="btn btn-ghost btn-sm"
-            style="font-size:0.72rem;">Alles deselecteren</button>
-        </div>
-        <div id="picker-lijst" style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:0.3rem;"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.85rem;flex-wrap:wrap;gap:0.5rem;">
-          <span id="picker-count" style="font-size:0.78rem;color:var(--muted);"></span>
-          <div style="display:flex;gap:0.5rem;">
-            <button class="btn btn-ghost btn-sm" onclick="sluitLeerlingenPicker()">Annuleren</button>
-            <button class="btn btn-gold btn-sm" onclick="bevestigLeerlingenKeuze()">Toevoegen →</button>
-          </div>
-        </div>
-      </div>
+    <div class="form-section">
+      <label>Koppel een les</label>
+      <select id="sessie-les-select"></select>
     </div>
-    <div style="display:flex;gap:0.65rem;margin-bottom:0.75rem;">
-      <button class="btn btn-ghost" style="flex:1;" onclick="genereerGroepsindeling()">🎲 Willekeurige indeling</button>
+    <div class="form-section">
+      <label>Aantal rondes</label>
+      <div id="sessie-rondes-btns" style="display:flex;gap:0.5rem;"></div>
     </div>
-    <div id="leerlingen-preview" style="display:none;margin-bottom:1rem;">
-      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text2);margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;">
-        <span>Groepsindeling — <span id="preview-count"></span></span>
-        <span style="font-weight:400;color:var(--muted);">Klik op een leerling om de Mol aan te wijzen</span>
-      </div>
-      <div id="preview-groepen"></div>
-    </div>
-    <div id="leerlingen-error" class="error-msg" style="margin-bottom:0.65rem;"></div>
-    <button class="btn btn-gold btn-full" id="naar-vragen-btn" onclick="naarVragenEditor()">Volgende: vragen →</button>
+    <button class="btn btn-gold btn-full" onclick="naarStap2Leerlingen()">Volgende: leerlingen →</button>
   </div>
 </div>
 
-
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN 3B: DOCENT — VRAAG-EDITOR                        -->
-<!-- ════════════════════════════════════════════════════════ -->
-<div id="screen-docent-vragen" class="screen">
+<!-- SCREEN: SESSIE-STAP2 (leerlingen + groepen) -->
+<div id="screen-sessie-stap2" class="screen">
   <div class="topbar">
-    <div class="topbar-brand">
-      <nav class="breadcrumb">
-        <button class="breadcrumb-link" onclick="naarSessieLijst()">🕵️ Sessies</button>
-        <span class="breadcrumb-sep">›</span>
-        <button class="breadcrumb-link" onclick="showScreen('screen-docent-setup')">Setup</button>
-        <span class="breadcrumb-sep">›</span>
-        <button class="breadcrumb-link" onclick="showScreen('screen-docent-leerlingen')">Leerlingen</button>
-        <span class="breadcrumb-sep">›</span>
-        <span class="breadcrumb-current">Vragen</span>
-      </nav>
-    </div>
-    <div class="topbar-right">
-      <span class="topbar-tag tag-docent">Leraar</span>
-      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-docent-leerlingen')">← Terug</button>
-    </div>
+    <div class="topbar-brand">🕵️ Nieuwe sessie</div>
+    <div class="topbar-right"><span class="topbar-tag tag-docent">STAP 2/4</span></div>
   </div>
-  <div class="content" style="max-width:760px;">
-    <div class="progress-wrap"><div class="progress-fill" style="width:62%"></div></div>
-    <div class="page-eyebrow">Stap 3 van 4 — Vragen</div>
-    <h2 class="page-title">Vragen per ronde</h2>
-    <p class="page-sub">De AI heeft een voorstel gemaakt. Pas de vragen aan of schrijf ze zelf. Stel ook het vraagtype in per ronde.</p>
-
-    <div id="vragen-loading" style="text-align:center;padding:2.5rem 0;color:var(--muted);">
-      <span class="spinner"></span>&nbsp; AI genereert vragen...
+  <div class="content">
+    <div class="page-eyebrow">Stap 2 van 4</div>
+    <h1 class="page-title">Leerlingen en groepen</h1>
+    <div class="form-section">
+      <label>Namen invoeren (één per regel)</label>
+      <textarea id="sessie-leerlingen-input" rows="6"></textarea>
+      <button class="btn btn-ghost btn-sm" onclick="openLeerlingenPicker('sessie-leerlingen-input')">↓ Importeren uit leerlingenlijst</button>
     </div>
-    <div id="vragen-editor-wrap" style="display:none;"></div>
-
-    <div id="vragen-error" class="error-msg"></div>
-    <div style="display:flex;gap:0.65rem;margin-top:1rem;" id="vragen-actie-row" style="display:none;">
-      <button class="btn btn-ghost" onclick="herGenereerAlleVragen()">↻ Alles opnieuw genereren</button>
-      <button class="btn btn-gold" style="flex:1;" onclick="maakSessie()">Sessie starten →</button>
+    <div class="form-section">
+      <label>Groepsgrootte</label>
+      <div id="sessie-groepgrootte-btns" style="display:flex;gap:0.5rem;"></div>
     </div>
+    <button class="btn btn-ghost" onclick="genereerGroepsindeling()">↻ Genereer groepen</button>
+    <div id="sessie-groepen-preview" style="margin-top:1rem;"></div>
+    <button class="btn btn-gold btn-full" onclick="naarStap3Mol()">Volgende: Mol aanwijzen →</button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN 4: DOCENT SESSIE-OVERZICHT (speelcodes)          -->
-<!-- ════════════════════════════════════════════════════════ -->
-<div id="screen-docent-sessie" class="screen">
+<!-- SCREEN: SESSIE-STAP3 (Mol aanwijzen) -->
+<div id="screen-sessie-stap3" class="screen">
   <div class="topbar">
-    <div class="topbar-brand">
-      <nav class="breadcrumb">
-        <button class="breadcrumb-link" onclick="naarSessieLijst()">🕵️ Sessies</button>
-        <span class="breadcrumb-sep">›</span>
-        <span class="breadcrumb-current" id="breadcrumb-les-naam">—</span>
-      </nav>
-    </div>
-    <div class="topbar-right">
-      <span class="topbar-tag tag-docent">Leraar</span>
-      <div id="docent-status-badge"></div>
-      <button class="btn btn-ghost btn-sm" onclick="naarSessieLijst()">← Sessies</button>
-    </div>
+    <div class="topbar-brand">🕵️ Nieuwe sessie</div>
+    <div class="topbar-right"><span class="topbar-tag tag-docent">STAP 3/4</span></div>
+  </div>
+  <div class="content">
+    <div class="page-eyebrow">Stap 3 van 4</div>
+    <h1 class="page-title">Mol aanwijzen</h1>
+    <p class="page-sub">De app heeft per groep een Mol voorgesteld. Klik om te wijzigen.</p>
+    <div id="sessie-mol-groepen"></div>
+    <button class="btn btn-gold btn-full" id="mol-volgende-btn" onclick="naarStap4Vragen()" disabled>Volgende: vragen instellen →</button>
+  </div>
+</div>
+
+<!-- SCREEN: SESSIE-STAP4 (vragen instellen) -->
+<div id="screen-sessie-stap4" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Nieuwe sessie</div>
+    <div class="topbar-right"><span class="topbar-tag tag-docent">STAP 4/4</span></div>
   </div>
   <div class="content wide">
-    <div class="progress-wrap"><div class="progress-fill" style="width:75%"></div></div>
-    <div class="page-eyebrow">Stap 3 van 3 — Sessie actief</div>
-    <h2 class="page-title" id="docent-les-naam">Sessie</h2>
+    <div class="page-eyebrow">Stap 4 van 4</div>
+    <h1 class="page-title">Vragen instellen</h1>
+    <div id="sessie-vragen-container"></div>
+    <button class="btn btn-ghost" onclick="voegRondeToe()">+ Ronde toevoegen</button>
+    <button class="btn btn-gold btn-full" onclick="sessieAanmakenEnStart()">Sessie aanmaken en starten →</button>
+  </div>
+</div>
 
-    <div class="card highlight-gold" style="margin-bottom:1.25rem;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-        <div>
-          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--gold);margin-bottom:0.3rem;">Sessie-code voor leerlingen</div>
-          <div id="docent-sessie-code" style="font-family:'DM Mono',monospace;font-size:2rem;font-weight:500;letter-spacing:0.3em;color:var(--gold-l);"></div>
-        </div>
-        <div>
-          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--text2);margin-bottom:0.3rem;">Url voor leerlingen</div>
-          <div id="docent-speler-url" style="font-size:0.72rem;color:var(--text2);font-family:'DM Mono',monospace;word-break:break-all;max-width:300px;"></div>
-        </div>
-        <div style="border-left:1px solid rgba(255,255,255,0.08);padding-left:1rem;">
-          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-bottom:0.3rem;">Jouw docentcode (om te hervatten)</div>
-          <div id="docent-code-display" style="font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:600;letter-spacing:0.2em;color:var(--text2);"></div>
-          <div style="font-size:0.62rem;color:var(--muted);margin-top:0.2rem;">Bewaar dit — nodig bij hervatten</div>
-        </div>
-      </div>
+<!-- SCREEN: SPELCODES -->
+<div id="screen-spelcodes" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Wie is de Mol</div>
+    <div class="topbar-right"><span class="topbar-tag tag-docent">CODES</span></div>
+  </div>
+  <div class="content">
+    <div class="page-eyebrow">Spelcodes</div>
+    <h1 class="page-title" id="spelcodes-sessie-naam">Sessie</h1>
+    <div class="form-section" style="text-align:center;">
+      <div style="font-size:0.72rem;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;">Sessiecode</div>
+      <div id="spelcodes-sessiecode" style="font-family:'DM Mono',monospace;font-size:2.2rem;font-weight:700;color:var(--gold);letter-spacing:0.15em;margin-top:0.25rem;"></div>
     </div>
-
-    <!-- Fase-besturing -->
-    <div class="ronde-panel" id="docent-control-panel">
-      <div class="ronde-panel-title" id="docent-fase-titel">Wachten op leerlingen...</div>
-      <div class="ronde-panel-sub" id="docent-fase-sub"></div>
-      <div class="phase-steps" id="docent-phase-steps"></div>
-      <div style="display:flex;gap:0.65rem;flex-wrap:wrap;" id="docent-actie-btns"></div>
-    </div>
-
-    <!-- Online-leerlingen -->
-    <div style="margin-bottom:1.25rem;">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.6rem;">
-        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--text2);">
-          Leerlingen — <span id="online-count">0</span> online
-        </div>
-        <div style="display:flex;gap:0.5rem;">
-          <button class="btn btn-ghost btn-sm" onclick="openProjectie()" title="Toon codes op groot scherm">📺 Codes tonen</button>
-          <button class="btn btn-ghost btn-sm" onclick="printBriefjes()" title="Print codes als briefjes">🖨️ Afdrukken</button>
-        </div>
-      </div>
-      <div id="docent-leerlingen-lijst"></div>
-    </div>
-
-    <!-- Groepen overzicht (na generatie) -->
-    <div id="docent-groepen-sectie" style="display:none;margin-bottom:1.25rem;">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--text2);margin-bottom:0.6rem;">Groepen + Mollen (alleen zichtbaar voor jou)</div>
-      <div class="groep-grid" id="docent-groepen-grid"></div>
-    </div>
-
-    <!-- Antwoorden overzicht per ronde -->
-    <div id="docent-antwoorden-sectie" style="display:none;">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--text2);margin-bottom:0.6rem;">Ingediende antwoorden — ronde <span id="docent-ronde-label">-</span></div>
-      <div id="docent-antwoorden-lijst"></div>
-    </div>
-
-    <!-- Nabespreek-scherm -->
-    <div id="docent-nabespreek-sectie" style="display:none;">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--gold);margin-bottom:0.75rem;">📊 Nabespreking — sabotage-momenten</div>
-      <div id="docent-nabespreek-content"></div>
+    <div id="spelcodes-groepen-container"></div>
+    <div style="display:flex;gap:0.5rem;">
+      <button class="btn btn-ghost" onclick="printSpelcodes()">🖨 Afdrukken</button>
+      <button class="btn btn-gold" onclick="openSessieNaAanmaken()">Sessie openen →</button>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN 5: SPELER LOGIN                                  -->
-<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN: SPELER-LOGIN -->
 <div id="screen-speler-login" class="screen">
   <div class="topbar">
     <div class="topbar-brand">🕵️ Wie is de Mol</div>
-    <div class="topbar-right">
-      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-keuze')">← Terug</button>
-    </div>
+    <div class="topbar-right"><span class="topbar-tag tag-speler">LEERLING</span></div>
   </div>
-  <div class="content" style="max-width:380px;">
-    <div style="font-size:2.5rem;text-align:center;margin-bottom:1rem;">🎓</div>
-    <div class="page-eyebrow" style="text-align:center;">Leerling</div>
-    <h2 class="page-title" style="text-align:center;">Inloggen</h2>
-    <p class="page-sub" style="text-align:center;">Vraag de sessie-code en jouw persoonlijke spelcode aan je leraar.</p>
-
+  <div class="content" style="max-width:420px;">
+    <div class="page-eyebrow" style="text-align:center;">Aanmelden</div>
+    <h1 class="page-title" style="text-align:center;">WIE IS DE MOL</h1>
     <div class="form-section">
-      <label>Sessie-code (4 letters)</label>
-      <input id="speler-sessie-code" type="text" placeholder="bijv. KRTB" maxlength="4" style="text-transform:uppercase;font-family:'DM Mono',monospace;font-size:1.5rem;letter-spacing:0.3em;text-align:center;">
+      <label>Sessiecode</label>
+      <input type="text" id="speler-sessiecode" maxlength="4"
+        style="font-family:'DM Mono',monospace;font-size:1.3rem;text-align:center;letter-spacing:0.2em;text-transform:uppercase;"
+        oninput="onSpelerLoginInput()">
     </div>
     <div class="form-section">
-      <label>Jouw spelcode (5 tekens)</label>
-      <input id="speler-speler-code" type="text" placeholder="bijv. KR7T2" maxlength="5" style="text-transform:uppercase;font-family:'DM Mono',monospace;font-size:1.5rem;letter-spacing:0.2em;text-align:center;">
+      <label>Spelcode</label>
+      <input type="text" id="speler-spelcode" maxlength="4"
+        style="font-family:'DM Mono',monospace;font-size:1.3rem;text-align:center;letter-spacing:0.2em;text-transform:uppercase;"
+        oninput="onSpelerLoginInput()">
     </div>
-    <div id="speler-login-error" class="error-msg"></div>
-    <button class="btn btn-gold btn-full" style="margin-top:0.5rem;" onclick="spelerLogin()">Inloggen →</button>
+    <div id="speler-login-preview" style="display:none;text-align:center;padding:1rem;background:rgba(200,169,81,0.08);border:1px solid rgba(200,169,81,0.25);border-radius:10px;margin:1rem 0;">
+      <div id="speler-login-naam" style="font-weight:700;font-size:1.1rem;color:#fff;"></div>
+      <div id="speler-login-groep" style="font-size:0.85rem;color:var(--muted);margin-top:0.2rem;"></div>
+    </div>
+    <button class="btn btn-gold btn-full" id="speler-aanmeld-btn" onclick="spelerAanmelden()" disabled>Aanmelden →</button>
+    <p class="page-sub" style="text-align:center;margin-top:1rem;">Vraag de codes aan je leraar</p>
+    <div id="speler-login-error" style="color:var(--red);display:none;margin-top:0.5rem;"></div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN 6: SPELER — WACHTEN / BRIEFING                   -->
-<!-- ════════════════════════════════════════════════════════ -->
-<div id="screen-speler-wacht" class="screen">
+<!-- SCREEN: SPELER-BRIEFING -->
+<div id="screen-speler-briefing" class="screen">
   <div class="topbar">
-    <div class="topbar-brand">🕵️ Wie is de Mol</div>
-    <div class="topbar-right" id="speler-topbar-right">
-      <span class="topbar-tag tag-speler" id="speler-naam-tag">Speler</span>
-    </div>
+    <div class="topbar-brand" id="briefing-speler-naam">—</div>
+    <div class="topbar-right"><span class="topbar-tag tag-speler" id="briefing-groep-naam">—</span></div>
   </div>
-  <div class="content" id="speler-wacht-content" style="text-align:center;padding-top:2rem;">
-    <div style="font-size:2.5rem;margin-bottom:1rem;">⏳</div>
-    <div class="page-eyebrow">Wachten</div>
-    <h2 class="page-title">Spel start zo...</h2>
-    <p class="page-sub">Jouw leraar start het spel. Zorg dat je scherm aan blijft.</p>
-    <div id="speler-briefing-sectie" style="display:none;text-align:left;margin-top:1.5rem;"></div>
+  <div class="content">
+    <div class="page-eyebrow">Welkom</div>
+    <h1 class="page-title" id="briefing-title">Welkom!</h1>
+    <p class="page-sub">Je speelt samen met je groep "Wie is de Mol". Eén van jullie is de Mol en probeert jullie te saboteren.</p>
+    <div class="form-section">
+      <label>Kies een groepshoofd</label>
+      <div id="briefing-hoofd-lijst"></div>
+    </div>
+    <button class="btn btn-gold btn-full" id="briefing-start-btn" disabled onclick="drukOpStart()">Klaar — start de ronde →</button>
+    <p class="page-sub">Wacht tot iedereen klaar is.</p>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN 7: SPELER — RONDE (antwoorden)                   -->
-<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN: SPELER-WACHT-BRIEFING -->
+<div id="screen-speler-wacht-briefing" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand" id="wacht-briefing-naam">—</div>
+    <div class="topbar-right"><span class="topbar-tag tag-speler">WACHTEN</span></div>
+  </div>
+  <div class="content" style="text-align:center;">
+    <div class="spinner" style="margin:2rem auto;"></div>
+    <h2 class="page-title">Wachten op groepsgenoten</h2>
+    <div id="wacht-briefing-stem" style="color:var(--muted);margin-bottom:1rem;"></div>
+    <div id="wacht-briefing-grid"></div>
+  </div>
+</div>
+
+<!-- SCREEN: SPELER-GROEPSHOOFD-BEKENDMAKING -->
+<div id="screen-speler-groepshoofd-bekendmaking" class="screen">
+  <div class="content" style="text-align:center;">
+    <div style="font-size:4rem;margin:2rem 0;">👑</div>
+    <div class="page-eyebrow">Het groepshoofd is</div>
+    <h1 class="page-title" id="groepshoofd-naam" style="color:var(--gold);font-size:2.2rem;">—</h1>
+    <div id="groepshoofd-eigen-badge" style="display:none;margin:1rem 0;">
+      <span class="topbar-tag tag-mol">Jij bent het groepshoofd!</span>
+    </div>
+    <div id="groepshoofd-countdown" style="font-size:0.85rem;color:var(--muted);margin-top:1.5rem;">Ronde 1 start zo...</div>
+  </div>
+</div>
+
+<!-- SCREEN: SPELER-RONDE -->
 <div id="screen-speler-ronde" class="screen">
   <div class="topbar">
-    <div class="topbar-brand">🕵️ Wie is de Mol</div>
-    <div class="topbar-right">
-      <span id="ronde-topbar-label" class="topbar-tag tag-speler"></span>
-    </div>
+    <div class="topbar-brand" id="ronde-speler-naam">—</div>
+    <div class="topbar-right"><span class="topbar-tag tag-speler" id="ronde-tag">Ronde 1</span></div>
   </div>
   <div class="content">
-    <div class="progress-wrap"><div class="progress-fill" id="ronde-progress" style="width:40%"></div></div>
-    <div id="ronde-fase-label" class="page-eyebrow"></div>
-    <div id="ronde-content"></div>
+    <div style="background:rgba(200,169,81,0.08);border:1px solid rgba(200,169,81,0.25);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:var(--gold-l);">
+      Kies het antwoord dat jij het meest juist vindt. Denk goed na — je antwoord telt mee voor jouw eindscore.
+    </div>
+    <div id="ronde-vraag-container"></div>
+    <button class="btn btn-gold btn-full" id="ronde-submit-btn" disabled onclick="submitRondeAntwoord()">Antwoord indienen →</button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN 8: SPELER — MOL-TEST                             -->
-<!-- ════════════════════════════════════════════════════════ -->
+<!-- SCREEN: SPELER-WACHT-RONDE -->
+<div id="screen-speler-wacht-ronde" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">—</div>
+    <div class="topbar-right"><span class="topbar-tag tag-speler">WACHTEN</span></div>
+  </div>
+  <div class="content" style="text-align:center;">
+    <div style="font-size:3rem;margin:1.5rem 0;color:var(--green);">✓</div>
+    <h2 class="page-title">Antwoord ingediend!</h2>
+    <div id="wacht-ronde-eigen" style="margin:1rem 0;padding:1rem;background:rgba(62,201,138,0.08);border-radius:10px;"></div>
+    <div id="wacht-ronde-grid"></div>
+  </div>
+</div>
+
+<!-- SCREEN: SPELER-DISCUSSIE -->
+<div id="screen-speler-discussie" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand" id="discussie-speler-naam">—</div>
+    <div class="topbar-right"><span class="topbar-tag tag-speler">Discussie</span></div>
+  </div>
+  <div class="content">
+    <div id="discussie-banner" style="background:rgba(79,163,232,0.08);border:1px solid rgba(79,163,232,0.25);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;">
+      <strong>Discussiefase</strong>
+      <div id="disc-instructie" style="font-size:0.85rem;color:var(--muted);margin-top:0.25rem;"></div>
+    </div>
+    <div id="disc-vraag-container"></div>
+    <div style="margin-top:1rem;padding:1rem;background:var(--bg2);border-radius:10px;">
+      <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Jouw antwoord</div>
+      <div id="disc-eigen-antwoord" style="font-weight:700;color:#fff;margin-top:0.25rem;"></div>
+    </div>
+    <div id="disc-groepshoofd-kaart" style="margin-top:1rem;padding:1rem;background:rgba(200,169,81,0.08);border-radius:10px;display:none;">
+      <span>👑 Groepshoofd: <strong id="disc-groepshoofd-naam"></strong></span>
+      <div style="font-size:0.82rem;color:var(--muted);margin-top:0.25rem;">kiest het groepsantwoord</div>
+    </div>
+    <button class="btn btn-gold btn-full" id="disc-groepsantwoord-knop" style="display:none;margin-top:1rem;" onclick="submitGroepsantwoord()">Groepsantwoord indienen →</button>
+  </div>
+</div>
+
+<!-- SCREEN: SPELER-GROEPSANTWOORD -->
+<div id="screen-speler-groepsantwoord" class="screen">
+  <div class="content" style="text-align:center;">
+    <div style="font-size:3rem;margin:1.5rem 0;color:var(--green);">✓</div>
+    <div class="page-eyebrow">Groepsantwoord</div>
+    <div id="groepsantwoord-tekst" style="font-size:1.4rem;font-weight:700;color:#fff;margin:1rem 0;"></div>
+    <div style="color:var(--muted);font-size:0.85rem;">Ingediend door <span id="groepsantwoord-door"></span></div>
+    <div style="margin-top:1.5rem;font-size:0.85rem;color:var(--muted);">Feedback verschijnt zo...</div>
+  </div>
+</div>
+
+<!-- SCREEN: SPELER-FEEDBACK -->
+<div id="screen-speler-feedback" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand" id="feedback-speler-naam">—</div>
+    <div class="topbar-right"><span class="topbar-tag tag-speler" id="feedback-ronde-tag">Feedback</span></div>
+  </div>
+  <div class="content">
+    <div id="feedback-score-banner" style="padding:1rem;border-radius:10px;margin-bottom:1rem;text-align:center;">
+      <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);">Jouw score</div>
+      <div id="feedback-score-val" style="font-size:2rem;font-weight:700;"></div>
+    </div>
+    <div id="feedback-content"></div>
+    <button class="btn btn-gold btn-full" id="feedback-volgende-btn" onclick="naarVolgendeRondeOfTest()">Verder →</button>
+  </div>
+</div>
+
+<!-- SCREEN: SPELER-TEST -->
 <div id="screen-speler-test" class="screen">
   <div class="topbar">
-    <div class="topbar-brand">🕵️ Wie is de Mol</div>
-    <div class="topbar-right">
-      <span class="topbar-tag tag-speler">Moltest</span>
-    </div>
+    <div class="topbar-brand" id="test-speler-naam">—</div>
+    <div class="topbar-right"><span class="topbar-tag tag-mol">Mol-test</span></div>
   </div>
   <div class="content">
-    <div class="progress-wrap"><div class="progress-fill" style="width:85%"></div></div>
-    <div class="page-eyebrow">Moltest</div>
-    <h2 class="page-title">Wie is de Mol?</h2>
-    <p class="page-sub">Analyseer de rondes en benoem de saboteur.</p>
-
-    <div class="card">
-      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.75rem;color:#fff;">🎯 Vraag 1 — Wie is de Mol in jouw groep?</div>
-      <div class="groepslid-grid" id="test-verdachte-keuze"></div>
+    <div class="page-eyebrow">Finale test</div>
+    <h1 class="page-title">Wie is de Mol?</h1>
+    <p class="page-sub">Alle rondes zijn gespeeld. Wie denk jij dat de Mol is?</p>
+    <div id="test-verdachten-lijst"></div>
+    <div class="form-section">
+      <label>Waarom denk je dat?</label>
+      <textarea id="test-argument-tekst" rows="4" placeholder="Leg uit waarom..."></textarea>
     </div>
-
-    <div class="card">
-      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.75rem;color:#fff;">🔍 Vraag 2 — In welke ronde saboteerde de Mol het meest?</div>
-      <div class="antwoord-opties" id="test-ronde-keuze"></div>
-    </div>
-
-    <div class="card">
-      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.5rem;color:#fff;">💬 Vraag 3 — Welk argument van de Mol was het meest misleidend en <em>waarom klopte het niet?</em></div>
-      <p style="font-size:0.75rem;color:var(--teal);margin-bottom:0.75rem;">Beschrijf het argument zo concreet mogelijk. Dit is het belangrijkste onderdeel van de test.</p>
-      <textarea id="test-argument-tekst" rows="4" placeholder="Het meest misleidende argument was... Dit klopt niet omdat..."></textarea>
-    </div>
-
-    <div id="test-error" class="error-msg"></div>
-    <button class="btn btn-gold btn-full" onclick="submitTest()">Test insturen →</button>
+    <button class="btn btn-gold btn-full" onclick="submitTest()">Test indienen →</button>
+    <div id="test-error" style="color:var(--red);display:none;margin-top:0.5rem;"></div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN 9: REVEAL                                        -->
-<!-- ════════════════════════════════════════════════════════ -->
-<div id="screen-reveal" class="screen">
+<!-- SCREEN: SPELER-WACHT-TEST -->
+<div id="screen-speler-wacht-test" class="screen">
+  <div class="content" style="text-align:center;">
+    <div class="spinner" style="margin:2rem auto;"></div>
+    <h2 class="page-title">Test ingediend</h2>
+    <p class="page-sub">Wacht tot alle groepsgenoten klaar zijn.</p>
+    <div id="wacht-test-grid"></div>
+  </div>
+</div>
+
+<!-- SCREEN: SPELER-REVEAL -->
+<div id="screen-speler-reveal" class="screen">
   <div class="topbar">
-    <div class="topbar-brand">🕵️ Wie is de Mol</div>
-    <div class="topbar-right">
-      <span id="reveal-rol-tag" class="topbar-tag"></span>
-    </div>
+    <div class="topbar-brand" id="reveal-groep-naam">—</div>
+    <div class="topbar-right"><span class="topbar-tag tag-mol">Resultaat</span></div>
   </div>
   <div class="content">
-    <div class="progress-wrap"><div class="progress-fill" style="width:100%"></div></div>
-    <div id="reveal-content"></div>
-    <div class="afsluiting-wrap" id="reveal-afsluiting" style="display:none;">
-      <div class="afsluiting-icoon">🎓</div>
-      <div class="afsluiting-titel">Goed gespeeld!</div>
-      <div class="afsluiting-sub">De sessie is afgelopen. Bespreek de vragen klassikaal na met je leraar.</div>
-      <button class="btn btn-ghost" onclick="sluitLeerlingAf()">Sessie afsluiten ✓</button>
+    <div class="page-eyebrow">Onthulling</div>
+    <h1 class="page-title">De Mol is onthuld!</h1>
+    <div id="reveal-mol-kaart" style="padding:1.5rem;background:rgba(232,92,92,0.1);border:1px solid rgba(232,92,92,0.3);border-radius:12px;text-align:center;margin:1.5rem 0;">
+      <div style="color:var(--muted);font-size:0.85rem;">De Mol was</div>
+      <div id="reveal-mol-naam" style="font-size:2rem;font-weight:700;color:var(--red-l);margin:0.5rem 0;"></div>
+      <div id="reveal-eigen-gok" style="font-size:0.9rem;font-weight:600;"></div>
+    </div>
+    <div style="padding:1rem;background:var(--bg2);border-radius:10px;">
+      <div class="page-eyebrow">Eindstand</div>
+      <div id="reveal-scores-lijst"></div>
     </div>
   </div>
-</div>
-
-
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SCREEN: PROJECTIE — codes tonen op groot scherm          -->
-<!-- ════════════════════════════════════════════════════════ -->
-<div id="screen-projectie" class="screen">
-  <div class="topbar" style="background:#0a0d12;">
-    <div class="topbar-brand" style="color:#f0c764;">📺 Codes — projectiemodus</div>
-    <div class="topbar-right">
-      <button class="btn btn-ghost btn-sm" onclick="sluitProjectie()">✕ Sluiten</button>
-    </div>
-  </div>
-  <div class="proj-header">
-    <div class="proj-sub">Sessie-code voor alle leerlingen</div>
-    <div class="proj-sessie-code" id="proj-sessie-code">—</div>
-    <div class="proj-url" id="proj-url">—</div>
-    <div class="proj-sub">Elke leerling heeft ook een eigen spelcode — zie kaartje hieronder</div>
-  </div>
-  <div class="proj-grid" id="proj-leerlingen-grid"></div>
 </div>
 
 <!-- Print-briefjes container (onzichtbaar, alleen bij print actief) -->
