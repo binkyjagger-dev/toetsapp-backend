@@ -209,7 +209,7 @@ function detecteerLeerjaar(naam) {
 // Laad klassen voor leerling-dropdown op landingspagina
 async function loadClasses() {
   try {
-    const klassen = await apiFetch('/api/classes');
+    const klassen = await apiFetch('/api/classes/public');
     classesCache = klassen || [];
     populateStudentClassDropdown();
   } catch(e) { console.warn('loadClasses fout:', e.message); }
