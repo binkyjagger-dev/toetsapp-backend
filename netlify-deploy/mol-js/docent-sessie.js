@@ -521,127 +521,16 @@ function getFaseTimerSec(sessie, cases, r, fase) {
 }
 
 async function advanceFase(newFase, newStatus) {
-  try {
-    await apiFetch('/api/mol/ronde-fase', {
-      method: 'PATCH',
-      body: JSON.stringify({
-        sessie_id:  sessieId,
-        docent_code: docentCode,
-        ronde_fase: newFase,
-        status:     newStatus || undefined,
-      }),
-    });
-  } catch(e) { console.error('advanceFase fout:', e.message); }
+  // Fase-overgangen lopen nu per groep via
+  // /api/mol/sessies/:id/groep-status — deze globale
+  // fase-update is niet meer nodig.
 }
 
 
 async function checkAutoAdvance(state) {
-  if (!state || !state.sessie) return;
-  const { sessie, leerlingen, antwoorden, groepStemmen, groepen, cases } = state;
-  if (!groepen || !leerlingen) return; // null-safety als tabellen ontbreken
-  const status = sessie.status;
-  const nu     = Date.now();
-
-  // ── AUTO-START bij setup ────────────────────────────────────
-  if (status === 'setup') {
-    const casesKlaar = Array.isArray(cases) && cases.length >= (sessie.n_rondes || 1);
-    if (!casesKlaar) return;
-
-    const eenGroepCompleet = groepen.some(g => {
-      const leden = leerlingen.filter(l => l.groep_id === g.id);
-      return leden.length > 0 && leden.every(l => l.online_at && (nu - l.online_at) < 90000);
-    });
-
-    if (eenGroepCompleet && lastAutoAdvance !== 'setup_autostart') {
-      lastAutoAdvance = 'setup_autostart';
-      // Zet sessie op briefing — leerlingen lezen en drukken zelf op Start
-      await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
-        method: 'PATCH',
-        body: JSON.stringify({ docent_code: docentCode, status: 'briefing', huidige_ronde: 0 }),
-      });
-    }
-    return;
-  }
-
-  // ── AUTO-ADVANCE briefing → ronde_1 ────────────────────────
-  // Zodra alle leerlingen van minstens één groep op Start gedrukt hebben
-  if (status === 'briefing') {
-    const klaarIds = new Set(Array.isArray(state.briefingKlaar)
-      ? state.briefingKlaar.map(b => b.leerling_id) : []);
-    const eenGroepKlaar = groepen.some(g => {
-      const leden = leerlingen.filter(l => l.groep_id === g.id);
-      return leden.length > 0 && leden.every(l => klaarIds.has(l.id));
-    });
-    if (eenGroepKlaar && lastAutoAdvance !== 'briefing_naar_ronde1') {
-      lastAutoAdvance = 'briefing_naar_ronde1';
-      await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
-        method: 'PATCH',
-        body: JSON.stringify({ docent_code: docentCode, status: 'ronde_1', huidige_ronde: 1 }),
-      });
-      await advanceFase('invoer', 'ronde_1');
-    }
-    return;
-  }
-
-  // ── AUTO-ADVANCE per ronde-fase ─────────────────────────────
-  if (!status.startsWith('ronde_')) return;
-
-  const r          = parseInt(status.split('_')[1]);
-  const fase       = sessie.ronde_fase || 'invoer';
-  const gestarted  = sessie.fase_gestart_op || Date.now();
-  const debounceKey = `${status}_${fase}`;
-  if (debounceKey === lastAutoAdvance) return;
-
-  const antInRonde    = antwoorden.filter(a => a.ronde_nr === r);
-  const alleIngediend = antInRonde.length >= leerlingen.length;
-  const alleStemmen   = groepStemmen.filter(s => s.ronde_nr === r);
-  const alleGestemd   = alleStemmen.length >= groepen.length;
-  // groepVotes per ronde (voor timer-einde meerderheid)
-  const groepVotesRonde = (state.groepVotes || []).filter(v => v.ronde_nr === r);
-
-  const timerDiscussie = getTimer(sessie, cases, r, 'discussie');
-  const timerStem      = getTimer(sessie, cases, r, 'stem');
-
-  if (fase === 'invoer' && alleIngediend) {
-    lastAutoAdvance = debounceKey;
-    await advanceFase('stem'); // direct naar stem, geen discussiefase meer
-    return;
-  }
-  if (fase === 'resultaat_5sec') {
-    // 5 seconden wachten dan door naar volgende ronde of test
-    if ((nu - gestarted) >= 5000) {
-      lastAutoAdvance = debounceKey;
-      const volgendeRonde = r < sessie.n_rondes;
-      if (volgendeRonde) {
-        await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
-          method: 'PATCH',
-          body: JSON.stringify({ docent_code: docentCode, status: `ronde_${r+1}`, huidige_ronde: r+1 }),
-        });
-        await advanceFase('invoer');
-      } else {
-        await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
-          method: 'PATCH',
-          body: JSON.stringify({ docent_code: docentCode, status: 'test', huidige_ronde: r }),
-        });
-      }
-    }
-    return;
-  }
-  if (fase === 'resultaat' && (nu - gestarted) >= 4000) {
-    lastAutoAdvance = debounceKey;
-    if (r < sessie.n_rondes) {
-      await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
-        method: 'PATCH',
-        body: JSON.stringify({ docent_code: docentCode, status: `ronde_${r+1}`, huidige_ronde: r+1 }),
-      });
-      await advanceFase('invoer');
-    } else {
-      await apiFetch('/api/mol/sessie/' + sessieId + '/status', {
-        method: 'PATCH',
-        body: JSON.stringify({ docent_code: docentCode, status: 'test', huidige_ronde: r }),
-      });
-    }
-  }
+  // Fase-overgangen lopen nu per groep via
+  // /api/mol/sessies/:id/groep-status — server berekent per-groep
+  // wat de volgende fase is.
 }
 
 async function startSessieAuto() {

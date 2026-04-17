@@ -64,24 +64,27 @@ function initSpelerFlow() {
 }
 
 async function pollSpelerStatus() {
+  let groepStatus;
   try {
     sessieState = await apiFetch('/api/mol/sessie/' + sessieId);
+    groepStatus = await apiFetch(
+      '/api/mol/sessies/' + sessieId + '/groep-status?groep_id=' + encodeURIComponent(speler.groep_id)
+    );
   } catch(e) { return; }
 
   const { sessie, cases, antwoorden, groepStemmen, leerlingen, groepen,
-          briefingKlaar, groepVotes, scores } = sessieState;
-  if (!sessie) return; // null-safety
+          briefingKlaar, groepVotes, scores } = sessieState || {};
+  if (!sessie) return;
 
-  // Houd speler-object up-to-date met verse server-data (groepshoofd_stem, is_groepshoofd etc.)
   if (speler && leerlingen) {
     const vers = leerlingen.find(l => l.id === speler.id);
     if (vers) speler = { ...speler, ...vers };
   }
 
-  const status = sessie.status;
+  const fase = groepStatus.fase;
+  const ronde = groepStatus.ronde_nr || 1;
 
-  if (status === 'setup') {
-    // Toon hoeveel groepsleden al online zijn
+  if (sessie.status === 'setup') {
     const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
     const nu3 = Date.now();
     const onlineInGroep = mijnGroep.filter(l => l.online_at && (nu3 - l.online_at) < 90000).length;
@@ -92,9 +95,8 @@ async function pollSpelerStatus() {
     return;
   }
 
-  if (status === 'briefing') {
+  if (fase === 'briefing') {
     const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
-    // Eerste keer renderen; daarna alleen wacht-grid updaten
     if (!briefingGedrukt) {
       renderSpelerBriefing(leerlingen, groepen, sessie);
     } else {
@@ -104,11 +106,8 @@ async function pollSpelerStatus() {
     return;
   }
 
-  if (status.startsWith('ronde_')) {
-    const ronde    = parseInt(status.split('_')[1]);
-    const faseSrv  = sessie.ronde_fase || 'invoer';
-    // Reset renderState als we naar een nieuwe ronde of fase gaan
-    if (!lastRenderedFase || !lastRenderedFase.startsWith(`ronde_${ronde}_${faseSrv}`)) {
+  if (fase === 'invoer') {
+    if (!lastRenderedFase || !lastRenderedFase.startsWith(`ronde_${ronde}_invoer`)) {
       lastRenderedFase = null;
       geselecteerdeOptie = null;
       geselecteerdeLidId = null;
@@ -123,33 +122,74 @@ async function pollSpelerStatus() {
     const timerDiscSec   = getFaseTimerSec(sessie, cases, ronde, 'discussie');
     const timerStemSec   = getFaseTimerSec(sessie, cases, ronde, 'stem');
     const faseTijd       = sessie.fase_gestart_op || Date.now();
-
     const mijnGroepVotes = (groepVotes || []).filter(v => v.groep_id === speler.groep_id && v.ronde_nr === ronde);
     renderSpelerRonde(ronde, sessie.n_rondes, caseRonde, mijnAntwoord, alleIngediend,
       alleAntwoorden, groepStem, mijnGroep, leerlingen,
-      faseSrv, faseTijd, timerDiscSec, timerStemSec, mijnGroepVotes, scores || []);
+      'invoer', faseTijd, timerDiscSec, timerStemSec, mijnGroepVotes, scores || []);
     showScreen('screen-speler-ronde');
     return;
   }
 
-  if (status === 'test') {
+  if (fase === 'discussie') {
+    await renderDiscussiescherm();
+    return;
+  }
+
+  if (fase === 'test') {
     if (!testIngediend) {
-      // Nog niet ingediend: toon de test
       lastRenderedFase = null;
       renderSpelerTest(leerlingen, sessieState);
       showScreen('screen-speler-test');
       clearInterval(pollTimer);
     }
-    // Wél ingediend: wachtscherm staat al — val door naar reveal-check hieronder
     return;
   }
 
-  if (status === 'reveal' || status === 'afgelopen') {
+  if (fase === 'reveal' || sessie.status === 'reveal' || sessie.status === 'afgelopen') {
     clearInterval(pollTimer);
     renderSpelerReveal(sessieState, scores || []);
     showScreen('screen-reveal');
     return;
   }
+}
+
+async function renderDiscussiescherm() {
+  const res = await apiFetch(
+    '/api/mol/sessies/' + sessieId +
+    '/discussie-data?leerling_id=' + encodeURIComponent(speler.id) +
+    '&groep_id=' + encodeURIComponent(speler.groep_id)
+  );
+
+  const eigenEl = document.getElementById('disc-eigen-antwoord');
+  const hoofdEl = document.getElementById('disc-groepshoofd-naam');
+  const instrEl = document.getElementById('disc-instructie');
+  const btnEl   = document.getElementById('disc-groepsantwoord-knop');
+
+  if (eigenEl) eigenEl.textContent = res.eigen_antwoord?.antwoord || '';
+
+  if (res.is_groepshoofd) {
+    if (instrEl) instrEl.textContent = 'Kies het groepsantwoord en druk op Groepsantwoord';
+    if (btnEl) btnEl.style.display = 'block';
+  } else {
+    if (hoofdEl) hoofdEl.textContent = res.groepshoofd_naam || '';
+    if (instrEl) instrEl.textContent = 'Kies als groep voor een uniform antwoord en bespreek wat het antwoord wordt';
+    if (btnEl) btnEl.style.display = 'none';
+  }
+  showScreen('screen-speler-discussie');
+}
+
+async function submitGroepsantwoord() {
+  const antwoord = geselecteerdeOptie;
+  if (!antwoord) { toast('Kies eerst een antwoord'); return; }
+  await apiFetch('/api/mol/sessies/' + sessieId + '/groepsantwoord', {
+    method: 'POST',
+    body: JSON.stringify({
+      leerling_id: speler.id,
+      groep_id: speler.groep_id,
+      antwoord,
+      ronde_nr: speler.ronde_nr || 1,
+    }),
+  });
 }
 
 
@@ -284,18 +324,24 @@ function updateBriefingDynamisch(mijnGroep, alleLeerlingen) {
 
 async function drukOpStart() {
   if (briefingGedrukt) return;
+  if (!speler.groepshoofd_stem) {
+    toast('Kies eerst een groepshoofd');
+    return;
+  }
   briefingGedrukt = true;
   const btn = document.getElementById('briefing-start-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Wachten op groep...'; }
   document.getElementById('briefing-wacht').style.display = 'block';
 
   try {
-    await apiFetch('/api/mol/briefing-klaar', {
+    await apiFetch('/api/mol/sessies/' + sessieId + '/briefing-start', {
       method: 'POST',
-      body: JSON.stringify({ sessie_id: sessieId, leerling_id: speler.id }),
+      body: JSON.stringify({
+        leerling_id: speler.id,
+        groepshoofd_stem: speler.groepshoofd_stem,
+      }),
     });
-    // groepshoofd-sectie is al zichtbaar vanaf het begin
-  } catch(e) { console.error('briefing-klaar fout:', e.message); }
+  } catch(e) { console.error('briefing-start fout:', e.message); }
 }
 
 
@@ -724,14 +770,17 @@ async function submitTest() {
   const arg = document.getElementById('test-argument-tekst').value.trim();
   const err = document.getElementById('test-error');
   if (!testVerdachteId) { err.textContent = 'Kies wie de Mol is.'; err.style.display='block'; return; }
-  if (!testRondeNr)     { err.textContent = 'Kies een ronde.'; err.style.display='block'; return; }
   if (arg.length < 20)  { err.textContent = 'Beschrijf het argument uitgebreider (minimaal 20 tekens).'; err.style.display='block'; return; }
   err.style.display = 'none';
 
   try {
-    await apiFetch('/api/mol/test-antwoord', {
+    await apiFetch('/api/mol/sessies/' + sessieId + '/test', {
       method: 'POST',
-      body: JSON.stringify({ sessie_id: sessieId, leerling_id: speler.id, mol_verdachte_id: testVerdachteId, mol_ronde: testRondeNr, mol_argument: arg }),
+      body: JSON.stringify({
+        leerling_id: speler.id,
+        verdachte_id: testVerdachteId,
+        argument: arg,
+      }),
     });
     // Zet flag zodat poll het test-scherm niet opnieuw toont
     testIngediend = true;
