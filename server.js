@@ -475,7 +475,7 @@ app.patch('/api/lessons/:id', optionalToken, async (req, res) => {
 app.post('/api/lesson_classes', verifyToken, async (req, res) => {
   try {
     const { lesson_id, class_id, lesson_date } = req.body;
-    const row = { lesson_id, class_id, lesson_date: lesson_date || null, feedback: null };
+    const row = { lesson_id, class_id, lesson_date: lesson_date || null };
     const { data, error } = await supabase.from('lesson_classes').insert([row]).select().single();
     if (error) {
       if (error.code === '23505') return res.status(409).json({ error: 'Koppeling bestaat al' });
