@@ -1,4 +1,16 @@
 
+// ── Cache ─────────────────────────────────────────────────────
+async function refreshCache() {
+  const [classes, lessons, results] = await Promise.all([
+    apiFetch('/api/classes'),
+    apiFetch('/api/lessons'),
+    apiFetch('/api/results'),
+  ]);
+  classesCache = classes  || [];
+  lessonsCache = lessons  || [];
+  resultsCache = results  || [];
+}
+
 // ── Les helpers ─────────────────────────────────────────────
 async function getLessons(classId) {
   const qs = classId ? '?class_id=' + classId : '';
@@ -212,14 +224,7 @@ function vulClassFilter() {
 // ── Dashboard ───────────────────────────────────────────────
 async function loadTeacherDashboard() {
   try {
-    const [classes, lessons, results] = await Promise.all([
-      apiFetch('/api/classes'),
-      apiFetch('/api/lessons'),
-      apiFetch('/api/results'),
-    ]);
-    classesCache  = classes  || [];
-    lessonsCache  = lessons  || [];
-    resultsCache  = results  || [];
+    await refreshCache();
 
     // ── Klassen-grid renderen ─────────────────────────────
     renderClassenGrid(classesCache);
