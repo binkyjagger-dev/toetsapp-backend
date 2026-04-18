@@ -23,6 +23,22 @@ async function openLeerlingenPicker(targetTextareaId) {
     kSel.innerHTML = '<option value="">— Alle klassen —</option>'
       + klassen.map(k => `<option value="${k}">${k}</option>`).join('');
 
+    const niveauSel = document.getElementById('picker-niveau');
+    if (niveauSel) {
+      niveauSel.innerHTML = '<option value="">— Alle niveaus —</option>'
+        + ['Atheneum','Gymnasium','HAVO']
+          .map(n => `<option value="${n}">${n}</option>`)
+          .join('');
+    }
+
+    const leerjaarSel = document.getElementById('picker-leerjaar');
+    if (leerjaarSel) {
+      leerjaarSel.innerHTML = '<option value="">— Alle jaren —</option>'
+        + [1,2,3,4,5,6]
+          .map(j => `<option value="${j}">Jaar ${j}</option>`)
+          .join('');
+    }
+
     await laadPickerLeerlingen();
   } catch(e) {
     document.getElementById('picker-lijst').innerHTML =
