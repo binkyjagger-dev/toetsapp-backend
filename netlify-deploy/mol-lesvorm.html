@@ -769,6 +769,74 @@ select { cursor: pointer; }
     .timer-tekst { font-size: 1.6rem; }
   }
 
+  /* ── Leerlingen-picker modal ── */
+  #ll-picker-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  #ll-picker-modal .modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  #ll-picker-modal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  #ll-picker-modal .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1B3A6B;
+  }
+  #ll-picker-modal .modal-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  #ll-picker-modal .modal-filters select {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px 10px;
+    border: 1.5px solid #dde4f0;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #1B3A6B;
+    background: #fff;
+  }
+  #ll-picker-modal .modal-footer {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  #ll-picker-modal .modal-footer button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1.5px solid #dde4f0;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #ll-picker-modal .modal-footer button:first-child {
+    background: #1B3A6B;
+    color: #fff;
+    border-color: #1B3A6B;
+  }
+
 </style>
 </head>
 <body>
