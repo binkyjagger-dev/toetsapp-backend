@@ -127,7 +127,7 @@ async function laadMolLessenDropdown() {
   try {
     const lessen = await apiFetch('/api/lessons');
     molLessenCache = lessen || [];
-    const sel = document.getElementById('setup-les-kiezer');
+    const sel = document.getElementById('sessie-les-select');
     if (!sel) return;
     sel.innerHTML = '<option value="">— Handmatig invullen —</option>'
       + molLessenCache.map(l =>
@@ -137,7 +137,7 @@ async function laadMolLessenDropdown() {
 }
 
 function onMolLesKeuze() {
-  const sel = document.getElementById('setup-les-kiezer');
+  const sel = document.getElementById('sessie-les-select');
   const lesId = sel?.value;
   if (!lesId) {
     // Reset naar handmatig
