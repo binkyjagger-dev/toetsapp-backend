@@ -182,7 +182,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (directSetup && lesNaamParam) {
     // Direct naar setup met les al ingevuld
-    showScreen('screen-docent-setup');
+    showScreen('screen-sessie-stap1');
     setTimeout(() => {
       const naamEl    = document.getElementById('setup-les-naam');
       const contentEl = document.getElementById('setup-les-content');
@@ -198,7 +198,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Laad ook les-lijst op de achtergrond voor dropdown
     laadMolLessenDropdown();
   } else {
-    showScreen('screen-docent-login');
+    showScreen('screen-sessie-lijst');
     await laadSessieLijst();
     // Laad les-dropdown op de achtergrond
     laadMolLessenDropdown();
