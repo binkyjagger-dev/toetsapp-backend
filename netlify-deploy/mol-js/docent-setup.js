@@ -456,3 +456,16 @@ function voegRondeToe() {
   });
   renderVraagKaart(n);
 }
+
+function kiesRondes(n) {
+  document.getElementById('setup-n-rondes').value = n;
+  document.querySelectorAll('.rondes-btn').forEach(btn => {
+    btn.classList.toggle('actief', parseInt(btn.dataset.n) === n);
+  });
+}
+
+function kiesGroepGrootte(n) {
+  document.querySelectorAll('.grootte-btn').forEach(btn => {
+    btn.classList.toggle('actief', parseInt(btn.dataset.n) === n);
+  });
+}
