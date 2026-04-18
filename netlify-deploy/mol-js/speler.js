@@ -84,7 +84,7 @@ function initSpelerFlow() {
     document.getElementById('speler-topbar-right').innerHTML +=
       '<span class="topbar-tag tag-mol">🕵️ Mol</span>';
   }
-  showScreen('screen-speler-wacht');
+  showScreen('screen-speler-wacht-briefing');
   startPoll(pollSpelerStatus, 3500);
 }
 
@@ -903,10 +903,13 @@ async function submitTest() {
         </div>
       </div>`;
     document.getElementById('speler-briefing-sectie').style.display = 'block';
-    showScreen('screen-speler-wacht');
+    showScreen('screen-speler-wacht-briefing');
     startPoll(pollSpelerStatus, 3000);
   } catch(e) {
     err.textContent = e.message; err.style.display = 'block';
   }
 }
 
+
+// ── Navigatie-stub ──
+function submitRondeAntwoord() { submitAntwoord(); }

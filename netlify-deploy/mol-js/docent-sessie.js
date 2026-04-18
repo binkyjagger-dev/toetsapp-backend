@@ -1,13 +1,13 @@
 function naarSessieLijst() {
   clearInterval(pollTimer);
-  showScreen('screen-docent-login');
+  showScreen('screen-sessie-lijst');
   laadSessieLijst();
 }
 
 function sluitLeerlingAf() {
   clearInterval(pollTimer);
   stopHeartbeat();
-  showScreen('screen-keuze');
+  showScreen('screen-sessie-lijst');
 }
 
 
@@ -148,7 +148,7 @@ async function verwijderSessie(id, naam) {
 }
 
 async function laadDocentSessie() {
-  showScreen('screen-docent-sessie');
+  showScreen('screen-sessie-lijst');
   document.getElementById('docent-sessie-code').textContent = sessieCode;
   document.getElementById('docent-code-display').textContent = docentCode || '—';
   const url = window.location.href.split('?')[0] + '?rol=speler';
@@ -467,11 +467,11 @@ async function openProjectie() {
         </div>
       </div>`).join('');
 
-  showScreen('screen-projectie');
+  showScreen('screen-sessie-lijst');
 }
 
 function sluitProjectie() {
-  showScreen('screen-docent-sessie');
+  showScreen('screen-sessie-lijst');
 }
 
 async function printBriefjes() {
@@ -568,3 +568,14 @@ function buildTimerRing(secTotaal, secResterend, type) {
 // LEERLINGEN PICKER (kies uit klas)
 // ════════════════════════════════════════════════════════════
 
+
+// ── Navigatie-stubs voor nieuwe schermen ──
+
+function openSessieNaAanmaken() {
+  showScreen('screen-sessie-lijst');
+  laadSessieLijst();
+}
+
+function printSpelcodes() {
+  printBriefjes();
+}

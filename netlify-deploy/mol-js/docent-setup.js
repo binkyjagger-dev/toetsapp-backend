@@ -437,3 +437,22 @@ async function laadEnToonSpelcodes() {
   }
   showScreen('screen-spelcodes');
 }
+
+// ── Navigatie-stubs voor sessie-stappen ──
+
+function naarStap2Leerlingen() { showScreen('screen-sessie-stap2'); }
+function naarStap3Mol() { showScreen('screen-sessie-stap3'); }
+function naarStap4Vragen() { showScreen('screen-sessie-stap4'); }
+function nieuweSessie() { showScreen('screen-sessie-stap1'); }
+function sessieAanmakenEnStart() { maakSessie(); }
+
+function voegRondeToe() {
+  const container = document.getElementById('sessie-vragen-container');
+  if (!container) return;
+  const n = container.children.length + 1;
+  vragenData.push({
+    ronde_nr: n, vraag: '', context: '', vraagtype: 'mc',
+    correct_uitleg: '', fout_uitleg: '', mc_opties: [],
+  });
+  renderVraagKaart(n);
+}

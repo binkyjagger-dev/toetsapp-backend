@@ -20,7 +20,7 @@ function selecteerHergebruikMol(gi, li) {
 // RESULTATEN + HERGEBRUIK — hoofd-functies
 // ════════════════════════════════════════════════════════════
 async function bekijkResultaten(id) {
-  showScreen('screen-resultaten');
+  showScreen('screen-speler-reveal');
   document.getElementById('resultaten-loading').style.display = 'block';
   document.getElementById('resultaten-content').style.display = 'none';
   try {
@@ -55,7 +55,7 @@ async function openHergebruik(id, dCode, lesNaam) {
     document.getElementById('hergebruik-cases-preview').innerHTML =
       '<div style="color:var(--muted);font-size:0.78rem;">Vragen laden mislukt.</div>';
   }
-  showScreen('screen-hergebruik');
+  showScreen('screen-sessie-lijst');
 }
 
 function genereerHergebruikGroepen() {
