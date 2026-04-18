@@ -1231,13 +1231,19 @@ select { cursor: pointer; }
       <button onclick="sluitLeerlingenPicker()">✕</button>
     </div>
     <div class="modal-filters" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
-      <select id="picker-periode"><option value="">— Alle periodes —</option></select>
-      <select id="picker-niveau"><option value="">— Alle niveaus —</option></select>
-      <select id="picker-leerjaar"><option value="">— Alle jaren —</option></select>
-      <select id="picker-klas"><option value="">— Alle klassen —</option></select>
+      <select id="picker-periode" onchange="laadPickerLeerlingen()"><option value="">— Alle periodes —</option></select>
+      <select id="picker-niveau" onchange="laadPickerLeerlingen()"><option value="">— Alle niveaus —</option></select>
+      <select id="picker-leerjaar" onchange="laadPickerLeerlingen()"><option value="">— Alle jaren —</option></select>
+      <select id="picker-klas" onchange="laadPickerLeerlingen()"><option value="">— Alle klassen —</option></select>
     </div>
     <div id="picker-lijst" style="max-height:300px;overflow-y:auto;"></div>
-    <div id="picker-count" style="font-size:12px;color:#6a7a96;margin-top:8px;"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+      <div style="display:flex;gap:6px;">
+        <button onclick="selecteerAllePickerLeerlingen()" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1.5px solid #dde4f0;background:#fff;color:#1B3A6B;cursor:pointer;font-weight:600;">Alles selecteren</button>
+        <button onclick="deselecteerAllePickerLeerlingen()" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1.5px solid #dde4f0;background:#fff;color:#6a7a96;cursor:pointer;font-weight:600;">Deselecteren</button>
+      </div>
+      <div id="picker-count" style="font-size:12px;color:#6a7a96;"></div>
+    </div>
     <div class="modal-footer" style="display:flex;gap:0.5rem;margin-top:1rem;">
       <button class="btn btn-gold" onclick="bevestigLeerlingenKeuze()">Importeren →</button>
       <button class="btn btn-ghost" onclick="sluitLeerlingenPicker()">Annuleren</button>
