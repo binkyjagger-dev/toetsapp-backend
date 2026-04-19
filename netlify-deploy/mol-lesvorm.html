@@ -902,6 +902,27 @@ select { cursor: pointer; }
   .optie-ai-feedback-btn { font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; border:1.5px solid rgba(200,169,81,0.4); background:rgba(200,169,81,0.08); color:#8a6200; cursor:pointer; }
   .optie-feedback-input { width:100%; padding:7px 10px; border:1.5px solid #dde4f0; border-radius:7px; font-size:12px; color:#2d4060; box-sizing:border-box; background:#fff; resize:none; line-height:1.4; }
 
+  .dashboard-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; gap:1rem; }
+  .dashboard-titel-blok { flex:1; min-width:0; }
+  .dashboard-sessie-naam { font-family:'Syne', sans-serif; font-size:1.6rem; font-weight:700; color:var(--gold-l); margin:0; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dashboard-klas-naam { font-size:0.82rem; color:var(--muted); margin-top:0.2rem; }
+  .dashboard-code-badge { font-family:'DM Mono', monospace; font-size:1.4rem; font-weight:700; color:var(--gold); letter-spacing:0.2em; background:rgba(212,168,67,0.1); border:1.5px solid rgba(212,168,67,0.3); border-radius:10px; padding:0.5rem 1rem; flex-shrink:0; }
+  .dashboard-stats { display:grid; grid-template-columns:repeat(3, 1fr); gap:0.75rem; margin-bottom:1.5rem; }
+  .dashboard-stat { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:12px; padding:1rem; text-align:center; }
+  .dashboard-stat-val { font-family:'Syne', sans-serif; font-size:1.8rem; font-weight:700; color:var(--gold-l); line-height:1; }
+  .dashboard-stat-label { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-top:0.4rem; }
+  .dashboard-groepen-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:0.75rem; margin-bottom:1.5rem; min-height:120px; }
+  .dashboard-acties { display:flex; gap:0.5rem; flex-wrap:wrap; }
+
+  .fase-briefing   { background:rgba(255,255,255,0.08); color:var(--text2); border-color:var(--border); }
+  .fase-individueel{ background:rgba(64,128,230,0.15); color:#8ab3f0; border-color:rgba(64,128,230,0.35); }
+  .fase-groep      { background:rgba(160,100,220,0.15); color:#c09bef; border-color:rgba(160,100,220,0.35); }
+  .fase-moltest    { background:rgba(240,160,60,0.15); color:#f0b86b; border-color:rgba(240,160,60,0.35); }
+  .fase-reveal     { background:rgba(232,92,92,0.15); color:#f08a8a; border-color:rgba(232,92,92,0.35); }
+
+  .stip-online  { display:inline-block; width:8px; height:8px; border-radius:50%; background:#3ec98a; }
+  .stip-offline { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--muted); }
+
 </style>
 </head>
 <body>
@@ -935,6 +956,46 @@ select { cursor: pointer; }
       <p>Nog geen sessies — klik op "+ Nieuwe sessie" om te beginnen.</p>
     </div>
     <div id="sessie-lijst-wrap" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- SCREEN: DOCENT-DASHBOARD (live sessie-overzicht) -->
+<div id="screen-docent-dashboard" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">🕵️ Wie is de Mol</div>
+    <div class="topbar-right"><span class="topbar-tag tag-docent">DASHBOARD</span></div>
+  </div>
+  <div class="content">
+    <div class="dashboard-header">
+      <div class="dashboard-titel-blok">
+        <div class="page-eyebrow">Live sessie</div>
+        <h1 class="dashboard-sessie-naam" id="dashboard-sessie-naam">[Sessienaam]</h1>
+        <div class="dashboard-klas-naam" id="dashboard-klas-naam">[Klas]</div>
+      </div>
+      <div class="dashboard-code-badge" id="dashboard-code">[CODE]</div>
+    </div>
+
+    <div class="dashboard-stats">
+      <div class="dashboard-stat">
+        <div class="dashboard-stat-val" id="dashboard-stat-online">—</div>
+        <div class="dashboard-stat-label">Online</div>
+      </div>
+      <div class="dashboard-stat">
+        <div class="dashboard-stat-val" id="dashboard-stat-groepen">—</div>
+        <div class="dashboard-stat-label">Groepen</div>
+      </div>
+      <div class="dashboard-stat">
+        <div class="dashboard-stat-val" id="dashboard-stat-status">—</div>
+        <div class="dashboard-stat-label">Status</div>
+      </div>
+    </div>
+
+    <div id="dashboard-groepen-grid" class="dashboard-groepen-grid"></div>
+
+    <div class="dashboard-acties">
+      <button class="btn btn-ghost" id="btn-toon-spelcodes">Spelcodes tonen</button>
+      <button class="btn btn-ghost" id="btn-stop-sessie">Sessie stoppen</button>
+    </div>
   </div>
 </div>
 
