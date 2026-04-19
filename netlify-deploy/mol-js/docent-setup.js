@@ -502,3 +502,34 @@ function voegOptieToe(n) {
   koppelOptieHandlers(clone, n);
   container.appendChild(clone);
 }
+
+function koppelOptieHandlers(clone, n) {
+  clone.querySelector('.optie-correct-btn').onclick = function() { toggleCorrect(this); };
+  clone.querySelector('.optie-punten-min').onclick = function() { passPuntenAan(this, -1); };
+  clone.querySelector('.optie-punten-plus').onclick = function() { passPuntenAan(this, 1); };
+  clone.querySelector('.optie-del-btn').onclick = function() { verwijderOptie(this); };
+  clone.querySelector('.optie-ai-feedback-btn').onclick = function() { genereerFeedbackOptie(this, n); };
+}
+
+function toggleCorrect(btn) {
+  const isActief = btn.classList.contains('actief');
+  btn.classList.toggle('actief', !isActief);
+  const wrap = btn.closest('.optie-rij').querySelector('.optie-punten-wrap');
+  if (!wrap) return;
+  wrap.style.borderColor = isActief ? '#dde4f0' : '#2a8a5a';
+  if (!isActief) {
+    const val = wrap.querySelector('.optie-punten-val');
+    if (val && val.textContent === '0') val.textContent = '10';
+  }
+}
+
+function passPuntenAan(btn, delta) {
+  const val = btn.closest('.optie-punten-wrap').querySelector('.optie-punten-val');
+  if (!val) return;
+  const huidig = parseInt(val.textContent) || 0;
+  val.textContent = Math.max(0, Math.min(10, huidig + delta));
+}
+
+function verwijderOptie(btn) {
+  btn.closest('.optie-blok')?.remove();
+}
