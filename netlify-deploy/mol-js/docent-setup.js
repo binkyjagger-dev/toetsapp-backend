@@ -560,3 +560,30 @@ async function genereerRondeAI(n) {
     if (btn) { btn.textContent = '✦ Genereer met AI'; btn.disabled = false; }
   }
 }
+
+function vulRondeMetAIData(n, res) {
+  const kaart = document.getElementById('ronde-kaart-' + n);
+  if (!kaart) return;
+  const vraagInput = kaart.querySelector('.ronde-vraag-input');
+  if (vraagInput) vraagInput.value = res.vraag || '';
+  const container = kaart.querySelector('.ronde-opties-container');
+  if (container) container.innerHTML = '';
+  (res.opties || []).forEach(opt => {
+    voegOptieToe(n);
+    const blok = container.lastElementChild;
+    if (blok) vulOptieMetData(blok, opt);
+  });
+}
+
+function vulOptieMetData(blok, opt) {
+  const input = blok.querySelector('.optie-tekst-input');
+  if (input) input.value = opt.tekst || '';
+  const val = blok.querySelector('.optie-punten-val');
+  if (val) val.textContent = opt.punten || 0;
+  const feedback = blok.querySelector('.optie-feedback-input');
+  if (feedback) feedback.value = opt.feedback || '';
+  if (opt.correct) {
+    const btn = blok.querySelector('.optie-correct-btn');
+    if (btn) toggleCorrect(btn);
+  }
+}
