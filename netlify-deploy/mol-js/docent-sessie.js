@@ -81,8 +81,12 @@ async function maakSessie() {
     laadDocentSessie();
     await laadSessieLijst();
   } catch(e) {
-    err.textContent = 'Fout: ' + e.message;
-    err.style.display = 'block';
+    if (err) {
+      err.textContent = 'Fout: ' + e.message;
+      err.style.display = 'block';
+    } else {
+      toast('Sessie aanmaken mislukt: ' + e.message);
+    }
     if (btn) { btn.disabled = false; btn.innerHTML = 'Sessie starten →'; }
   }
 }
