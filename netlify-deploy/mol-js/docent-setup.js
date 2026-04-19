@@ -441,7 +441,7 @@ async function laadEnToonSpelcodes() {
 // ── Navigatie-stubs voor sessie-stappen ──
 
 function naarStap2Leerlingen() { showScreen('screen-sessie-stap2'); }
-function naarStap3Mol() { showScreen('screen-sessie-stap4'); }
+function naarStap3Mol() { initStap4(); showScreen('screen-sessie-stap4'); }
 function naarStap4Vragen() { showScreen('screen-sessie-stap4'); }
 function nieuweSessie() { showScreen('screen-sessie-stap1'); }
 function sessieAanmakenEnStart() { maakSessie(); }
@@ -450,11 +450,7 @@ function voegRondeToe() {
   const container = document.getElementById('sessie-vragen-container');
   if (!container) return;
   const n = container.children.length + 1;
-  vragenData.push({
-    ronde_nr: n, vraag: '', context: '', vraagtype: 'mc',
-    correct_uitleg: '', fout_uitleg: '', mc_opties: [],
-  });
-  renderVraagKaart(n);
+  container.appendChild(renderRondeKaart(n));
 }
 
 function kiesRondes(n) {
@@ -532,4 +528,15 @@ function passPuntenAan(btn, delta) {
 
 function verwijderOptie(btn) {
   btn.closest('.optie-blok')?.remove();
+}
+
+function initStap4() {
+  const n = parseInt(document.getElementById('setup-n-rondes')?.value) || 3;
+  const container = document.getElementById('sessie-vragen-container');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 1; i <= n; i++) {
+    container.appendChild(renderRondeKaart(i));
+  }
+  showScreen('screen-sessie-stap4');
 }
