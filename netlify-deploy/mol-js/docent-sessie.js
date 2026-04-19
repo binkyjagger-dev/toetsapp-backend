@@ -232,51 +232,7 @@ function startPoll(fn, interval = 4000) {
 }
 
 async function renderDocentSessie() {
-  try {
-    sessieState = await apiFetch('/api/mol/sessie/' + sessieId);
-  } catch(e) { return; }
-
-  // Auto-advance: check of huidige fase vooruit kan
-  await checkAutoAdvance(sessieState);
-
-  const { sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden } = sessieState;
-
-  // Les-naam
-  document.getElementById('docent-les-naam').textContent = sessie.les_naam || 'Sessie';
-  const bc = document.getElementById('breadcrumb-les-naam');
-  if (bc) bc.textContent = sessie.les_naam || 'Sessie';
-
-  // Online-count
-  const nu = Date.now();
-  const online = leerlingen.filter(l => l.online_at && (nu - l.online_at) < 90000);
-  document.getElementById('online-count').textContent = `${online.length} / ${leerlingen.length}`;
-
-  // Leerlingen lijst
-  const ljDiv = document.getElementById('docent-leerlingen-lijst');
-  ljDiv.innerHTML = leerlingen.map(l => {
-    const isOnline = l.online_at && (nu - l.online_at) < 90000;
-    return `<div class="leerling-rij">
-      <div class="leerling-code">${l.speler_code}</div>
-      <div class="leerling-naam">${escH(l.naam)}</div>
-      <div class="leerling-groep">${escH(l.groep_naam)}</div>
-      ${l.is_mol ? '<span class="mol-badge">🕵️ Mol</span>' : ''}
-      <div style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:${isOnline ? 'var(--green)' : 'var(--muted)'}"></div>
-    </div>`;
-  }).join('');
-
-  // Groepen (altijd tonen voor docent)
-  document.getElementById('docent-groepen-sectie').style.display = 'block';
-  const gg = document.getElementById('docent-groepen-grid');
-  gg.innerHTML = groepen.map(g => {
-    const leden = leerlingen.filter(l => l.groep_id === g.id);
-    return `<div class="groep-card">
-      <div class="groep-naam">${escH(g.naam)}</div>
-      ${leden.map(l => `<div class="groep-lid${l.is_mol ? ' is-mol' : ''}">${escH(l.naam)}${l.is_mol ? ' 🕵️' : ''}</div>`).join('')}
-    </div>`;
-  }).join('');
-
-  // Fase-besturing
-  renderDocentFase(sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden, online);
+  // Dashboard nog niet geimplementeerd — wordt gebouwd in een latere sessie
 }
 
 function renderDocentFase(sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden, online) {
