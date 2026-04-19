@@ -26,7 +26,22 @@ function leesVragenUitDOM() {
       punten:   parseInt(blok.querySelector('.optie-punten-val')?.textContent) || 0,
       feedback: blok.querySelector('.optie-feedback-input')?.value || '',
     }));
-    return { ronde_nr: i + 1, vraag, opties };
+    const correctOptie = opties.find(o => o.correct);
+    const foutOptie    = opties.find(o => !o.correct);
+    return {
+      ronde_nr: i + 1,
+      vraag,
+      vraagtype: 'mc',
+      correct_uitleg: correctOptie?.feedback || '',
+      fout_uitleg:    foutOptie?.feedback || '',
+      mc_opties: opties.map(o => ({
+        id:         crypto.randomUUID(),
+        tekst:      o.tekst,
+        is_correct: o.correct,
+        punten:     o.punten,
+        feedback:   o.feedback,
+      })),
+    };
   });
 }
 
