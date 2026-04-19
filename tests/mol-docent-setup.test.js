@@ -16,10 +16,10 @@ describe('mol-js/docent-setup.js — extractie', () => {
     expect(content).toContain('function genereerGroepsindeling');
     expect(content).toContain('function renderGroepsindeling');
     expect(content).toContain('function selecteerMol');
-    expect(content).toContain('function naarVragenEditor');
-    expect(content).toContain('function genereerVragenPreview');
-    expect(content).toContain('function renderVragenEditor');
-    expect(content).toContain('function renderVraagKaart');
+    expect(content).toContain('function renderRondeKaart');
+    expect(content).toContain('function initStap4');
+    expect(content).toContain('function genereerRondeAI');
+    expect(content).toContain('function voegOptieToe');
   });
 
   it('docent-setup.js bevat geen alert() aanroepen', () => {
