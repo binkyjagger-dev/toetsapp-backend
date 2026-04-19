@@ -483,3 +483,22 @@ function renderRondeKaart(n) {
   clone.querySelector('.ronde-optie-toevoegen').onclick = () => voegOptieToe(n);
   return clone;
 }
+
+function toonRondeInvoer(n) {
+  const kaart = document.getElementById('ronde-kaart-' + n);
+  if (!kaart) return;
+  kaart.querySelector('.ronde-leeg').style.display = 'none';
+  kaart.querySelector('.ronde-invoer').style.display = 'block';
+  voegOptieToe(n);
+  voegOptieToe(n);
+}
+
+function voegOptieToe(n) {
+  const kaart = document.getElementById('ronde-kaart-' + n);
+  if (!kaart) return;
+  const container = kaart.querySelector('.ronde-opties-container');
+  const tmpl = document.getElementById('optie-template');
+  const clone = tmpl.content.cloneNode(true);
+  koppelOptieHandlers(clone, n);
+  container.appendChild(clone);
+}
