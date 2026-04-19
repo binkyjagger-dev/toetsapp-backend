@@ -64,6 +64,7 @@ async function maakSessie() {
     localStorage.setItem('mol_docent_code', docentCode);
     localStorage.setItem('mol_sessie_id',   sessieId);
     laadDocentSessie();
+    await laadSessieLijst();
   } catch(e) {
     err.textContent = 'Fout: ' + e.message;
     err.style.display = 'block';
