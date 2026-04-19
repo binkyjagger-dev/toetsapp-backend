@@ -1289,5 +1289,49 @@ select { cursor: pointer; }
 <input type="hidden" id="setup-les-content" value="">
 <div id="les-kiezer-preview" style="display:none;"></div>
 
+<template id="ronde-kaart-template">
+  <div class="ronde-kaart">
+    <div class="ronde-kaart-header">
+      <div class="ronde-kaart-label">Ronde <span class="ronde-nr"></span></div>
+      <button class="ronde-ai-btn">✦ Genereer met AI</button>
+    </div>
+    <div class="ronde-leeg">
+      <div class="ronde-leeg-tekst">Nog geen vraag ingesteld</div>
+      <button class="ronde-ai-groot-btn">✦ Genereer vraag + antwoorden + feedback</button>
+      <div class="ronde-of">of</div>
+      <button class="ronde-zelf-btn">Zelf invoeren</button>
+    </div>
+    <div class="ronde-invoer" style="display:none;">
+      <label class="ronde-vraag-label">Vraag</label>
+      <input type="text" class="ronde-vraag-input" placeholder="Typ hier de vraag..." />
+      <div class="ronde-opties-label">Antwoordopties</div>
+      <div class="ronde-opties-container"></div>
+      <button class="ronde-optie-toevoegen">+ Optie toevoegen</button>
+    </div>
+  </div>
+</template>
+
+<template id="optie-template">
+  <div class="optie-blok">
+    <div class="optie-rij">
+      <button class="optie-correct-btn">✓</button>
+      <input type="text" class="optie-tekst-input" placeholder="Antwoord..." />
+      <div class="optie-punten-wrap">
+        <button class="optie-punten-min">−</button>
+        <span class="optie-punten-val">0</span>
+        <button class="optie-punten-plus">+</button>
+      </div>
+      <button class="optie-del-btn">×</button>
+    </div>
+    <div class="optie-feedback-sectie">
+      <div class="optie-feedback-header">
+        <span class="optie-feedback-label">Feedback</span>
+        <button class="optie-ai-feedback-btn">✦ Genereer</button>
+      </div>
+      <textarea class="optie-feedback-input" rows="2" placeholder="Feedback voor de speler..."></textarea>
+    </div>
+  </div>
+</template>
+
 </body>
 </html>
