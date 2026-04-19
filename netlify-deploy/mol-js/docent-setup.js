@@ -470,3 +470,16 @@ function kiesGroepGrootte(n) {
     btn.classList.toggle('actief', parseInt(btn.dataset.n) === n);
   });
 }
+
+function renderRondeKaart(n) {
+  const tmpl = document.getElementById('ronde-kaart-template');
+  const clone = tmpl.content.cloneNode(true);
+  const kaart = clone.querySelector('.ronde-kaart');
+  kaart.id = 'ronde-kaart-' + n;
+  clone.querySelector('.ronde-nr').textContent = n;
+  clone.querySelector('.ronde-ai-btn').onclick = () => genereerRondeAI(n);
+  clone.querySelector('.ronde-ai-groot-btn').onclick = () => genereerRondeAI(n);
+  clone.querySelector('.ronde-zelf-btn').onclick = () => toonRondeInvoer(n);
+  clone.querySelector('.ronde-optie-toevoegen').onclick = () => voegOptieToe(n);
+  return clone;
+}
