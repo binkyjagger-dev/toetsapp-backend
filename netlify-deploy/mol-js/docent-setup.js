@@ -587,3 +587,26 @@ function vulOptieMetData(blok, opt) {
     if (btn) toggleCorrect(btn);
   }
 }
+
+async function genereerFeedbackOptie(btn, n) {
+  const blok = btn.closest('.optie-blok');
+  if (!blok) return;
+  const kaart = document.getElementById('ronde-kaart-' + n);
+  const vraag = kaart?.querySelector('.ronde-vraag-input')?.value || '';
+  const optie = blok.querySelector('.optie-tekst-input')?.value || '';
+  const correct = blok.querySelector('.optie-correct-btn')?.classList.contains('actief') || false;
+  const lesContent = document.getElementById('setup-les-content')?.value || '';
+  btn.textContent = '⏳';
+  try {
+    const res = await apiFetch('/api/mol/genereer-feedback', {
+      method: 'POST',
+      body: JSON.stringify({ vraag, optie, correct, les_content: lesContent }),
+    });
+    const textarea = blok.querySelector('.optie-feedback-input');
+    if (textarea) textarea.value = res.feedback || '';
+  } catch(e) {
+    toast('Feedback mislukt: ' + e.message);
+  } finally {
+    btn.textContent = '✦ Genereer';
+  }
+}
