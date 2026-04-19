@@ -8,7 +8,9 @@ function goToLeerlingenSetup() {
   setupData.lesNaam    = naam;
   setupData.lesContent = content;
   setupData.nRondes       = parseInt(document.getElementById('setup-n-rondes').value);
-  setupData.groepGrootte  = parseInt(document.getElementById('setup-groep-grootte').value);
+  setupData.groepGrootte = 3;
+  const actiefBtn = document.querySelector('#setup-groep-grootte .grootte-btn.actief');
+  if (actiefBtn) { setupData.groepGrootte = parseInt(actiefBtn.dataset.n) || 3; }
   setupData.timerDiscussie = 0; // discussiefase niet meer gebruikt
   setupData.timerStem      = parseInt(document.getElementById('setup-timer-stem').value) || 60;
   showScreen('screen-sessie-stap2');
