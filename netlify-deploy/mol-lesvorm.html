@@ -929,12 +929,12 @@ select { cursor: pointer; }
       </div>
       <button class="btn btn-gold" onclick="nieuweSessie()">+ Nieuwe sessie</button>
     </div>
-    <div id="sessie-lijst-container">
-      <div class="empty-state" style="padding:3rem 1rem;text-align:center;color:var(--muted);">
-        <div style="font-size:2rem;margin-bottom:0.5rem;">📋</div>
-        <p>Nog geen sessies — klik op "+ Nieuwe sessie" om te beginnen.</p>
-      </div>
+    <div id="sessie-lijst-loading" style="display:none;padding:2rem;text-align:center;color:var(--muted);">Laden...</div>
+    <div id="sessie-lijst-leeg" style="display:none;padding:3rem 1rem;text-align:center;color:var(--muted);">
+      <div style="font-size:2rem;margin-bottom:0.5rem;">📋</div>
+      <p>Nog geen sessies — klik op "+ Nieuwe sessie" om te beginnen.</p>
     </div>
+    <div id="sessie-lijst-wrap" style="display:none;"></div>
   </div>
 </div>
 
