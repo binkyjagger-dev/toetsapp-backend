@@ -2077,6 +2077,33 @@ app.get('/api/mol/sessies/:id/ronde-feedback', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── POST /api/mol/genereer-vraag — AI genereert MC-vraag per ronde ──
+app.post('/api/mol/genereer-vraag', verifyToken, async (req, res) => {
+  try {
+    const { ronde_nr, les_content } = req.body;
+    const prompt = `Je bent een economieleraar. Genereer een meerkeuzevraag voor ronde ${ronde_nr} op basis van deze lesinhoud: ${les_content || 'economie VWO'}.
+
+Geef precies dit JSON formaat terug, niets anders:
+{
+  "vraag": "De vraagstelling hier",
+  "opties": [
+    {"tekst": "Optie A", "correct": true, "punten": 10, "feedback": "Uitleg waarom correct"},
+    {"tekst": "Optie B", "correct": false, "punten": 0, "feedback": "Uitleg waarom fout"},
+    {"tekst": "Optie C", "correct": false, "punten": 0, "feedback": "Uitleg waarom fout"}
+  ]
+}`;
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const tekst = message?.content?.[0]?.text || '';
+    const clean = tekst.replace(/```json|```/g, '').trim();
+    const data = JSON.parse(clean);
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── POST /api/mol/genereer-feedback — AI-feedback per antwoordoptie ──
 app.post('/api/mol/genereer-feedback', verifyToken, async (req, res) => {
   try {
