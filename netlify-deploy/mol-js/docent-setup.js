@@ -540,3 +540,23 @@ function initStap4() {
   }
   showScreen('screen-sessie-stap4');
 }
+
+async function genereerRondeAI(n) {
+  const kaart = document.getElementById('ronde-kaart-' + n);
+  if (!kaart) return;
+  const btn = kaart.querySelector('.ronde-ai-btn');
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+  try {
+    const lesContent = document.getElementById('setup-les-content')?.value || '';
+    const res = await apiFetch('/api/mol/genereer-vraag', {
+      method: 'POST',
+      body: JSON.stringify({ ronde_nr: n, les_content: lesContent }),
+    });
+    toonRondeInvoer(n);
+    vulRondeMetAIData(n, res);
+  } catch(e) {
+    toast('Genereren mislukt: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = '✦ Genereer met AI'; btn.disabled = false; }
+  }
+}
