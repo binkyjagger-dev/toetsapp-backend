@@ -465,6 +465,7 @@ function kiesRondes(n) {
 }
 
 function kiesGroepGrootte(n) {
+  setupData.groepGrootte = n;
   document.querySelectorAll('.grootte-btn').forEach(btn => {
     btn.classList.toggle('actief', parseInt(btn.dataset.n) === n);
   });
