@@ -24,7 +24,6 @@ let groepshoofGedrukt = false;
 // ── Setup state ──────────────────────────────────────────
 let setupData   = {};
 let groepsindeling = [];
-let vragenData = [];
 
 // ── Hergebruik state ─────────────────────────────────────
 let hergebruikGroepen = [];

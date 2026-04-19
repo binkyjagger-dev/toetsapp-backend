@@ -16,7 +16,6 @@ describe('mol-js/state.js — module extractie', () => {
     expect(content).toContain('let sessieState');
     expect(content).toContain('let speler');
     expect(content).toContain('let setupData');
-    expect(content).toContain('let vragenData');
     expect(content).toContain('let groepsindeling');
     expect(content).toContain('let pollTimer');
     expect(content).toContain('let heartbeatTimer');
