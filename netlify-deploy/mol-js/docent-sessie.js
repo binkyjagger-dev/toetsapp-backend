@@ -144,12 +144,15 @@ async function laadSessieLijst() {
         </div>
         <span class="sessie-status ${statusCls}">${statusTxt}</span>
         <div class="sessie-acties">
-          ${s.status === 'afgelopen'
-            ? `<button class="btn btn-ghost btn-sm" onclick="bekijkResultaten('${s.id}')">📊 Resultaten</button>`
-            : `<button class="btn btn-gold btn-sm" onclick="openSessie('${s.id}','${s.docent_code}','${s.sessie_code}')">Openen →</button>`
-          }
+          ${s.status !== 'afgelopen' ? `
+            <button class="btn btn-gold btn-sm" onclick="startSessie('${s.id}','${s.docent_code}','${s.sessie_code}')">▶ Starten</button>
+            <button class="btn btn-ghost btn-sm" onclick="openSessie('${s.id}','${s.docent_code}','${s.sessie_code}')">Openen</button>
+            <button class="btn btn-ghost btn-sm" onclick="bewerkSessie('${s.id}')">✏ Bewerken</button>
+          ` : `
+            <button class="btn btn-ghost btn-sm" onclick="bekijkResultaten('${s.id}')">📊 Resultaten</button>
+          `}
           <button class="btn btn-ghost btn-sm" onclick="openHergebruik('${s.id}','${s.docent_code}','${escH(s.les_naam||'')}')">↺ Hergebruik</button>
-          <button class="sessie-verwijder-btn" onclick="verwijderSessie('${s.id}', '${escH(s.les_naam || 'deze sessie')}')" title="Verwijderen">🗑</button>
+          <button class="btn btn-ghost btn-sm btn-danger" onclick="verwijderSessie('${s.id}','${escH(s.les_naam||'deze sessie')}')">🗑</button>
         </div>
       </div>`;
     }).join('');
@@ -613,4 +616,15 @@ function openSessieNaAanmaken() {
 
 function printSpelcodes() {
   printBriefjes();
+}
+
+function startSessie(id, dCode, sCode) {
+  sessieId   = id;
+  docentCode = dCode;
+  sessieCode = sCode;
+  laadDocentSessie();
+}
+
+function bewerkSessie(id) {
+  toast('Bewerken komt binnenkort beschikbaar.');
 }
