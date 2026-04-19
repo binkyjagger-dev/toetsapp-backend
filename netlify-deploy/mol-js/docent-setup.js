@@ -441,7 +441,7 @@ async function laadEnToonSpelcodes() {
 // ── Navigatie-stubs voor sessie-stappen ──
 
 function naarStap2Leerlingen() { showScreen('screen-sessie-stap2'); }
-function naarStap3Mol() { showScreen('screen-sessie-stap3'); }
+function naarStap3Mol() { showScreen('screen-sessie-stap4'); }
 function naarStap4Vragen() { showScreen('screen-sessie-stap4'); }
 function nieuweSessie() { showScreen('screen-sessie-stap1'); }
 function sessieAanmakenEnStart() { maakSessie(); }
