@@ -15,6 +15,21 @@ function sluitLeerlingAf() {
 // ════════════════════════════════════════════════════════════
 // SETUP — DOCENT
 // ════════════════════════════════════════════════════════════
+function leesVragenUitDOM() {
+  const container = document.getElementById('sessie-vragen-container');
+  if (!container) return [];
+  return Array.from(container.querySelectorAll('.ronde-kaart')).map((kaart, i) => {
+    const vraag = kaart.querySelector('.ronde-vraag-input')?.value || '';
+    const opties = Array.from(kaart.querySelectorAll('.optie-blok')).map(blok => ({
+      tekst:    blok.querySelector('.optie-tekst-input')?.value || '',
+      correct:  blok.querySelector('.optie-correct-btn')?.classList.contains('actief') || false,
+      punten:   parseInt(blok.querySelector('.optie-punten-val')?.textContent) || 0,
+      feedback: blok.querySelector('.optie-feedback-input')?.value || '',
+    }));
+    return { ronde_nr: i + 1, vraag, opties };
+  });
+}
+
 async function maakSessie() {
   const leerlingen = setupData.leerlingen || parseLeerlingen();
   const err = document.getElementById('vragen-error') || document.getElementById('leerlingen-error');
@@ -38,7 +53,7 @@ async function maakSessie() {
         timer_stem:      setupData.timerStem      || 60,
         leerlingen:     setupData.leerlingen || leerlingen,
         groepsindeling: setupData.groepsindeling || null,
-        vragen:         vragenData.length > 0 ? vragenData : null,
+        vragen:         leesVragenUitDOM(),
         klas_id:        document.getElementById('setup-klas-id')?.value   || null,
         klas_naam:      document.getElementById('setup-klas-naam')?.value || null,
       }),
