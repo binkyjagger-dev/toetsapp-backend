@@ -69,6 +69,50 @@
 - Zijn alle bestaande tests nog groen?
 - Is dit één commit waard?
 
+## HTML en JavaScript structuur — altijd volgen
+
+### HTML hoort in HTML, JS hoort in JS
+- Schrijf NOOIT grote HTML-strings in JavaScript functies
+- Gebruik <template> elementen in mol-lesvorm.html of
+  index.html voor herbruikbare HTML-structuren
+- JavaScript vult alleen waarden in — het bouwt geen
+  HTML-structuur
+
+### Functies blijven klein
+- Maximaal 20-25 regels per functie
+- Als een functie groter wordt: splits op in kleinere
+  functies met elk één verantwoordelijkheid
+- Namen zijn beschrijvend: vulOpties(), leesGroepsGrootte(),
+  slaWaardeOp() — niet genereerAlles()
+
+### Geen bulk-operaties
+- Voeg nooit meer dan 50 regels code toe in één wijziging
+- Meer dan 50 regels = splitsen in aparte wijzigingen
+- Elke wijziging heeft één doel
+
+### Template patroon voor herbruikbare HTML
+  In HTML:
+  <template id="ronde-kaart-template">
+    <div class="ronde-kaart">
+      <!-- structuur hier -->
+    </div>
+  </template>
+
+  In JavaScript:
+  function renderRondeKaart(n) {
+    const template = document.getElementById(
+      'ronde-kaart-template');
+    const clone = template.content.cloneNode(true);
+    clone.querySelector('.ronde-nummer').textContent = n;
+    return clone;
+  }
+
+### Scheiding van verantwoordelijkheden
+- Structuur (wat er staat): mol-lesvorm.html
+- Gedrag (wat er gebeurt): mol-js/ bestanden
+- Stijl (hoe het eruit ziet): <style> in mol-lesvorm.html
+- Data (wat er opgeslagen wordt): server.js + Supabase
+
 ## Maximale omvang per sessie
 
 - Maximaal 3-4 wijzigingen per Claude Code sessie
