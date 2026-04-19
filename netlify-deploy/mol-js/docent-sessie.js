@@ -186,12 +186,43 @@ async function verwijderSessie(id, naam) {
 }
 
 async function laadDocentSessie() {
-  showScreen('screen-sessie-lijst');
-  document.getElementById('docent-sessie-code').textContent = sessieCode;
-  document.getElementById('docent-code-display').textContent = docentCode || '—';
-  const url = window.location.href.split('?')[0] + '?rol=speler';
-  document.getElementById('docent-speler-url').textContent = url;
-  startPoll(renderDocentSessie);
+  await genereerSpelcodesEnToon();
+  await laadSessieLijst();
+  showScreen('screen-spelcodes');
+}
+
+async function genereerSpelcodesEnToon() {
+  if (!sessieId) return;
+  try {
+    const res = await apiFetch(
+      '/api/mol/sessies/' + sessieId + '/genereer-spelcodes',
+      { method: 'POST' }
+    );
+    const sessiecodeEl = document.getElementById('spelcodes-sessiecode');
+    if (sessiecodeEl) sessiecodeEl.textContent = sessieCode || '';
+    const groepenEl = document.getElementById('spelcodes-groepen-container');
+    if (groepenEl && res.spelcodes) {
+      const perGroep = {};
+      res.spelcodes.forEach(s => {
+        const g = s.groep_naam || 'Groep';
+        if (!perGroep[g]) perGroep[g] = [];
+        perGroep[g].push(s);
+      });
+      groepenEl.innerHTML = Object.entries(perGroep).map(([groep, spelers]) => `
+        <div style="margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:700;color:#C8A951;margin-bottom:8px;">${groep}</div>
+          ${spelers.map(s => `
+            <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.1);">
+              <span style="font-size:14px;color:#fff;flex:1;">${s.naam}</span>
+              <span style="font-family:monospace;font-size:16px;font-weight:700;color:#C8A951;letter-spacing:0.2em;">${s.spelcode}</span>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+  } catch(e) {
+    toast('Spelcodes genereren mislukt: ' + e.message);
+  }
 }
 
 function startPoll(fn, interval = 4000) {
