@@ -1142,17 +1142,16 @@ app.get('/api/mol/sessie/:id/resultaten', async (req, res) => {
 });
 
 // ── DELETE /api/mol/sessie/:id — docent verwijdert sessie ────────────────────
-app.delete('/api/mol/sessie/:id', async (req, res) => {
+app.delete('/api/mol/sessie/:id', verifyToken, async (req, res) => {
   try {
-    const { docent_token } = req.query;
-    if (docent_token !== process.env.TEACHER_TOKEN && docent_token !== 'leraar123') {
-      return res.status(403).json({ error: 'Niet geautoriseerd' });
-    }
     const sid = req.params.id;
-    // Verwijder alle gerelateerde data in de juiste volgorde
+    const { data: sessie } = await supabase.from('mol_sessies').select('leraar_id').eq('id', sid).single();
+    if (!sessie) return res.status(404).json({ error: 'sessie niet gevonden' });
+    if (sessie.leraar_id !== req.leraar.id) return res.status(403).json({ error: 'geen toegang' });
     await supabase.from('mol_test_antwoorden').delete().eq('sessie_id', sid);
     await supabase.from('mol_groep_stemmen').delete().eq('sessie_id', sid);
     await supabase.from('mol_antwoorden').delete().eq('sessie_id', sid);
+    await supabase.from('mol_briefing_klaar').delete().eq('sessie_id', sid);
     await supabase.from('mol_cases').delete().eq('sessie_id', sid);
     await supabase.from('mol_leerlingen').delete().eq('sessie_id', sid);
     await supabase.from('mol_groepen').delete().eq('sessie_id', sid);

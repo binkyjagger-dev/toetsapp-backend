@@ -177,7 +177,7 @@ function openSessie(id, dCode, sCode) {
 async function verwijderSessie(id, naam) {
   if (!confirm(`Sessie "${naam}" definitief verwijderen? Alle leerlingdata gaat verloren.`)) return;
   try {
-    await apiFetch(`/api/mol/sessie/${id}?docent_token=${encodeURIComponent(docentToken)}`, { method: 'DELETE' });
+    await apiFetch(`/api/mol/sessie/${id}`, { method: 'DELETE' });
     toast(`✓ Sessie "${naam}" verwijderd`);
     laadSessieLijst();
   } catch(e) {
