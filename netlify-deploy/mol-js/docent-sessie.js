@@ -232,7 +232,26 @@ function startPoll(fn, interval = 4000) {
 }
 
 async function renderDocentSessie() {
-  // Dashboard nog niet geimplementeerd — wordt gebouwd in een latere sessie
+  if (!sessieId) { toast('Geen sessie geselecteerd'); return; }
+  showScreen('screen-docent-dashboard');
+  try {
+    const data = await apiFetch('/api/mol/sessies/' + sessieId + '/dashboard');
+    const sessie = data.sessie || {};
+    const stats  = data.stats  || {};
+    document.getElementById('dashboard-sessie-naam').textContent = sessie.les_naam || 'Sessie';
+    document.getElementById('dashboard-klas-naam').textContent   = sessie.klas_naam || '';
+    document.getElementById('dashboard-code').textContent        = sessie.sessie_code || '—';
+    document.getElementById('dashboard-stat-online').textContent  = stats.online ?? '—';
+    document.getElementById('dashboard-stat-groepen').textContent = stats.aantal_groepen ?? '—';
+    const statusEl = document.getElementById('dashboard-stat-status');
+    statusEl.textContent = stats.status_label || '—';
+    statusEl.classList.remove('status-actief', 'status-gestopt');
+    if (stats.status_label === 'Actief')  statusEl.classList.add('status-actief');
+    if (stats.status_label === 'Gestopt') statusEl.classList.add('status-gestopt');
+  } catch (e) {
+    toast('Netwerkfout');
+    showScreen('screen-sessie-lijst');
+  }
 }
 
 function renderDocentFase(sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden, online) {
