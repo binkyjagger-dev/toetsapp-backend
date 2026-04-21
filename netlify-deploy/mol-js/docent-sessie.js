@@ -171,7 +171,7 @@ function openSessie(id, dCode, sCode) {
   sessieCode = sCode;
   localStorage.setItem('mol_docent_code', dCode);
   localStorage.setItem('mol_sessie_id',   id);
-  laadDocentSessie();
+  renderDocentSessie();
 }
 
 async function verwijderSessie(id, naam) {
@@ -666,7 +666,7 @@ function startSessie(id, dCode, sCode) {
   sessieId   = id;
   docentCode = dCode;
   sessieCode = sCode;
-  laadDocentSessie();
+  renderDocentSessie();
 }
 
 function bewerkSessie(id) {
