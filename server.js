@@ -1866,6 +1866,38 @@ app.get('/api/mol/sessies/:id/groep-status', verifyToken, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── GET /api/mol/sessies/:id/dashboard — docent-dashboard data ──
+app.get('/api/mol/sessies/:id/dashboard', verifyToken, async (req, res) => {
+  try {
+    const sid = req.params.id;
+    const [{ data: sessie }, { data: groepen }, { data: leerlingen }] = await Promise.all([
+      supabase.from('mol_sessies').select('id, sessie_code, les_naam, klas_naam, status, leraar_id').eq('id', sid).single(),
+      supabase.from('mol_groepen').select('id, naam, fase').eq('sessie_id', sid),
+      supabase.from('mol_leerlingen').select('id, naam, groep_id, is_groepshoofd, online_at').eq('sessie_id', sid),
+    ]);
+    if (!sessie) return res.status(404).json({ error: 'sessie niet gevonden' });
+    if (sessie.leraar_id !== req.leraar.id) return res.status(403).json({ error: 'geen toegang' });
+
+    const nu = Date.now();
+    const spelersByGroep = {};
+    let totalOnline = 0;
+    (leerlingen || []).forEach(l => {
+      const online = l.online_at !== null && (nu - l.online_at) < 90000;
+      if (online) totalOnline++;
+      if (!spelersByGroep[l.groep_id]) spelersByGroep[l.groep_id] = [];
+      spelersByGroep[l.groep_id].push({
+        id: l.id, naam: l.naam, online, is_groepshoofd: !!l.is_groepshoofd,
+      });
+    });
+
+    res.json({
+      sessie: { id: sessie.id, sessie_code: sessie.sessie_code, les_naam: sessie.les_naam, klas_naam: sessie.klas_naam, status: sessie.status },
+      groepen: (groepen || []).map(g => ({ id: g.id, naam: g.naam, fase: g.fase, spelers: spelersByGroep[g.id] || [] })),
+      stats: { online: totalOnline, aantal_groepen: (groepen || []).length, status_label: sessie.status === 'afgelopen' ? 'Gestopt' : 'Actief' },
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── POST /api/mol/sessies/:id/briefing-start ──
 app.post('/api/mol/sessies/:id/briefing-start', async (req, res) => {
   try {
