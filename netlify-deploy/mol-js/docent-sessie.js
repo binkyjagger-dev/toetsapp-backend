@@ -248,10 +248,48 @@ async function renderDocentSessie() {
     statusEl.classList.remove('status-actief', 'status-gestopt');
     if (stats.status_label === 'Actief')  statusEl.classList.add('status-actief');
     if (stats.status_label === 'Gestopt') statusEl.classList.add('status-gestopt');
+    renderGroepskaarten(data.groepen || []);
   } catch (e) {
     toast('Netwerkfout');
     showScreen('screen-sessie-lijst');
   }
+}
+
+function renderGroepskaarten(groepen) {
+  const grid = document.getElementById('dashboard-groepen-grid');
+  if (!grid) return;
+  if (!groepen || groepen.length === 0) {
+    grid.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);">Nog geen groepen gevormd</div>';
+    return;
+  }
+  const FASE_LABELS = {
+    briefing: 'Briefing', individueel: 'Individuele vraag',
+    groep: 'Groepsfase', moltest: 'Moltest', reveal: 'Reveal',
+  };
+  grid.innerHTML = groepen.map(g => {
+    const faseKey = FASE_LABELS[g.fase] ? g.fase : 'briefing';
+    const faseLabel = FASE_LABELS[faseKey];
+    const spelers = g.spelers || [];
+    const spelersHtml = spelers.length === 0
+      ? '<div style="font-size:0.82rem;color:var(--muted);padding:0.5rem 0;">Geen leerlingen</div>'
+      : spelers.map(s => {
+        const naam = escH(s.naam || '[naamloos]');
+        const stipClass = s.online ? 'stip-online' : 'stip-offline';
+        const kroon = s.is_groepshoofd ? ' 👑' : '';
+        const offline = s.online ? '' : ' <span style="font-size:0.72rem;color:var(--muted);">— offline</span>';
+        return `<div class="groepskaart-speler" style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;">
+          <span class="${stipClass}"></span>
+          <span style="font-size:0.85rem;color:var(--text);">${naam}${kroon}</span>${offline}
+        </div>`;
+      }).join('');
+    return `<div class="groepskaart" style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:1rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <span style="font-weight:700;font-size:0.95rem;color:var(--gold-l);">${escH(g.naam)}</span>
+        <span class="fase-${faseKey}" style="font-size:0.68rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:6px;border:1px solid;">${faseLabel}</span>
+      </div>
+      ${spelersHtml}
+    </div>`;
+  }).join('');
 }
 
 function renderDocentFase(sessie, leerlingen, groepen, cases, antwoorden, groepStemmen, testAntwoorden, online) {
