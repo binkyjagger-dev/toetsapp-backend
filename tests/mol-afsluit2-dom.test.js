@@ -130,3 +130,14 @@ describe('Newlines behouden in textarea', () => {
     expect(val.match(/^- .+/gm).length).toBe(3);
   });
 });
+
+describe('Preview-element bij lesselectie', () => {
+  it('preview wordt zichtbaar met les-naam na selectie', () => {
+    document.getElementById('sessie-les-select').value = 'les-1';
+    onMolLesKeuze();
+    const prev = document.getElementById('les-kiezer-preview');
+    expect(prev.style.display).toBe('block');
+    expect(prev.textContent).toContain('✓');
+    expect(prev.textContent).toContain('Economie H4');
+  });
+});
