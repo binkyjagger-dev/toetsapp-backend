@@ -54,7 +54,7 @@ function setupDOM() {
       <option value="les-2">Bedrijfseconomie V5</option>
     </select>
     <input id="setup-les-naam" value="">
-    <input id="setup-les-content" value="">
+    <textarea id="setup-les-content" style="display:none"></textarea>
     <div id="les-kiezer-preview" style="display:none;"></div>
     <div id="ronde-kaart-1"><span class="ronde-ai-btn"></span></div>
   `;
@@ -118,5 +118,15 @@ describe('Schakel 2 — genereerRondeAI leest uit setupData', () => {
     await genereerRondeAI(1);
     const body = JSON.parse(global.apiFetch.mock.calls[0][1].body);
     expect(body.les_content).toBe('');
+  });
+});
+
+describe('Newlines behouden in textarea', () => {
+  it('textarea behoudt newlines uit les.content', () => {
+    document.getElementById('sessie-les-select').value = 'les-1';
+    onMolLesKeuze();
+    const val = document.getElementById('setup-les-content').value;
+    expect(val.split('\n').length).toBe(3);
+    expect(val.match(/^- .+/gm).length).toBe(3);
   });
 });
