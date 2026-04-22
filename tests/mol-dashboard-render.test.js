@@ -20,20 +20,21 @@ function getFunctionBody(src, naam) {
 describe('renderDocentSessie — dashboard', () => {
   const c = fs.readFileSync(docentSessiePath, 'utf8');
   const body = getFunctionBody(c, 'renderDocentSessie');
+  const refreshBody = getFunctionBody(c, 'refreshDashboardData');
 
   it('happy path: toont dashboard en fetcht data', () => {
     expect(body).toContain("showScreen('screen-docent-dashboard')");
-    expect(body).toContain('/api/mol/sessies/');
-    expect(body).toContain('/dashboard');
-    expect(body).toContain('dashboard-sessie-naam');
-    expect(body).toContain('dashboard-stat-online');
-    expect(body).toContain('les_naam');
-    expect(body).toContain('stats.online');
+    expect(refreshBody).toContain('/api/mol/sessies/');
+    expect(refreshBody).toContain('/dashboard');
+    expect(refreshBody).toContain('dashboard-sessie-naam');
+    expect(refreshBody).toContain('dashboard-stat-online');
+    expect(refreshBody).toContain('les_naam');
+    expect(refreshBody).toContain('stats.online');
   });
 
   it('sessie gestopt: status-gestopt klasse wordt gezet', () => {
-    expect(body).toContain('status-gestopt');
-    expect(body).toContain('status-actief');
+    expect(refreshBody).toContain('status-gestopt');
+    expect(refreshBody).toContain('status-actief');
   });
 
   it('leeg sessieId: toast en geen navigatie', () => {
@@ -49,8 +50,8 @@ describe('renderDocentSessie — dashboard', () => {
   });
 
   it('klasse-reset: verwijdert oude status-klasse voor nieuwe toevoegen', () => {
-    expect(body).toMatch(/classList\.remove\(.*status-actief/);
-    expect(body).toMatch(/classList\.remove\(.*status-gestopt/);
+    expect(refreshBody).toMatch(/classList\.remove\(.*status-actief/);
+    expect(refreshBody).toMatch(/classList\.remove\(.*status-gestopt/);
   });
 
   it('CSS klassen status-actief en status-gestopt bestaan in HTML', () => {

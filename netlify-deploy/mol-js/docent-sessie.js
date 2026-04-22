@@ -1,11 +1,13 @@
 function naarSessieLijst() {
   clearInterval(pollTimer);
+  stopDashboardPolling();
   showScreen('screen-sessie-lijst');
   laadSessieLijst();
 }
 
 function sluitLeerlingAf() {
   clearInterval(pollTimer);
+  stopDashboardPolling();
   stopHeartbeat();
   showScreen('screen-sessie-lijst');
 }
@@ -231,28 +233,61 @@ function startPoll(fn, interval = 4000) {
   pollTimer = setInterval(fn, interval);
 }
 
+let dashboardPollInterval = null;
+let dashboardPollFails = 0;
+
+async function refreshDashboardData() {
+  const data = await apiFetch('/api/mol/sessies/' + sessieId + '/dashboard');
+  const sessie = data.sessie || {};
+  const stats  = data.stats  || {};
+  document.getElementById('dashboard-sessie-naam').textContent = sessie.les_naam || 'Sessie';
+  document.getElementById('dashboard-klas-naam').textContent   = sessie.klas_naam || '';
+  document.getElementById('dashboard-code').textContent        = sessie.sessie_code || '—';
+  document.getElementById('dashboard-stat-online').textContent  = stats.online ?? '—';
+  document.getElementById('dashboard-stat-groepen').textContent = stats.aantal_groepen ?? '—';
+  const statusEl = document.getElementById('dashboard-stat-status');
+  statusEl.textContent = stats.status_label || '—';
+  statusEl.classList.remove('status-actief', 'status-gestopt');
+  if (stats.status_label === 'Actief')  statusEl.classList.add('status-actief');
+  if (stats.status_label === 'Gestopt') statusEl.classList.add('status-gestopt');
+  renderGroepskaarten(data.groepen || []);
+}
+
 async function renderDocentSessie() {
   if (!sessieId) { toast('Geen sessie geselecteerd'); return; }
   showScreen('screen-docent-dashboard');
   try {
-    const data = await apiFetch('/api/mol/sessies/' + sessieId + '/dashboard');
-    const sessie = data.sessie || {};
-    const stats  = data.stats  || {};
-    document.getElementById('dashboard-sessie-naam').textContent = sessie.les_naam || 'Sessie';
-    document.getElementById('dashboard-klas-naam').textContent   = sessie.klas_naam || '';
-    document.getElementById('dashboard-code').textContent        = sessie.sessie_code || '—';
-    document.getElementById('dashboard-stat-online').textContent  = stats.online ?? '—';
-    document.getElementById('dashboard-stat-groepen').textContent = stats.aantal_groepen ?? '—';
-    const statusEl = document.getElementById('dashboard-stat-status');
-    statusEl.textContent = stats.status_label || '—';
-    statusEl.classList.remove('status-actief', 'status-gestopt');
-    if (stats.status_label === 'Actief')  statusEl.classList.add('status-actief');
-    if (stats.status_label === 'Gestopt') statusEl.classList.add('status-gestopt');
-    renderGroepskaarten(data.groepen || []);
+    await refreshDashboardData();
+    startDashboardPolling();
   } catch (e) {
     toast('Netwerkfout');
+    stopDashboardPolling();
     showScreen('screen-sessie-lijst');
   }
+}
+
+function startDashboardPolling() {
+  stopDashboardPolling();
+  dashboardPollFails = 0;
+  dashboardPollInterval = setInterval(async function() {
+    if (document.visibilityState !== 'visible') return;
+    try {
+      await refreshDashboardData();
+      dashboardPollFails = 0;
+    } catch (e) {
+      dashboardPollFails++;
+      if (dashboardPollFails >= 3) {
+        toast('Verbinding hapert');
+        dashboardPollFails = 0;
+      }
+    }
+  }, 4000);
+}
+
+function stopDashboardPolling() {
+  if (dashboardPollInterval) clearInterval(dashboardPollInterval);
+  dashboardPollInterval = null;
+  dashboardPollFails = 0;
 }
 
 function renderGroepskaarten(groepen) {
