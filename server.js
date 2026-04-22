@@ -1897,6 +1897,21 @@ app.get('/api/mol/sessies/:id/dashboard', verifyToken, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── PATCH /api/mol/sessies/:id/status — docent zet sessie op afgelopen ──
+app.patch('/api/mol/sessies/:id/status', verifyToken, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (status !== 'afgelopen') return res.status(400).json({ error: 'status ongeldig' });
+    const sid = req.params.id;
+    const { data: sessie } = await supabase.from('mol_sessies').select('leraar_id').eq('id', sid).single();
+    if (!sessie) return res.status(404).json({ error: 'sessie niet gevonden' });
+    if (sessie.leraar_id !== req.leraar.id) return res.status(403).json({ error: 'geen toegang' });
+    const { error } = await supabase.from('mol_sessies').update({ status: 'afgelopen' }).eq('id', sid);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── POST /api/mol/sessies/:id/briefing-start ──
 app.post('/api/mol/sessies/:id/briefing-start', async (req, res) => {
   try {

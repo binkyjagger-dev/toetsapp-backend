@@ -258,6 +258,12 @@ async function renderDocentSessie() {
   showScreen('screen-docent-dashboard');
   try {
     await refreshDashboardData();
+    const btnStop = document.getElementById('btn-stop-sessie');
+    if (btnStop && !btnStop.dataset.bound) { btnStop.dataset.bound = '1'; btnStop.addEventListener('click', stopSessie); }
+    const btnCodes = document.getElementById('btn-toon-spelcodes');
+    if (btnCodes && !btnCodes.dataset.bound) { btnCodes.dataset.bound = '1'; btnCodes.addEventListener('click', toonSpelcodes); }
+    const btnTerug = document.getElementById('btn-terug-dashboard');
+    if (btnTerug && !btnTerug.dataset.bound) { btnTerug.dataset.bound = '1'; btnTerug.addEventListener('click', terugNaarDashboard); }
     startDashboardPolling();
   } catch (e) {
     toast('Netwerkfout');
@@ -288,6 +294,61 @@ function stopDashboardPolling() {
   if (dashboardPollInterval) clearInterval(dashboardPollInterval);
   dashboardPollInterval = null;
   dashboardPollFails = 0;
+}
+
+async function stopSessie() {
+  if (!sessieId) { toast('Geen sessie'); return; }
+  if (!confirm('Weet je zeker dat je de sessie wil stoppen? Dit kan niet ongedaan worden gemaakt.')) return;
+  const btn = document.getElementById('btn-stop-sessie');
+  if (btn) { if (btn.disabled) return; btn.disabled = true; }
+  try {
+    await apiFetch('/api/mol/sessies/' + sessieId + '/status', {
+      method: 'PATCH', body: JSON.stringify({ status: 'afgelopen' }),
+    });
+    stopDashboardPolling();
+    showScreen('screen-sessie-lijst');
+    laadSessieLijst();
+  } catch (e) {
+    toast('Stoppen mislukt: ' + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function toonSpelcodes() {
+  if (!sessieId) { toast('Geen sessie'); return; }
+  stopDashboardPolling();
+  try {
+    const state = await apiFetch('/api/mol/sessie/' + sessieId);
+    const sessie = state.sessie || {};
+    const leerlingen = state.leerlingen || [];
+    const groepen = state.groepen || [];
+    document.getElementById('dash-spelcodes-sessienaam').textContent = sessie.les_naam || 'Sessie';
+    document.getElementById('dash-spelcodes-code').textContent = sessie.sessie_code || '—';
+    const container = document.getElementById('dash-spelcodes-groepen');
+    if (groepen.length === 0) {
+      container.innerHTML = '<p style="color:var(--muted);text-align:center;">Nog geen groepen met spelcodes</p>';
+    } else {
+      container.innerHTML = groepen.map(g => {
+        const leden = leerlingen.filter(l => l.groep_id === g.id);
+        return `<div style="margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:700;color:var(--gold-l);margin-bottom:8px;">${escH(g.naam)}</div>
+          ${leden.map(l => `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.1);">
+            <span style="font-size:14px;color:#fff;flex:1;">${escH(l.naam)}</span>
+            <span style="font-family:monospace;font-size:16px;font-weight:700;color:var(--gold-l);letter-spacing:0.2em;">${escH(l.speler_code || '—')}</span>
+          </div>`).join('')}
+        </div>`;
+      }).join('');
+    }
+    showScreen('screen-dashboard-spelcodes');
+  } catch (e) {
+    toast('Spelcodes laden mislukt: ' + e.message);
+    startDashboardPolling();
+  }
+}
+
+function terugNaarDashboard() {
+  renderDocentSessie();
 }
 
 function renderGroepskaarten(groepen) {
