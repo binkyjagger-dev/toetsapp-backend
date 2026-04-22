@@ -23,7 +23,7 @@ global.hergebruikDocentCode = null;
 global.showScreen = jest.fn();
 global.toast = jest.fn();
 global.apiFetch = jest.fn();
-global.escH = (s) => String(s);
+global.escH = (s) => { const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; };
 global.stopHeartbeat = jest.fn();
 global.confirm = jest.fn(() => true);
 global.crypto = { randomUUID: () => 'test-uuid' };
@@ -139,5 +139,44 @@ describe('Preview-element bij lesselectie', () => {
     expect(prev.style.display).toBe('block');
     expect(prev.textContent).toContain('✓');
     expect(prev.textContent).toContain('Economie H4');
+  });
+
+  it('preview toont leerdoelen als lijst', () => {
+    document.getElementById('sessie-les-select').value = 'les-1';
+    onMolLesKeuze();
+    const prev = document.getElementById('les-kiezer-preview');
+    expect(prev.textContent).toContain('3 leerdoelen');
+    expect(prev.textContent).toContain('Vraag en aanbod');
+    expect(prev.textContent).toContain('Marktevenwicht');
+    expect(prev.textContent).toContain('Elasticiteit');
+  });
+
+  it('preview zonder leerdoelen toont alleen naam', () => {
+    global.molLessenCache = [{ id: 'les-1', name: 'Leeg Vak', content: 'Geen leerdoelen hier' }];
+    document.getElementById('sessie-les-select').value = 'les-1';
+    onMolLesKeuze();
+    const prev = document.getElementById('les-kiezer-preview');
+    expect(prev.textContent).toContain('Leeg Vak');
+    expect(prev.textContent).not.toMatch(/\d+ leerdoel/);
+  });
+
+  it('XSS-bescherming in leerdoelen', () => {
+    global.molLessenCache = [{ id: 'les-1', name: 'Test', content: "- <script>alert('xss')</script>\n- Normaal doel" }];
+    document.getElementById('sessie-les-select').value = 'les-1';
+    onMolLesKeuze();
+    const prev = document.getElementById('les-kiezer-preview');
+    expect(prev.innerHTML).not.toContain('<script>');
+    expect(prev.textContent).toContain('script');
+    expect(prev.textContent).toContain('Normaal doel');
+  });
+
+  it('hervullen wist oude leerdoelen', () => {
+    document.getElementById('sessie-les-select').value = 'les-1';
+    onMolLesKeuze();
+    document.getElementById('sessie-les-select').value = 'les-2';
+    onMolLesKeuze();
+    const prev = document.getElementById('les-kiezer-preview');
+    expect(prev.textContent).toContain('Balansanalyse');
+    expect(prev.textContent).not.toContain('Vraag en aanbod');
   });
 });

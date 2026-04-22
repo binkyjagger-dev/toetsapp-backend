@@ -171,7 +171,12 @@ function onMolLesKeuze() {
   const aantalLd = (les.content?.match(/^- .+/gm) || []).length;
   const prev = document.getElementById('les-kiezer-preview');
   if (prev) {
-    prev.textContent = '✓ ' + les.name + (aantalLd ? ' · ' + aantalLd + ' leerdoelen' : '');
+    const leerdoelen = (les.content?.match(/^- .+/gm) || []).map(l => l.slice(2).trim());
+    const kopTekst = '✓ ' + escH(les.name) + (leerdoelen.length ? ' · ' + leerdoelen.length + ' leerdoel' + (leerdoelen.length > 1 ? 'en' : '') : '');
+    const lijstHtml = leerdoelen.length
+      ? '<div style="margin-top:0.4rem;font-size:0.78rem;color:var(--text2);">' + leerdoelen.map(d => '• ' + escH(d)).join('<br>') + '</div>'
+      : '';
+    prev.innerHTML = '<div style="font-size:0.82rem;color:var(--gold-l);font-weight:600;">' + kopTekst + '</div>' + lijstHtml;
     prev.style.display = 'block';
   }
 }
