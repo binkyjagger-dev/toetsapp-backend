@@ -153,7 +153,6 @@ async function laadSessieLijst() {
           ` : `
             <button class="btn btn-ghost btn-sm" onclick="bekijkResultaten('${s.id}')">📊 Resultaten</button>
           `}
-          <button class="btn btn-ghost btn-sm" onclick="openHergebruik('${s.id}','${s.docent_code}','${escH(s.les_naam||'')}')">↺ Hergebruik</button>
           <button class="btn btn-ghost btn-sm btn-danger" onclick="verwijderSessie('${s.id}','${escH(s.les_naam||'deze sessie')}')">🗑</button>
         </div>
       </div>`;
@@ -264,6 +263,8 @@ async function renderDocentSessie() {
     if (btnCodes && !btnCodes.dataset.bound) { btnCodes.dataset.bound = '1'; btnCodes.addEventListener('click', toonSpelcodes); }
     const btnTerug = document.getElementById('btn-terug-dashboard');
     if (btnTerug && !btnTerug.dataset.bound) { btnTerug.dataset.bound = '1'; btnTerug.addEventListener('click', terugNaarDashboard); }
+    const btnLijst = document.getElementById('btn-terug-sessielijst');
+    if (btnLijst && !btnLijst.dataset.bound) { btnLijst.dataset.bound = '1'; btnLijst.addEventListener('click', terugNaarSessielijst); }
     startDashboardPolling();
   } catch (e) {
     toast('Netwerkfout');
@@ -349,6 +350,12 @@ async function toonSpelcodes() {
 
 function terugNaarDashboard() {
   renderDocentSessie();
+}
+
+function terugNaarSessielijst() {
+  stopDashboardPolling();
+  laadSessieLijst();
+  showScreen('screen-sessie-lijst');
 }
 
 function renderGroepskaarten(groepen) {

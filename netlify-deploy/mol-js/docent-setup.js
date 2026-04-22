@@ -133,7 +133,14 @@ async function laadEnToonSpelcodes() {
 
 // ── Navigatie-stubs voor sessie-stappen ──
 
-function naarStap2Leerlingen() { showScreen('screen-sessie-stap2'); }
+function naarStap2Leerlingen() {
+  const naam = (document.getElementById('sessie-naam')?.value || '').trim();
+  if (!naam) { toast('Vul een sessie-naam in'); return; }
+  setupData.lesNaam    = naam;
+  setupData.lesContent = (document.getElementById('setup-les-content')?.value || '').trim();
+  setupData.nRondes    = parseInt(document.getElementById('setup-n-rondes')?.value) || 3;
+  showScreen('screen-sessie-stap2');
+}
 function naarStap3Mol() { initStap4(); showScreen('screen-sessie-stap4'); }
 function naarStap4Vragen() { showScreen('screen-sessie-stap4'); }
 function nieuweSessie() { showScreen('screen-sessie-stap1'); }
