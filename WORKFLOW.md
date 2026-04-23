@@ -71,6 +71,16 @@ Jouw taak:
    - Geschatte ticket-grootte: XS/S/M/L. Bij L: splits op.
 4. Schrijf het plan pas naar /tickets/TICKET-XXX.md zodra ik akkoord geef.
 
+Voor handmatige stappen (wat Martijn zelf moet doen): volg de regel uit 
+CLAUDE.md §"Handmatige stappen voor Martijn". Als het blok handmatig werk 
+complex of onbekend is voor een onervaren developer, voeg zinspelende 
+screenshots/beschrijvingen van UI toe ("in de linker sidebar zie je een 
+tandwiel-icoon"). Wees uitvoerig.
+
+Als handmatige stappen vereisen dat Martijn een tool installeert die hij 
+misschien niet kent: voeg expliciet installatie-instructies toe, ook al 
+lijkt het triviaal.
+
 Je mag GEEN code wijzigen. Je bent Architect, niet Builder.
 ```
 

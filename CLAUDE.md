@@ -121,3 +121,24 @@
   één commit
 - Nooit een heel bestand herschrijven
 - Nooit bulk-operaties zonder tussendoor te testen
+
+## Handmatige stappen voor Martijn
+
+Wanneer een ticket of instructie vraagt om stappen die Martijn zelf moet 
+uitvoeren (bijv. dashboards openen, commando's draaien, instellingen 
+wijzigen), schrijf dan:
+
+- Per stap één concrete actie, genummerd
+- Letterlijk uit te typen commando's in codeblokken
+- Bij elke klik: waar precies klikken ("rechtsboven tandwiel" niet "settings")
+- Verwachte tussentijdse uitkomst per stap ("je ziet nu X")
+- Wat te doen als iets anders verschijnt dan verwacht
+
+Martijn is een onervaren developer die leert door te doen. Ga uit van:
+- Hij heeft geen parate kennis van CLI-tools, dashboards, of conventies
+- Hij heeft geen Linux-ervaring — alle commando's moeten in PowerShell werken
+- Hij kan fouten herstellen als hij begrijpt wat er gebeurt, niet als hij 
+  alleen een commando kopieert zonder context
+
+Liever te uitvoerig dan te beknopt. Vergelijking: schrijf zoals een goede 
+IKEA-handleiding, niet zoals een man-page.
