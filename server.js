@@ -1857,7 +1857,7 @@ async function bepaalGroepStatus(sessie_id, groep_id) {
 }
 
 // ── GET /api/mol/sessies/:id/groep-status ──
-app.get('/api/mol/sessies/:id/groep-status', verifyToken, async (req, res) => {
+app.get('/api/mol/sessies/:id/groep-status', async (req, res) => {
   try {
     const { groep_id } = req.query;
     if (!groep_id) return res.status(400).json({ error: 'groep_id verplicht' });
@@ -1966,7 +1966,7 @@ app.post('/api/mol/sessies/:id/antwoord', async (req, res) => {
 });
 
 // ── GET /api/mol/sessies/:id/discussie-data ──
-app.get('/api/mol/sessies/:id/discussie-data', verifyToken, async (req, res) => {
+app.get('/api/mol/sessies/:id/discussie-data', async (req, res) => {
   try {
     const { leerling_id, groep_id } = req.query;
     const [r0, r1] = (await Promise.all([
