@@ -5,10 +5,19 @@ node_modules/
 
 # Environment variables — NOOIT committen
 .env
+.env.test
 .env.local
 .env.*.local
 .env.production
 .env.development
+
+# Schema dumps — bevatten database-structuur
+schema.sql
+*.dump.sql
+
+# notities
+Todo.md.txt
+
 
 # Logs
 *.log
@@ -36,6 +45,9 @@ desktop.ini
 # Claude Code scratch-bestanden (als je ze gebruikt)
 .claude/
 .claudeignore
+
+# Supabase CLI metadata (lokaal, niet delen)
+supabase/
 
 # Build output (voor als we ooit een build-stap krijgen)
 dist/
