@@ -23,6 +23,9 @@
     "pdf-parse": "^1.1.1",
     "pg": "^8.20.0"
   },
+  "jest": {
+    "setupFiles": ["./jest.setup.js"]
+  },
   "devDependencies": {
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
