@@ -197,7 +197,7 @@ async function genereerSpelcodesEnToon() {
   try {
     const res = await apiFetch(
       '/api/mol/sessies/' + sessieId + '/genereer-spelcodes',
-      { method: 'POST' }
+      { method: 'POST', body: JSON.stringify({ docentCode }) }
     );
     const sessiecodeEl = document.getElementById('spelcodes-sessiecode');
     if (sessiecodeEl) sessiecodeEl.textContent = sessieCode || '';

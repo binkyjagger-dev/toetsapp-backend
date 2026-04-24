@@ -2181,8 +2181,14 @@ app.get('/api/mol/sessies/:id/mol-voorstel', verifyToken, async (req, res) => {
 });
 
 // ── POST /api/mol/sessies/:id/genereer-spelcodes ──
-app.post('/api/mol/sessies/:id/genereer-spelcodes', verifyToken, async (req, res) => {
+app.post('/api/mol/sessies/:id/genereer-spelcodes', async (req, res) => {
   try {
+    const { docentCode } = req.body;
+    const { data: sessie } = await supabase.from('mol_sessies')
+      .select('docent_code').eq('id', req.params.id).single();
+    if (!sessie || sessie.docent_code !== docentCode) {
+      return res.status(403).json({ error: 'Geen toegang' });
+    }
     const { data: leerlingen } = await supabase.from('mol_leerlingen')
       .select('*').eq('sessie_id', req.params.id);
     const gebruikt = new Set();
