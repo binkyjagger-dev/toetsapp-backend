@@ -30,7 +30,7 @@ function renderSpelerReveal(state, scoresArr) {
       <div style="font-weight:700;font-size:0.95rem;color:${heeftGeraden ? 'var(--green-l)' : 'var(--red-l)'};">
         ${heeftGeraden ? 'Jij had de Mol geraden!' : 'Jij had de Mol niet geraden'}
       </div>
-      <div style="font-size:0.78rem;color:var(--text2);margin-top:0.25rem;">Jij verdacht: ${escH(leerlingen.find(l => l.id === mijnTest?.mol_verdachte_id)?.naam || '?')}</div>
+      <div style="font-size:0.78rem;color:var(--text2);margin-top:0.25rem;">Jij verdacht: ${escH(leerlingen.find(l => l.id === (mijnTest?.verdachte_id || mijnTest?.mol_verdachte_id))?.naam || '?')}</div>
     </div>`;
   } else {
     html += `<div class="card highlight-red" style="text-align:center;margin-bottom:1rem;">
@@ -249,7 +249,9 @@ function renderResultaten(data) {
     const pctKleur=pct>=70?'var(--green-l)':pct>=40?'var(--gold-l)':'var(--red-l)';
     html+=`<div class="res-groep-blok"><div class="res-groep-header"><span class="res-groep-naam">${escH(g.naam)}</span><span style="font-size:0.8rem;font-family:'DM Mono',monospace;font-weight:700;color:${pctKleur};">${potTotaal}/${maxTotaal} pt (${pct}%)</span></div>`;
     html+=leden.map(l=>{
-      const test=testAntwoorden.find(t=>t.leerling_id===l.id), heeftGeraden=test&&mol&&test.mol_verdachte_id===mol.id;
+      const test = testAntwoorden.find(t => t.leerling_id === l.id);
+      const heeftGeraden = test && mol &&
+        (test.verdachte_id === mol.id || test.mol_verdachte_id === mol.id);
       return `<div class="res-leerling-rij"><span class="res-leerling-naam">${escH(l.naam)}${l.is_mol?' <span class="res-mol-tag">🕵️ Mol</span>':''}</span>${!l.is_mol?`<span class="${heeftGeraden?'res-mol-correct':'res-mol-fout'}">${heeftGeraden?'✓ Mol geraden':'✗ Mol gemist'}</span>`:'<span style="font-size:0.72rem;color:var(--muted);">saboteur</span>'}${test&&test.mol_argument?`<span class="res-arg-tekst" title="${escH(test.mol_argument)}">"${escH(test.mol_argument.substring(0,60))}${test.mol_argument.length>60?'…':''}"</span>`:''}</div>`;
     }).join('');
     html+='</div>';
