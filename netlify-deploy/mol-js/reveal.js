@@ -3,7 +3,10 @@ function renderSpelerReveal(state, scoresArr) {
   const { sessie, leerlingen, cases, antwoorden, groepStemmen, testAntwoorden } = state;
   const mol        = leerlingen.find(l => l.is_mol);
   const isMol      = speler.is_mol;
-  const heeftGeraden = testAntwoorden.find(a => a.leerling_id === speler.id && a.mol_verdachte_id === mol?.id);
+  const heeftGeraden = testAntwoorden.find(a =>
+    a.leerling_id === speler.id &&
+    (a.verdachte_id === mol?.id || a.mol_verdachte_id === mol?.id)
+  );
   const mijnTest   = testAntwoorden.find(a => a.leerling_id === speler.id);
 
   // Pot-totaal
