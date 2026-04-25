@@ -33,7 +33,8 @@ geregeld in TICKET-001.
 2. Architect levert plan + eventueel mockup → Martijn keurt goed of stuurt bij
 3. Plan wordt opgeslagen in /tickets/TICKET-XXX.md
 4. Nieuwe Cowork-sessie (B, Builder-rol) pakt TICKET-XXX.md op
-5. Builder levert: commit-hash + testrapport + self-check tegen acceptatiecriteria
+5. Builder levert: commit-instructie voor Martijn + testrapport + self-check
+   tegen acceptatiecriteria
 6. Nieuwe Cowork-sessie (C, Reviewer-rol):
    a. Leest ticket en diff
    b. Draait npm test (unit/integration tests)
@@ -103,12 +104,13 @@ Harde regels:
 1. Volg het ticket EXACT. Niks erbij, niks eraf.
 2. Als je iets buiten scope tegenkomt: STOP. Rapporteer. Geen fix-onderweg.
 3. Geen dependencies toevoegen die niet in het ticket genoemd staan.
-4. Commit-boodschap: "TICKET-XXX: <samenvatting>"
+4. Schrijf een commit-instructie voor Martijn in je handoff-document.
+   De Builder voert zelf GEEN git-commando's uit vanuit de sandbox.
 
 Na oplevering lever je:
-- Commit-hash
 - Testresultaten (output van npm test)
 - Self-check: acceptatiecriteria langslopen met ✓ of ✗
+- Commit-instructie voor Martijn (zie handoff-template hieronder)
 - Out-of-scope observaties als "Opgemerkt, niet opgepakt:"
 ```
 
@@ -229,7 +231,6 @@ met de concrete API-call.
 Builder schrijft /tickets/TICKET-XXX-build.md:
 ```
 Ticket: TICKET-XXX
-Commit: <hash>
 Bestanden gewijzigd: <lijst>
 Tests: <aantal> toegevoegd, alle groen
 Self-check:
@@ -237,6 +238,14 @@ Self-check:
   ✓ Acceptatiecriterium 2
 Opgemerkt, niet opgepakt:
   - <observatie>
+
+Commit-instructie voor Martijn (uitvoeren in PowerShell):
+  1. Open PowerShell in de projectmap
+  2. Voer uit:
+       git add <bestand1> <bestand2>
+       git commit -m "TICKET-XXX: <samenvatting>"
+  3. Verwacht: je ziet "X file(s) changed"
+  4. Bij fout: stuur de exacte foutmelding naar de Architect
 ```
 
 ### Van Reviewer naar Product Owner

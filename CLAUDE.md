@@ -16,7 +16,8 @@
 - Draai npm test — alle tests groen?
 - npm test draait automatisch lint:html mee
 - Een syntaxfout in index.html laat npm test nu falen voor je deployt
-- git add . && git commit -m "beschrijving"
+- **Handmatige stap voor Martijn (PowerShell, niet door de agent):**
+  `git add . && git commit -m "beschrijving"`
 
 ## Nooit
 - str_replace op een getrunceerde string
