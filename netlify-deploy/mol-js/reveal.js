@@ -99,10 +99,40 @@ function renderSpelerReveal(state, scoresArr) {
     ${scoreHtml}
   </div>`;
 
+  renderEindstand(leerlingen, scoresArr);
   document.getElementById('reveal-content').innerHTML = html;
   // Toon afsluitknop voor leerling
   const afsluiting = document.getElementById('reveal-afsluiting');
   if (afsluiting) afsluiting.style.display = 'block';
+}
+
+function renderEindstand(leerlingen, scoresArr) {
+  const container = document.getElementById('reveal-scores-lijst');
+  if (!container) return;
+
+  const mijnGroep = (leerlingen || []).filter(
+    l => l.groep_id === speler.groep_id
+  );
+  const totaalMap = {};
+  (scoresArr || []).forEach(s => {
+    totaalMap[s.leerling_id] = s.totaal || 0;
+  });
+
+  const gesorteerd = mijnGroep
+    .map(l => ({ ...l, punten: totaalMap[l.id] || 0 }))
+    .sort((a, b) => b.punten - a.punten);
+
+  container.innerHTML = gesorteerd.map((l, i) => {
+    const positie = i === 0 ? '🥇' : `${i + 1}.`;
+    const tag = l.is_mol
+      ? '<span style="font-size:0.65rem;color:var(--red-l);font-weight:700;margin-left:0.4rem;">MOL</span>'
+      : '';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;
+        padding:0.5rem 0;border-bottom:1px solid var(--border);">
+      <span>${positie} ${escH(l.naam)}${tag}</span>
+      <span style="font-family:'DM Mono',monospace;font-weight:700;">${l.punten} pt</span>
+    </div>`;
+  }).join('');
 }
 
 function bouwScoreOpbouw(score, isMol, nRondes) {

@@ -904,6 +904,20 @@ function selecteerTestRonde(r) {
   document.getElementById('ronde-opt-' + r)?.classList.add('selected');
 }
 
+function renderWachtTest(leerlingen) {
+  const mijnGroep = (leerlingen || []).filter(
+    l => l.groep_id === speler.groep_id
+  );
+  const grid = document.getElementById('wacht-test-grid');
+  if (!grid) return;
+  grid.innerHTML = mijnGroep.map(l => {
+    const klaar = l.id === speler.id;
+    return `<div class="wacht-chip ${klaar ? 'klaar' : ''}">
+      <div class="dot"></div>${escH(l.naam.split(' ')[0])}
+    </div>`;
+  }).join('');
+}
+
 async function submitTest() {
   const err = document.getElementById('test-error');
   if (!testVerdachteId) { err.textContent = 'Kies wie de Mol is.'; err.style.display='block'; return; }
@@ -919,24 +933,8 @@ async function submitTest() {
     });
     // Zet flag zodat poll het test-scherm niet opnieuw toont
     testIngediend = true;
-    // Toon wachtscherm
-    document.querySelector('#screen-speler-wacht .page-title').textContent = 'Test ingediend ✅';
-    document.querySelector('#screen-speler-wacht .page-sub').textContent = '';
-    document.getElementById('speler-briefing-sectie').innerHTML = `
-      <div style="text-align:center;padding:1.5rem 0;">
-        <div style="font-size:2.5rem;margin-bottom:1rem;">🕵️</div>
-        <div style="font-weight:700;font-size:1rem;color:#fff;margin-bottom:0.5rem;">De Mol wordt zo onthuld...</div>
-        <p style="font-size:0.82rem;color:var(--muted);line-height:1.6;max-width:320px;margin:0 auto;">
-          Wacht tot je leraar de onthulling start. Houd je scherm aan.
-        </p>
-        <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:0.4rem;">
-          <span style="width:8px;height:8px;border-radius:50%;background:var(--red-l);animation:blink 1.2s ease-in-out infinite;"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:var(--red-l);animation:blink 1.2s ease-in-out 0.4s infinite;"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:var(--red-l);animation:blink 1.2s ease-in-out 0.8s infinite;"></span>
-        </div>
-      </div>`;
-    document.getElementById('speler-briefing-sectie').style.display = 'block';
-    showScreen('screen-speler-wacht-briefing');
+    renderWachtTest(sessieState?.leerlingen || []);
+    showScreen('screen-speler-wacht-test');
     startPoll(pollSpelerStatus, 3000);
   } catch(e) {
     err.textContent = e.message; err.style.display = 'block';
