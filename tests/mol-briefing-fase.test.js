@@ -143,3 +143,122 @@ describe('MOL-02 Fix 3 — gh-wacht-grid verwijderd uit updateBriefingWachtGrid'
     expect(fnMatch[0]).not.toContain('gh-wacht-grid');
   });
 });
+
+// ── Fix 2: DOM-gedragstests badge zichtbaarheid ───────────────────────────────
+
+describe('MOL-02 Fix 2 — renderGroepshoofBekendmaking badge zichtbaarheid', () => {
+  beforeAll(() => {
+    global.sessieId = 'test-sessie';
+    global.speler = { id: 'sp1', groep_id: 'g1', naam: 'Test', is_groepshoofd: false };
+    global.sessieState = null;
+    global.lastRenderedFase = null;
+    global.briefingGedrukt = false;
+    global.briefingGerenderd = false;
+    global.bekendmakingGetoond = false;
+    global.testIngediend = false;
+    global.testVerdachteId = null;
+    global.testRondeNr = null;
+    global.geselecteerdeOptie = null;
+    global.geselecteerdeLidId = null;
+    global.geselecteerdeMcOptieId = null;
+    global.pollTimer = null;
+    global.heartbeatTimer = null;
+    global.showScreen = jest.fn();
+    global.toast = jest.fn();
+    global.apiFetch = jest.fn();
+    global.escH = (s) => String(s);
+    global.startPoll = jest.fn();
+    global.stopPoll = jest.fn();
+    global.stopHeartbeat = jest.fn();
+    global.getFaseTimerSec = jest.fn(() => 120);
+    global.localStorage = { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn() };
+    const src = fs.readFileSync(spelerPath, 'utf8');
+    const indirectEval = eval;
+    indirectEval(src);
+  });
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    global.bekendmakingGetoond = false;
+    document.body.innerHTML = `
+      <div id="screen-speler-groepshoofd-bekendmaking" class="screen">
+        <span id="groepshoofd-naam"></span>
+        <span id="groepshoofd-eigen-badge" style="display:none"></span>
+        <span id="groepshoofd-countdown"></span>
+      </div>`;
+  });
+
+  afterEach(() => { jest.useRealTimers(); });
+
+  it('badge is zichtbaar (display:block) als speler.is_groepshoofd === true', () => {
+    global.speler = { id: 'sp1', groep_id: 'g1', naam: 'Test', is_groepshoofd: true };
+    global.renderGroepshoofBekendmaking(
+      [{ id: 'sp1', groep_id: 'g1', naam: 'Test', is_groepshoofd: true }], {}
+    );
+    expect(document.getElementById('groepshoofd-eigen-badge').style.display).toBe('block');
+  });
+
+  it('badge is verborgen (display:none) als speler.is_groepshoofd === false', () => {
+    global.speler = { id: 'sp1', groep_id: 'g1', naam: 'Test', is_groepshoofd: false };
+    global.renderGroepshoofBekendmaking(
+      [{ id: 'sp2', groep_id: 'g1', naam: 'Hoofd', is_groepshoofd: true }], {}
+    );
+    expect(document.getElementById('groepshoofd-eigen-badge').style.display).toBe('none');
+  });
+});
+
+// ── Fix 2: timer-integratietest — poll loopt autonoom door ───────────────────
+// De lege callback () => {} in startCountdown is correct: de poll stopt nooit.
+// startPoll wordt NIET vanuit de callback aangeroepen — de poll draait al.
+
+describe('MOL-02 Fix 2 — timer-integratietest: poll loopt autonoom door', () => {
+  beforeAll(() => {
+    global.sessieId = 'test-sessie';
+    global.speler = { id: 'sp1', groep_id: 'g1', naam: 'Test', is_groepshoofd: false };
+    global.sessieState = null;
+    global.lastRenderedFase = null;
+    global.briefingGedrukt = false;
+    global.briefingGerenderd = false;
+    global.bekendmakingGetoond = false;
+    global.testIngediend = false;
+    global.testVerdachteId = null;
+    global.testRondeNr = null;
+    global.geselecteerdeOptie = null;
+    global.geselecteerdeLidId = null;
+    global.geselecteerdeMcOptieId = null;
+    global.pollTimer = null;
+    global.heartbeatTimer = null;
+    global.showScreen = jest.fn();
+    global.toast = jest.fn();
+    global.apiFetch = jest.fn();
+    global.escH = (s) => String(s);
+    global.startPoll = jest.fn();
+    global.stopPoll = jest.fn();
+    global.stopHeartbeat = jest.fn();
+    global.getFaseTimerSec = jest.fn(() => 120);
+    global.localStorage = { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn() };
+    const src = fs.readFileSync(spelerPath, 'utf8');
+    const indirectEval = eval;
+    indirectEval(src);
+  });
+
+  it('startPoll wordt NIET vanuit callback aangeroepen — poll draait autonoom door', () => {
+    jest.useFakeTimers();
+    global.bekendmakingGetoond = false;
+    document.body.innerHTML = `
+      <div id="screen-speler-groepshoofd-bekendmaking" class="screen">
+        <span id="groepshoofd-naam"></span>
+        <span id="groepshoofd-eigen-badge"></span>
+        <span id="groepshoofd-countdown"></span>
+      </div>`;
+    global.startPoll.mockClear();
+    global.renderGroepshoofBekendmaking(
+      [{ id: 'sp1', groep_id: 'g1', naam: 'Test', is_groepshoofd: false }], {}
+    );
+    jest.advanceTimersByTime(10000);
+    // startPoll wordt NIET aangeroepen vanuit de callback: de poll draait
+    // al autonoom via initSpelerFlow en detecteert de fase-overgang zelf.
+    expect(global.startPoll).not.toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+});
