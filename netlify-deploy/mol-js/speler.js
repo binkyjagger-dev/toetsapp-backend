@@ -79,6 +79,7 @@ function initSpelerFlow() {
   testRondeNr            = null;
   briefingGedrukt        = false;
   briefingGerenderd      = false;
+  bekendmakingGetoond    = false;
   document.getElementById('speler-naam-tag').textContent = speler.naam;
   if (speler.is_mol) {
     document.getElementById('speler-topbar-right').innerHTML +=
@@ -130,6 +131,12 @@ async function pollSpelerStatus() {
       updateBriefingWachtGrid(mijnGroep, briefingKlaar);
       showScreen('screen-speler-wacht-briefing');
     }
+    return;
+  }
+
+  if (fase === 'ronde_1') {
+    renderGroepshoofBekendmaking(leerlingen, sessieState);
+    showScreen('screen-speler-groepshoofd-bekendmaking');
     return;
   }
 
@@ -489,17 +496,6 @@ function updateBriefingWachtGrid(mijnGroep, briefingKlaar) {
     </div>`;
   }).join('');
 
-  // Update groepshoofd-wacht grid
-  const ghGrid = document.getElementById('gh-wacht-grid');
-  if (ghGrid) {
-    ghGrid.innerHTML = mijnGroep.map(l => {
-      const heeftGestemd = !!l.groepshoofd_stem;
-      return `<div class="wacht-chip ${heeftGestemd ? 'klaar' : ''}">
-        <div class="dot"></div>${escH(l.naam.split(' ')[0])}
-      </div>`;
-    }).join('');
-  }
-
   // Toon groepshoofd badge als bekend
   const groepshoofd = mijnGroep.find(l => l.is_groepshoofd);
   if (groepshoofd) {
@@ -515,6 +511,29 @@ function updateBriefingWachtGrid(mijnGroep, briefingKlaar) {
         </div>`);
     }
   }
+}
+
+function startCountdown(elementId, seconden, callback) {
+  let resterend = seconden;
+  const el = document.getElementById(elementId);
+  if (el) el.textContent = resterend;
+  const timer = setInterval(() => {
+    resterend--;
+    if (el) el.textContent = resterend;
+    if (resterend <= 0) { clearInterval(timer); callback(); }
+  }, 1000);
+}
+
+function renderGroepshoofBekendmaking(leerlingen, state) {
+  if (bekendmakingGetoond) return;
+  bekendmakingGetoond = true;
+  const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
+  const hoofd = mijnGroep.find(l => l.is_groepshoofd);
+  const naamEl  = document.getElementById('groepshoofd-naam');
+  const badgeEl = document.getElementById('groepshoofd-eigen-badge');
+  if (naamEl)  naamEl.textContent  = hoofd ? hoofd.naam : '—';
+  if (badgeEl) badgeEl.style.display = speler.is_groepshoofd ? 'block' : 'none';
+  startCountdown('groepshoofd-countdown', 10, () => {});
 }
 
 function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngediend,
