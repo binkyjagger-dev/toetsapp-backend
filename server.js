@@ -1566,17 +1566,23 @@ async function berekenScoresIntern(sessie_id) {
     const [
       { data: leerlingen }, { data: antwoorden },
       { data: groepStemmen }, { data: testAntwoorden }, { data: sessie },
+      { data: cases },
     ] = await Promise.all([
       supabase.from('mol_leerlingen').select('*').eq('sessie_id', sessie_id),
       supabase.from('mol_antwoorden').select('*').eq('sessie_id', sessie_id),
       supabase.from('mol_groep_stemmen').select('*').eq('sessie_id', sessie_id),
       supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sessie_id),
       supabase.from('mol_sessies').select('*').eq('id', sessie_id).single(),
+      supabase.from('mol_cases').select('*').eq('sessie_id', sessie_id),
     ]);
 
     const mol = leerlingen?.find(l => l.is_mol);
     const nRondes = sessie?.n_rondes || 3;
     const scores = [];
+
+    const aantalCorrectGeraden = (testAntwoorden || []).filter(
+      t => mol && t.leerling_id !== mol.id && t.mol_verdachte_id === mol.id
+    ).length;
 
     for (const leerling of (leerlingen || [])) {
       const isMol = leerling.is_mol;
@@ -1587,19 +1593,13 @@ async function berekenScoresIntern(sessie_id) {
         // ── Niet-Mol scoring ──────────────────────────────────
         let indivPunten = 0;
         for (let r = 1; r <= nRondes; r++) {
-          const ant = antwoorden?.find(a => a.leerling_id === leerling.id && a.ronde_nr === r);
-          if (ant?.antwoord === 'correct' || ant?.mc_optie_id) {
-            // Correct als antwoord === 'correct' of mc-optie de hoogste score heeft
-            const isCorrect = ant.antwoord === 'correct';
-            if (isCorrect) {
-              indivPunten += 15;
-              opbouw['ronde_' + r + '_individueel'] = 15;
-            } else {
-              opbouw['ronde_' + r + '_individueel'] = 0;
-            }
-          } else {
-            opbouw['ronde_' + r + '_individueel'] = 0;
-          }
+          const ant     = antwoorden?.find(a => a.leerling_id === leerling.id && a.ronde_nr === r);
+          const molCase = cases?.find(c => c.ronde_nr === r);
+          const opties  = molCase?.mc_opties || [];
+          const optie   = opties.find(o => o.id === ant?.mc_optie_id);
+          const pnt     = optie?.punten || 0;
+          indivPunten += pnt;
+          opbouw['ronde_' + r + '_individueel'] = pnt;
         }
         totaal += indivPunten;
 
@@ -1619,8 +1619,11 @@ async function berekenScoresIntern(sessie_id) {
         const test = testAntwoorden?.find(t => t.leerling_id === leerling.id);
         const molGeraden = test && mol && test.mol_verdachte_id === mol.id;
         if (molGeraden) {
-          totaal += 25;
-          opbouw['mol_geraden'] = 25;
+          const bonus = aantalCorrectGeraden > 0
+            ? Math.round((1 / aantalCorrectGeraden) * 50)
+            : 0;
+          totaal += bonus;
+          opbouw['mol_geraden'] = bonus;
         } else {
           opbouw['mol_geraden'] = 0;
         }
@@ -1635,22 +1638,12 @@ async function berekenScoresIntern(sessie_id) {
             opbouw['ronde_' + r + '_sabotage'] = 0;
           }
         }
-        // Niet ontmaskerd: niemand raadde de mol correct
-        const ontmaskerd = testAntwoorden?.some(t =>
-          t.leerling_id !== mol.id && t.mol_verdachte_id === mol.id
-        );
-        // Meerderheid check: meer dan helft raadde correct?
-        const aantalCorrect = testAntwoorden?.filter(t =>
-          t.leerling_id !== mol.id && t.mol_verdachte_id === mol.id
-        ).length || 0;
-        const aantalSpelers = leerlingen.filter(l => !l.is_mol).length;
-        const meerderheid = aantalCorrect > aantalSpelers / 2;
-        if (!meerderheid) {
-          totaal += 40;
-          opbouw['niet_ontmaskerd'] = 40;
-        } else {
-          opbouw['niet_ontmaskerd'] = 0;
-        }
+        const nietMolCount = leerlingen.filter(l => !l.is_mol).length;
+        const molBonus = nietMolCount > 0
+          ? Math.round((1 - (aantalCorrectGeraden / nietMolCount)) * 50)
+          : 0;
+        totaal += molBonus;
+        opbouw['niet_ontmaskerd'] = molBonus;
       }
 
       // Clamp op 0
@@ -2006,6 +1999,20 @@ app.post('/api/mol/sessies/:id/groepsantwoord', async (req, res) => {
       gekozen_argument: antwoord,
       submitted_at: Date.now(),
     }]);
+    // Bereken punten voor dit groepsantwoord
+    const { data: molCase } = await supabase
+      .from('mol_cases')
+      .select('mc_opties, max_punten')
+      .eq('sessie_id', req.params.id)
+      .eq('ronde_nr', ronde_nr)
+      .maybeSingle();
+    const opties     = molCase?.mc_opties || [];
+    const maxPunten  = Math.max(0, ...opties.map(o => o.punten || 0));
+    const gekozOptie = opties.find(o => o.id === antwoord || o.tekst === antwoord);
+    const punten     = gekozOptie?.punten || 0;
+    await supabase.from('mol_groep_stemmen')
+      .update({ punten, max_punten: maxPunten })
+      .eq('id', `stem_${req.params.id}_r${ronde_nr}_${groep_id}`);
     res.json({ groepsantwoord: antwoord });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
