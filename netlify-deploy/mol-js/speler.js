@@ -286,8 +286,16 @@ async function renderFeedbackScherm() {
   showScreen('screen-speler-feedback');
 }
 
-async function naarVolgendeRondeOfTest() {
-  // Noop: server bepaalt fase, poll zal automatisch naar volgende scherm schakelen
+function naarVolgendeRondeOfTest() {
+  const ronde   = sessieState?.sessie?.huidige_ronde || 1;
+  const nRondes = sessieState?.sessie?.n_rondes || 1;
+  if (ronde < nRondes) {
+    startPoll(pollSpelerStatus, 3500);
+  } else {
+    renderSpelerTest(sessieState.leerlingen, sessieState);
+    showScreen('screen-speler-test');
+    clearInterval(pollTimer);
+  }
 }
 
 async function submitGroepsantwoord() {
@@ -302,6 +310,21 @@ async function submitGroepsantwoord() {
       ronde_nr: speler.ronde_nr || 1,
     }),
   });
+  renderGroepsantwoordBevestiging(antwoord);
+  showScreen('screen-speler-groepsantwoord');
+}
+
+// Scherm 8: bevestiging na indiening groepsantwoord (alleen voor groepshoofd).
+// Gewone spelers gaan via de poll direct naar scherm 9 (fase 'resultaat').
+function renderGroepsantwoordBevestiging(antwoord) {
+  const tekstEl = document.getElementById('groepsantwoord-tekst');
+  const doorEl  = document.getElementById('groepsantwoord-door');
+  const leerlingen = sessieState?.leerlingen || [];
+  const mijnGroep  = leerlingen.filter(l => l.groep_id === speler.groep_id);
+  const hoofd = mijnGroep.find(l => l.is_groepshoofd);
+  if (tekstEl) tekstEl.textContent = antwoord;
+  if (doorEl)  doorEl.textContent  = hoofd ? hoofd.naam : '---';
+  startCountdown('groepsantwoord-countdown', 5, () => { pollSpelerStatus(); });
 }
 
 
