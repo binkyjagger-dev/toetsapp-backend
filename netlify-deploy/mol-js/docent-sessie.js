@@ -261,6 +261,8 @@ async function renderDocentSessie() {
     if (btnStop && !btnStop.dataset.bound) { btnStop.dataset.bound = '1'; btnStop.addEventListener('click', stopSessie); }
     const btnCodes = document.getElementById('btn-toon-spelcodes');
     if (btnCodes && !btnCodes.dataset.bound) { btnCodes.dataset.bound = '1'; btnCodes.addEventListener('click', toonSpelcodes); }
+    const btnDeelLink = document.getElementById('btn-deel-spelerlink');
+    if (btnDeelLink && !btnDeelLink.dataset.bound) { btnDeelLink.dataset.bound = '1'; btnDeelLink.addEventListener('click', deelSpelerLink); }
     const btnTerug = document.getElementById('btn-terug-dashboard');
     if (btnTerug && !btnTerug.dataset.bound) { btnTerug.dataset.bound = '1'; btnTerug.addEventListener('click', terugNaarDashboard); }
     const btnLijst = document.getElementById('btn-terug-sessielijst');
@@ -616,6 +618,12 @@ function renderNabespreek(cases, antwoorden, leerlingen, groepen) {
 
 function getSpelerUrl() {
   return window.location.href.split('?')[0] + '?rol=speler';
+}
+
+async function deelSpelerLink() {
+  const url = getSpelerUrl();
+  await navigator.clipboard.writeText(url);
+  toast('🔗 Link gekopieerd!');
 }
 
 async function ensureSessieState() {
