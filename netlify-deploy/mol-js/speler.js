@@ -883,7 +883,6 @@ async function submitGroepsStem(rondeNr) {
 function renderSpelerTest(leerlingen, state) {
   clearInterval(pollTimer);
   const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id && l.id !== speler.id);
-  const rondeOpties = Array.from({length: state.sessie.n_rondes}, (_, i) => i + 1);
 
   // Verdachte keuze
   const vc = document.getElementById('test-verdachte-keuze');
@@ -892,11 +891,6 @@ function renderSpelerTest(leerlingen, state) {
       <div class="groepslid-avatar">🎓</div>
       <div style="font-weight:700;font-size:0.88rem;">${escH(l.naam)}</div>
     </button>`).join('');
-
-  // Ronde keuze
-  const rc = document.getElementById('test-ronde-keuze');
-  rc.innerHTML = rondeOpties.map(r => `
-    <button class="antwoord-optie" id="ronde-opt-${r}" onclick="selecteerTestRonde(${r})">Ronde ${r}</button>`).join('');
 }
 
 function selecteerVerdachte(id) {
@@ -911,10 +905,8 @@ function selecteerTestRonde(r) {
 }
 
 async function submitTest() {
-  const arg = document.getElementById('test-argument-tekst').value.trim();
   const err = document.getElementById('test-error');
   if (!testVerdachteId) { err.textContent = 'Kies wie de Mol is.'; err.style.display='block'; return; }
-  if (arg.length < 20)  { err.textContent = 'Beschrijf het argument uitgebreider (minimaal 20 tekens).'; err.style.display='block'; return; }
   err.style.display = 'none';
 
   try {
@@ -923,7 +915,6 @@ async function submitTest() {
       body: JSON.stringify({
         leerling_id: speler.id,
         verdachte_id: testVerdachteId,
-        argument: arg,
       }),
     });
     // Zet flag zodat poll het test-scherm niet opnieuw toont
