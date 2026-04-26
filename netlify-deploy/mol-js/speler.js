@@ -80,10 +80,11 @@ function initSpelerFlow() {
   briefingGedrukt        = false;
   briefingGerenderd      = false;
   bekendmakingGetoond    = false;
-  document.getElementById('speler-naam-tag').textContent = speler.naam;
-  if (speler.is_mol) {
-    document.getElementById('speler-topbar-right').innerHTML +=
-      '<span class="topbar-tag tag-mol">🕵️ Mol</span>';
+  const naamEl = document.getElementById('wacht-briefing-naam');
+  if (naamEl) naamEl.textContent = speler.naam;
+  const topbarEl = document.getElementById('speler-topbar-right');
+  if (topbarEl && speler.is_mol) {
+    topbarEl.innerHTML += '<span class="topbar-tag tag-mol">🕵️ Mol</span>';
   }
   showScreen('screen-speler-wacht-briefing');
   startPoll(pollSpelerStatus, 3500);
