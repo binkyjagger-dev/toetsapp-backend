@@ -85,6 +85,31 @@ INSERT INTO schema_migrations (filename) VALUES
 Verwacht: 6 rijen. Zonder dit probeert `runMigrations()` alles opnieuw
 te draaien tegen een al compleet schema.
 
+### B5. RLS uitschakelen op mol-tabellen (test-project)
+
+> **⚠ UITSLUITEND uitvoeren op het test-project — NOOIT op productie.**
+
+Supabase zet standaard Row Level Security (RLS) aan op alle tabellen. In
+het test-project blokkert dit schrijfpogingen via de anon key. Voer de
+volgende SQL uit in het test-dashboard → SQL Editor → New query:
+
+```sql
+ALTER TABLE mol_sessies          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mol_leerlingen       DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mol_groepen          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mol_antwoorden       DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mol_cases            DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mol_groep_stemmen    DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mol_groep_votes      DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mol_scores           DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mol_briefing_klaar   DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mol_test_antwoorden  DISABLE ROW LEVEL SECURITY;
+```
+
+Controle: SQL Editor → run `SELECT tablename, rowsecurity FROM pg_tables
+WHERE schemaname = 'public' AND tablename LIKE 'mol_%';`
+Verwacht: kolom `rowsecurity` is `false` voor alle 10 rijen.
+
 ## Sectie C — .env.test invullen
 
 Kopieer `.env.test.example` naar `.env.test` en vul in:

@@ -54,6 +54,7 @@ function optionalToken(req, res, next) {
 }
 
 app.get('/', (req, res) => res.json({ status: 'ok', app: 'Socratische Toetsapp' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 // ════════════════════════════════════════════════════════════
 // AUTH — registreren + inloggen
