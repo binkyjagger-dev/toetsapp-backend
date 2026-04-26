@@ -2,11 +2,11 @@ require('dotenv').config();
 const express  = require('express');
 const fs       = require('fs');
 const path     = require('path');
-// ══ SQL MIGRATIES IN SUPABASE (éénmalig uitvoeren) ══════════
+// == SQL MIGRATIES IN SUPABASE (éénmalig uitvoeren) ==========
 // alter table classes add column if not exists niveau text;
 // alter table classes add column if not exists leerjaar text;
 // alter table classes add column if not exists leraar_id uuid;
-// ════════════════════════════════════════════════════════════
+// ============================================================
 const cors     = require('cors');
 const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
@@ -21,7 +21,7 @@ const anthropic  = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase   = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 const JWT_SECRET = process.env.JWT_SECRET || 'stanislascollege_mol_secret_2025';
 
-// ── Nakijk-assistent ──────────────────────────────────────────
+// -- Nakijk-assistent ------------------------------------------
 app.locals.supabase  = supabase;
 app.locals.anthropic = anthropic;
 // Bulk router EERST registreren — anders pikt /api/nakijk alles af
@@ -30,7 +30,7 @@ app.use('/api/nakijk/bulk', nakijkBulkRouter);
 const nakijkRouter = require('./routes/nakijk.routes');
 app.use('/api/nakijk', nakijkRouter);
 
-// ── JWT middleware ────────────────────────────────────────────
+// -- JWT middleware --------------------------------------------
 function verifyToken(req, res, next) {
   const auth = req.headers['authorization'];
   if (!auth || !auth.startsWith('Bearer ')) {
@@ -56,9 +56,9 @@ function optionalToken(req, res, next) {
 app.get('/', (req, res) => res.json({ status: 'ok', app: 'Socratische Toetsapp' }));
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
-// ════════════════════════════════════════════════════════════
+// ============================================================
 // AUTH — registreren + inloggen
-// ════════════════════════════════════════════════════════════
+// ============================================================
 
 
 app.post('/api/auth/registreer', async (req, res) => {
@@ -99,9 +99,9 @@ app.get('/api/auth/mij', verifyToken, async (req, res) => {
   res.json(data || req.leraar);
 });
 
-// ════════════════════════════════════════════════════════════
+// ============================================================
 // LEERLINGEN — import + ophalen + verwijderen
-// ════════════════════════════════════════════════════════════
+// ============================================================
 app.post('/api/leerlingen/import', verifyToken, async (req, res) => {
   try {
     const { lesperiode, leerlingen } = req.body;
@@ -172,7 +172,7 @@ app.get('/api/leerlingen/klassen', verifyToken, async (req, res) => {
 });
 
 
-// ── POST /api/leerlingen/koppel-klas — koppel leerlingen aan klasnaam ─────────
+// -- POST /api/leerlingen/koppel-klas — koppel leerlingen aan klasnaam ---------
 app.post('/api/leerlingen/koppel-klas', verifyToken, async (req, res) => {
   try {
     const { leerling_ids, klas_naam } = req.body;
@@ -200,7 +200,7 @@ app.post('/api/leerlingen/koppel-klas', verifyToken, async (req, res) => {
 });
 
 
-// ── DELETE /api/leerlingen/:id — verwijder één leerling ──────
+// -- DELETE /api/leerlingen/:id — verwijder één leerling ------
 app.delete('/api/leerlingen/:id', verifyToken, async (req, res) => {
   try {
     const { error } = await supabase
@@ -262,7 +262,7 @@ app.post('/api/classes', optionalToken, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── PATCH /api/classes/:id — klas bewerken ───────────────────
+// -- PATCH /api/classes/:id — klas bewerken -------------------
 app.patch('/api/classes/:id', optionalToken, async (req, res) => {
   try {
     const { name, niveau, leerjaar } = req.body;
@@ -287,9 +287,9 @@ app.delete('/api/classes/:id', async (req, res) => {
 });
 
 
-// ════════════════════════════════════════════════════════════
+// ============================================================
 //  LEERDOELEN ENDPOINTS
-// ════════════════════════════════════════════════════════════
+// ============================================================
 // SQL MIGRATIE (éénmalig in Supabase):
 // create table if not exists leerdoelen (
 //   id uuid primary key default gen_random_uuid(),
@@ -630,7 +630,7 @@ Antwoord ALLEEN met geldige JSON, geen tekst daarbuiten:
   "verbeteren": "..."
 }
 
-── BLOOM-NIVEAUS (wees streng en realistisch) ──────────────────
+-- BLOOM-NIVEAUS (wees streng en realistisch) ------------------
 1 = Onvoldoende:  Nauwelijks begrip, antwoorden zijn onsamenhangend of onjuist
 2 = Beginnend:    Herkent begrippen maar kan ze niet uitleggen of toepassen
 3 = Begrijpend:   Begrijpt de stof, legt verbanden op basis van herkenning maar niet zelfstandig
@@ -638,12 +638,12 @@ Antwoord ALLEEN met geldige JSON, geen tekst daarbuiten:
 5 = Analyserend:  Ontleedt situaties zelfstandig, herkent oorzaak-gevolgrelaties
 6 = Verdiept:     Redeneert vanuit meerdere perspectieven, beoordeelt en nuanceert
 
-── REGELS VOOR "goed" (TOP) ────────────────────────────────────
+-- REGELS VOOR "goed" (TOP) ------------------------------------
 VERPLICHT: Citeer letterlijk een uitspraak die de leerling deed — tussen aanhalingstekens, zo exact mogelijk overgenomen uit het gesprek.
 Leg in 1-2 zinnen uit waarom díé specifieke redenering klopt en wat het aantoont over het begrip van de leerling.
 VERBODEN: vage zinnen als "je begrijpt de stof goed", "je hebt goed nagedacht" of "je legt verbanden". Alleen concrete citaten + uitleg.
 
-── REGELS VOOR "verbeteren" (TIP) ──────────────────────────────
+-- REGELS VOOR "verbeteren" (TIP) ------------------------------
 VERPLICHT stap 1 — Wijs een concreet moment aan: beschrijf kort op welk moment in het gesprek de redenering haakte of een leerdoel onvoldoende aan bod kwam. Gebruik de vraag van de AI als aanknopingspunt ("Toen ik vroeg naar...").
 VERPLICHT stap 2 — Koppel aan een leerdoel: benoem expliciet welk begrip of welke vaardigheid uit de les de leerling verder moet oefenen. Gebruik de termen uit de leerdoelenlijst als die beschikbaar is.
 VERPLICHT stap 3 — Geef een concrete oefenvraag die de leerling zelf kan beantwoorden om dat leerdoel te oefenen. De oefenvraag moet zo specifiek zijn dat de leerling weet wat het goede antwoord moet bevatten.
@@ -736,9 +736,9 @@ Antwoord ALLEEN met JSON:
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ══════════════════════════════════════════════════════════
+// ==========================================================
 //  AI — ANTWOORD SCOREN (1-10)
-// ══════════════════════════════════════════════════════════
+// ==========================================================
 
 app.post('/api/ai/score', async (req, res) => {
   const { lessonName, lessonContent, question, answer, gerichtLeerdoel } = req.body;
@@ -790,7 +790,7 @@ Antwoord ALLEEN met JSON:
   }
 });
 
-// ── TOETSAGENT: GENEREER TOETS ──────────────────────────────────────────────
+// -- TOETSAGENT: GENEREER TOETS ----------------------------------------------
 app.post('/api/agent/genereer-toets', async (req, res) => {
   const {
     klas,         // bijv. "VWO 5A"
@@ -911,9 +911,9 @@ Genereer precies ${aantalVragen} vragen. De puntentelling moet optellen tot ${to
 });
 
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  WIE IS DE MOL — ENDPOINTS
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 // Hulpfuncties
 function randCode(n, chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789') {
@@ -922,7 +922,7 @@ function randCode(n, chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789') {
   return s;
 }
 
-// ── POST /api/mol/sessie — docent maakt sessie aan ──────────────────────────
+// -- POST /api/mol/sessie — docent maakt sessie aan --------------------------
 app.post('/api/mol/sessie', optionalToken, async (req, res) => {
   try {
     const { les_id, les_naam, les_content, klas_id, klas_naam, n_rondes, leerlingen, groep_grootte, vragen, groepsindeling, timer_discussie, timer_stem } = req.body;
@@ -1037,7 +1037,7 @@ app.post('/api/mol/sessie', optionalToken, async (req, res) => {
 });
 
 
-// ── GET /api/mol/sessies — docent haalt lijst van alle sessies op ────────────
+// -- GET /api/mol/sessies — docent haalt lijst van alle sessies op ------------
 app.get('/api/mol/sessies', verifyToken, async (req, res) => {
   try {
     const { data, error } = await supabase.from('mol_sessies')
@@ -1052,7 +1052,7 @@ app.get('/api/mol/sessies', verifyToken, async (req, res) => {
 });
 
 
-// ── POST /api/mol/sessie/:id/hergebruik — reset groepen maar behoud cases ────
+// -- POST /api/mol/sessie/:id/hergebruik — reset groepen maar behoud cases ----
 app.post('/api/mol/sessie/:id/hergebruik', async (req, res) => {
   try {
     const { docent_token, groepsindeling, n_rondes, groep_grootte } = req.body;
@@ -1106,7 +1106,7 @@ app.post('/api/mol/sessie/:id/hergebruik', async (req, res) => {
   }
 });
 
-// ── GET /api/mol/sessie/:id/resultaten — volledige resultaten voor archief ───
+// -- GET /api/mol/sessie/:id/resultaten — volledige resultaten voor archief ---
 app.get('/api/mol/sessie/:id/resultaten', async (req, res) => {
   try {
     const { docent_token } = req.query;
@@ -1143,7 +1143,7 @@ app.get('/api/mol/sessie/:id/resultaten', async (req, res) => {
   }
 });
 
-// ── DELETE /api/mol/sessie/:id — docent verwijdert sessie ────────────────────
+// -- DELETE /api/mol/sessie/:id — docent verwijdert sessie --------------------
 app.delete('/api/mol/sessie/:id', verifyToken, async (req, res) => {
   try {
     const sid = req.params.id;
@@ -1165,7 +1165,7 @@ app.delete('/api/mol/sessie/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ── GET /api/mol/sessie/:id — volledige sessie state ────────────────────────
+// -- GET /api/mol/sessie/:id — volledige sessie state ------------------------
 app.get('/api/mol/sessie/:id', async (req, res) => {
   try {
     const sid = req.params.id;
@@ -1201,7 +1201,7 @@ app.get('/api/mol/sessie/:id', async (req, res) => {
   }
 });
 
-// ── GET /api/mol/login — leerling inloggen met speler-code ──────────────────
+// -- GET /api/mol/login — leerling inloggen met speler-code ------------------
 app.get('/api/mol/login', async (req, res) => {
   try {
     const { sessie_code, speler_code } = req.query;
@@ -1222,7 +1222,7 @@ app.get('/api/mol/login', async (req, res) => {
 });
 
 
-// ── PATCH /api/mol/ronde-fase — zet ronde-fase + timestamp ──────────────────
+// -- PATCH /api/mol/ronde-fase — zet ronde-fase + timestamp ------------------
 app.patch('/api/mol/ronde-fase', async (req, res) => {
   try {
     const { sessie_id, docent_code, ronde_fase, status } = req.body;
@@ -1237,7 +1237,7 @@ app.patch('/api/mol/ronde-fase', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── PATCH /api/mol/sessie/:id/status — docent stuurt spel aan ───────────────
+// -- PATCH /api/mol/sessie/:id/status — docent stuurt spel aan ---------------
 app.patch('/api/mol/sessie/:id/status', async (req, res) => {
   try {
     const { docent_code, status, huidige_ronde } = req.body;
@@ -1254,7 +1254,7 @@ app.patch('/api/mol/sessie/:id/status', async (req, res) => {
 
 
 
-// ── POST /api/mol/briefing-klaar — leerling drukt op "Start" ────────────────
+// -- POST /api/mol/briefing-klaar — leerling drukt op "Start" ----------------
 app.post('/api/mol/briefing-klaar', async (req, res) => {
   try {
     const { sessie_id, leerling_id } = req.body;
@@ -1282,7 +1282,7 @@ app.post('/api/mol/briefing-klaar', async (req, res) => {
 });
 
 
-// ── POST /api/mol/groepshoofd-stem — leerling stemt op groepshoofd ───────────
+// -- POST /api/mol/groepshoofd-stem — leerling stemt op groepshoofd -----------
 app.post('/api/mol/groepshoofd-stem', async (req, res) => {
   try {
     const { sessie_id, leerling_id, kandidaat_id } = req.body;
@@ -1321,7 +1321,7 @@ app.post('/api/mol/groepshoofd-stem', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/groep-stem-hoofd — groepshoofd dient groepsantwoord in ─────
+// -- POST /api/mol/groep-stem-hoofd — groepshoofd dient groepsantwoord in -----
 app.post('/api/mol/groep-stem-hoofd', async (req, res) => {
   try {
     const { sessie_id, ronde_nr, groep_id, leerling_id, gekozen_optie_id } = req.body;
@@ -1364,7 +1364,7 @@ app.post('/api/mol/groep-stem-hoofd', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/heartbeat — leerling stuurt periodiek ping ────────────────
+// -- POST /api/mol/heartbeat — leerling stuurt periodiek ping ----------------
 app.post('/api/mol/heartbeat', async (req, res) => {
   try {
     const { leerling_id } = req.body;
@@ -1376,7 +1376,7 @@ app.post('/api/mol/heartbeat', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/antwoord — leerling dient individueel antwoord in ─────────
+// -- POST /api/mol/antwoord — leerling dient individueel antwoord in ---------
 app.post('/api/mol/antwoord', async (req, res) => {
   try {
     const { sessie_id, ronde_nr, leerling_id, antwoord, argument, mc_optie_id } = req.body;
@@ -1407,7 +1407,7 @@ app.post('/api/mol/antwoord', async (req, res) => {
   }
 });
 
-// ── POST /api/mol/groep-vote — leerling stemt op groepsoptie (unaniem) ───────
+// -- POST /api/mol/groep-vote — leerling stemt op groepsoptie (unaniem) -------
 app.post('/api/mol/groep-vote', async (req, res) => {
   try {
     const { sessie_id, ronde_nr, groep_id, leerling_id, gekozen_optie_id, gekozen_antwoord } = req.body;
@@ -1465,7 +1465,7 @@ app.post('/api/mol/groep-vote', async (req, res) => {
   }
 });
 
-// ── POST /api/mol/groep-stem — groep stemt op definitief antwoord ────────────
+// -- POST /api/mol/groep-stem — groep stemt op definitief antwoord ------------
 app.post('/api/mol/groep-stem', async (req, res) => {
   try {
     const { sessie_id, ronde_nr, groep_id, gekozen_leerling_id } = req.body;
@@ -1505,7 +1505,7 @@ app.post('/api/mol/groep-stem', async (req, res) => {
   }
 });
 
-// ── POST /api/mol/score-open — docent scoort open antwoord per groep ─────────
+// -- POST /api/mol/score-open — docent scoort open antwoord per groep ---------
 app.post('/api/mol/score-open', async (req, res) => {
   try {
     const { sessie_id, ronde_nr, groep_id, punten, docent_code } = req.body;
@@ -1528,7 +1528,7 @@ app.post('/api/mol/score-open', async (req, res) => {
   }
 });
 
-// ── POST /api/mol/test-antwoord — leerling dient moltest in ─────────────────
+// -- POST /api/mol/test-antwoord — leerling dient moltest in -----------------
 app.post('/api/mol/test-antwoord', async (req, res) => {
   try {
     const { sessie_id, leerling_id, mol_verdachte_id, mol_ronde, mol_argument } = req.body;
@@ -1561,7 +1561,7 @@ app.post('/api/mol/test-antwoord', async (req, res) => {
   }
 });
 
-// ── Score-berekening (intern) ─────────────────────────────────────────────────
+// -- Score-berekening (intern) -------------------------------------------------
 async function berekenScoresIntern(sessie_id) {
   try {
     const [
@@ -1591,7 +1591,7 @@ async function berekenScoresIntern(sessie_id) {
       let totaal = 0;
 
       if (!isMol) {
-        // ── Niet-Mol scoring ──────────────────────────────────
+        // -- Niet-Mol scoring ----------------------------------
         let indivPunten = 0;
         for (let r = 1; r <= nRondes; r++) {
           const ant     = antwoorden?.find(a => a.leerling_id === leerling.id && a.ronde_nr === r);
@@ -1629,7 +1629,7 @@ async function berekenScoresIntern(sessie_id) {
           opbouw['mol_geraden'] = 0;
         }
       } else {
-        // ── Mol scoring ───────────────────────────────────────
+        // -- Mol scoring ---------------------------------------
         for (let r = 1; r <= nRondes; r++) {
           const stem = groepStemmen?.find(s => s.groep_id === leerling.groep_id && s.ronde_nr === r);
           if (stem && !stem.is_correct) {
@@ -1672,11 +1672,11 @@ async function berekenScoresIntern(sessie_id) {
 
 
 
-// ═══════════════════════════════════════════════════════════════
+// ===============================================================
 // MOL MULTI-GROEP FLOW — groep-onafhankelijke fase-tracking
-// ═══════════════════════════════════════════════════════════════
+// ===============================================================
 
-// ── POST /api/mol/sessies — nieuwe sessie met leraar_id + vragen/opties ──
+// -- POST /api/mol/sessies — nieuwe sessie met leraar_id + vragen/opties --
 app.post('/api/mol/sessies', verifyToken, async (req, res) => {
   try {
     const { les_naam, les_content, leerlingen = [], groep_grootte = 3, n_rondes = 3, vragen = [], naam } = req.body;
@@ -1733,7 +1733,7 @@ app.post('/api/mol/sessies', verifyToken, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/sessies/:id/login — speler login via sessie_code + speler_code ──
+// -- POST /api/mol/sessies/:id/login — speler login via sessie_code + speler_code --
 app.post('/api/mol/sessies/:id/login', async (req, res) => {
   try {
     const { sessiecode, spelcode } = req.body;
@@ -1755,7 +1755,7 @@ app.post('/api/mol/sessies/:id/login', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── GET /api/mol/sessies/:id/state — volledige sessie-state (feedback/punten verwijderd) ──
+// -- GET /api/mol/sessies/:id/state — volledige sessie-state (feedback/punten verwijderd) --
 app.get('/api/mol/sessies/:id/state', verifyToken, async (req, res) => {
   try {
     const [r0, r1] = (await Promise.all([
@@ -1783,7 +1783,7 @@ app.get('/api/mol/sessies/:id/state', verifyToken, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Helper: bepaal fase en wacht_op voor een groep ──
+// -- Helper: bepaal fase en wacht_op voor een groep --
 async function bepaalGroepStatus(sessie_id, groep_id) {
   const results = await Promise.all([
     supabase.from('mol_sessies').select('*').eq('id', sessie_id).single(),
@@ -1850,7 +1850,7 @@ async function bepaalGroepStatus(sessie_id, groep_id) {
   return { fase: status, ronde_nr, wacht_op: [] };
 }
 
-// ── GET /api/mol/sessies/:id/groep-status ──
+// -- GET /api/mol/sessies/:id/groep-status --
 app.get('/api/mol/sessies/:id/groep-status', async (req, res) => {
   try {
     const { groep_id } = req.query;
@@ -1860,7 +1860,7 @@ app.get('/api/mol/sessies/:id/groep-status', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── GET /api/mol/sessies/:id/dashboard — docent-dashboard data ──
+// -- GET /api/mol/sessies/:id/dashboard — docent-dashboard data --
 app.get('/api/mol/sessies/:id/dashboard', verifyToken, async (req, res) => {
   try {
     const sid = req.params.id;
@@ -1892,7 +1892,7 @@ app.get('/api/mol/sessies/:id/dashboard', verifyToken, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── PATCH /api/mol/sessies/:id/status — docent zet sessie op afgelopen ──
+// -- PATCH /api/mol/sessies/:id/status — docent zet sessie op afgelopen --
 app.patch('/api/mol/sessies/:id/status', verifyToken, async (req, res) => {
   try {
     const { status } = req.body;
@@ -1907,7 +1907,7 @@ app.patch('/api/mol/sessies/:id/status', verifyToken, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/sessies/:id/briefing-start ──
+// -- POST /api/mol/sessies/:id/briefing-start --
 app.post('/api/mol/sessies/:id/briefing-start', async (req, res) => {
   try {
     const { leerling_id, groepshoofd_stem } = req.body;
@@ -1921,7 +1921,7 @@ app.post('/api/mol/sessies/:id/briefing-start', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/sessies/:id/bepaal-groepshoofd ──
+// -- POST /api/mol/sessies/:id/bepaal-groepshoofd --
 app.post('/api/mol/sessies/:id/bepaal-groepshoofd', async (req, res) => {
   try {
     const { groep_id } = req.body;
@@ -1944,7 +1944,7 @@ app.post('/api/mol/sessies/:id/bepaal-groepshoofd', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/sessies/:id/antwoord ──
+// -- POST /api/mol/sessies/:id/antwoord --
 app.post('/api/mol/sessies/:id/antwoord', async (req, res) => {
   try {
     const { leerling_id, ronde_nr, antwoord, argument, mc_optie_id } = req.body;
@@ -1959,7 +1959,7 @@ app.post('/api/mol/sessies/:id/antwoord', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── GET /api/mol/sessies/:id/discussie-data ──
+// -- GET /api/mol/sessies/:id/discussie-data --
 app.get('/api/mol/sessies/:id/discussie-data', async (req, res) => {
   try {
     const { leerling_id, groep_id } = req.query;
@@ -1983,7 +1983,7 @@ app.get('/api/mol/sessies/:id/discussie-data', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/sessies/:id/groepsantwoord ──
+// -- POST /api/mol/sessies/:id/groepsantwoord --
 app.post('/api/mol/sessies/:id/groepsantwoord', async (req, res) => {
   try {
     const { leerling_id, groep_id, antwoord, ronde_nr } = req.body;
@@ -2018,7 +2018,7 @@ app.post('/api/mol/sessies/:id/groepsantwoord', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/sessies/:id/test ──
+// -- POST /api/mol/sessies/:id/test --
 app.post('/api/mol/sessies/:id/test', async (req, res) => {
   try {
     const { leerling_id, verdachte_id } = req.body;
@@ -2031,7 +2031,7 @@ app.post('/api/mol/sessies/:id/test', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── GET /api/mol/sessies/:id/test-vragen ──
+// -- GET /api/mol/sessies/:id/test-vragen --
 app.get('/api/mol/sessies/:id/test-vragen', verifyToken, async (req, res) => {
   try {
     const { leerling_id } = req.query;
@@ -2056,7 +2056,7 @@ app.get('/api/mol/sessies/:id/test-vragen', verifyToken, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── GET /api/mol/sessies/:id/resultaten ──
+// -- GET /api/mol/sessies/:id/resultaten --
 app.get('/api/mol/sessies/:id/resultaten', verifyToken, async (req, res) => {
   try {
     const { groep_id } = req.query;
@@ -2088,7 +2088,7 @@ app.get('/api/mol/sessies/:id/resultaten', verifyToken, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── GET /api/mol/sessies/:id/ronde-feedback — feedback na ronde afgerond ──
+// -- GET /api/mol/sessies/:id/ronde-feedback — feedback na ronde afgerond --
 app.get('/api/mol/sessies/:id/ronde-feedback', async (req, res) => {
   try {
     const { leerling_id, groep_id, ronde_nr } = req.query;
@@ -2132,7 +2132,7 @@ app.get('/api/mol/sessies/:id/ronde-feedback', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/genereer-vraag — AI genereert MC-vraag per ronde ──
+// -- POST /api/mol/genereer-vraag — AI genereert MC-vraag per ronde --
 app.post('/api/mol/genereer-vraag', verifyToken, async (req, res) => {
   try {
     const { ronde_nr, les_content } = req.body;
@@ -2159,7 +2159,7 @@ Geef precies dit JSON formaat terug, niets anders:
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/genereer-feedback — AI-feedback per antwoordoptie ──
+// -- POST /api/mol/genereer-feedback — AI-feedback per antwoordoptie --
 app.post('/api/mol/genereer-feedback', verifyToken, async (req, res) => {
   try {
     const { vraag, optie, correct, les_content } = req.body;
@@ -2175,7 +2175,7 @@ app.post('/api/mol/genereer-feedback', verifyToken, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── GET /api/mol/sessies/:id/mol-voorstel — willekeurige Mol-suggestie ──
+// -- GET /api/mol/sessies/:id/mol-voorstel — willekeurige Mol-suggestie --
 app.get('/api/mol/sessies/:id/mol-voorstel', verifyToken, async (req, res) => {
   try {
     const { groep_id } = req.query;
@@ -2188,7 +2188,7 @@ app.get('/api/mol/sessies/:id/mol-voorstel', verifyToken, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/sessies/:id/genereer-spelcodes ──
+// -- POST /api/mol/sessies/:id/genereer-spelcodes --
 app.post('/api/mol/sessies/:id/genereer-spelcodes', async (req, res) => {
   try {
     const { docentCode } = req.body;
@@ -2213,7 +2213,7 @@ app.post('/api/mol/sessies/:id/genereer-spelcodes', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── POST /api/mol/genereer-cases-preview — genereert zonder op te slaan ──────
+// -- POST /api/mol/genereer-cases-preview — genereert zonder op te slaan ------
 app.post('/api/mol/genereer-cases-preview', async (req, res) => {
   try {
     const { les_naam, les_content, n_rondes, ronde_offset = 0 } = req.body;
@@ -2279,7 +2279,7 @@ Antwoord ALLEEN met geldige JSON:
   }
 });
 
-// ── POST /api/mol/genereer-cases — AI genereert cases voor het spel ─────────
+// -- POST /api/mol/genereer-cases — AI genereert cases voor het spel ---------
 app.post('/api/mol/genereer-cases', async (req, res) => {
   try {
     const { sessie_id, les_naam, les_content, n_rondes } = req.body;
@@ -2349,7 +2349,7 @@ Antwoord ALLEEN met geldige JSON, geen tekst daarbuiten:
   }
 });
 
-// ── POST /api/mol/bereken-scores — bereken testscore na reveal ───────────────
+// -- POST /api/mol/bereken-scores — bereken testscore na reveal ---------------
 app.post('/api/mol/bereken-scores', async (req, res) => {
   try {
     const { sessie_id } = req.body;
@@ -2373,7 +2373,7 @@ app.post('/api/mol/bereken-scores', async (req, res) => {
   }
 });
 
-// ── Migratie-runner ───────────────────────────────────────
+// -- Migratie-runner ---------------------------------------
 async function runMigrations() {
   console.log('[migrations] controleren...');
   const dir = path.join(__dirname, 'migrations');
