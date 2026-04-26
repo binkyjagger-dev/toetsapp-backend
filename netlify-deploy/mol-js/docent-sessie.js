@@ -617,7 +617,7 @@ function renderNabespreek(cases, antwoorden, leerlingen, groepen) {
 
 
 function getSpelerUrl() {
-  return window.location.href.split('?')[0] + '?rol=speler';
+  return window.location.href.split('?')[0] + '?rol=speler' + (sessieId ? '&sessie=' + sessieId : '');
 }
 
 async function deelSpelerLink() {

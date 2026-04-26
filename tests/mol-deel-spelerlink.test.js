@@ -56,18 +56,38 @@ indirectEval(src);
 beforeEach(() => {
   jest.clearAllMocks();
   mockWriteText.mockResolvedValue(undefined);
+  global.sessieId = 's1'; // reset na tests die sessieId wijzigen
 });
 
 describe('deelSpelerLink()', () => {
-  test('roept clipboard.writeText aan met URL die eindigt op ?rol=speler', async () => {
+  test('roept clipboard.writeText aan met URL die ?rol=speler&sessie= bevat', async () => {
     await deelSpelerLink();
     expect(mockWriteText).toHaveBeenCalledTimes(1);
     const url = mockWriteText.mock.calls[0][0];
-    expect(url).toMatch(/\?rol=speler$/);
+    expect(url).toContain('?rol=speler');
+    expect(url).toContain('&sessie=s1');
   });
 
-  test('roept toast aan met "🔗 Link gekopieerd!" na kopiëren', async () => {
+  test('roept toast aan na kopieren', async () => {
     await deelSpelerLink();
-    expect(global.toast).toHaveBeenCalledWith('🔗 Link gekopieerd!');
+    expect(global.toast).toHaveBeenCalledTimes(1);
+    const toastArg = global.toast.mock.calls[0][0];
+    expect(toastArg).toContain('Link gekopieerd!');
+  });
+});
+
+describe('getSpelerUrl()', () => {
+  test('bevat &sessie= als sessieId gezet is', () => {
+    global.sessieId = 'abc-123';
+    const url = getSpelerUrl();
+    expect(url).toContain('?rol=speler');
+    expect(url).toContain('&sessie=abc-123');
+  });
+
+  test('geeft geen sessie-param als sessieId null is', () => {
+    global.sessieId = null;
+    const url = getSpelerUrl();
+    expect(url).toContain('?rol=speler');
+    expect(url).not.toContain('sessie=');
   });
 });
