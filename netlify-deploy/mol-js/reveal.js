@@ -1,109 +1,40 @@
 function renderSpelerReveal(state, scoresArr) {
   scoresArr = scoresArr || [];
   const { sessie, leerlingen, cases, antwoorden, groepStemmen, testAntwoorden } = state;
-  const mol        = leerlingen.find(l => l.is_mol);
-  const isMol      = speler.is_mol;
+  const mol          = leerlingen.find(l => l.is_mol);
+  const isMol        = speler.is_mol;
   const heeftGeraden = testAntwoorden.find(a =>
     a.leerling_id === speler.id &&
     (a.verdachte_id === mol?.id || a.mol_verdachte_id === mol?.id)
   );
-  const mijnTest   = testAntwoorden.find(a => a.leerling_id === speler.id);
+  const mijnTest = testAntwoorden.find(a => a.leerling_id === speler.id);
 
-  // Pot-totaal
-  const mijnGroepStems = groepStemmen.filter(s => s.groep_id === speler.groep_id);
-  const potTotaal = mijnGroepStems.reduce((sum, s) => sum + (s.punten || 0), 0);
-
-  document.getElementById('reveal-rol-tag').className = 'topbar-tag ' + (isMol ? 'tag-mol' : 'tag-speler');
-  document.getElementById('reveal-rol-tag').textContent = isMol ? '🕵️ Mol' : '🎓 Speler';
-
-  let html = `<div class="reveal-container">
-    <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.2em;color:var(--gold);margin-bottom:0.5rem;">De Mol is...</div>
-    <div class="reveal-icon">🕵️</div>
-    <div class="reveal-mol-naam">${escH(mol?.naam || '?')}</div>
-    <div style="font-size:0.83rem;color:var(--text2);margin-bottom:2rem;">${escH(mol?.groep_naam || '')} · ${sessie.les_naam}</div>
-  </div>`;
-
-  // Jouw resultaat
-  if (!isMol) {
-    html += `<div class="card ${heeftGeraden ? 'highlight-green' : 'highlight-red'}" style="text-align:center;margin-bottom:1rem;">
-      <div style="font-size:1.5rem;margin-bottom:0.4rem;">${heeftGeraden ? '🎉' : '😅'}</div>
-      <div style="font-weight:700;font-size:0.95rem;color:${heeftGeraden ? 'var(--green-l)' : 'var(--red-l)'};">
-        ${heeftGeraden ? 'Jij had de Mol geraden!' : 'Jij had de Mol niet geraden'}
-      </div>
-      <div style="font-size:0.78rem;color:var(--text2);margin-top:0.25rem;">Jij verdacht: ${escH(leerlingen.find(l => l.id === (mijnTest?.verdachte_id || mijnTest?.mol_verdachte_id))?.naam || '?')}</div>
-    </div>`;
-  } else {
-    html += `<div class="card highlight-red" style="text-align:center;margin-bottom:1rem;">
-      <div style="font-size:1.5rem;margin-bottom:0.4rem;">🕵️</div>
-      <div style="font-weight:700;font-size:0.95rem;color:var(--red-l);">Jij was de Mol</div>
-      <div style="font-size:0.78rem;color:var(--text2);margin-top:0.25rem;">Hoeveel leerlingen raadden het?</div>
-    </div>`;
+  // reveal-rol-tag bestaat alleen in de docent-view — null-safe
+  const rolTagEl = document.getElementById('reveal-rol-tag');
+  if (rolTagEl) {
+    rolTagEl.className   = 'topbar-tag ' + (isMol ? 'tag-mol' : 'tag-speler');
+    rolTagEl.textContent = isMol ? '\u{1F575}\uFE0F Mol' : '\u{1F393} Speler';
   }
 
-  // Pot-punten met percentage en max per groep
-  const maxTotaal = mijnGroepStems.reduce((s, x) => s + (x.max_punten ?? 10), 0);
-  const pct = maxTotaal > 0 ? Math.round((potTotaal / maxTotaal) * 100) : 0;
-  const pctKleur = pct >= 70 ? 'var(--green-l)' : pct >= 40 ? 'var(--gold-l)' : 'var(--red-l)';
-  html += `<div class="card" style="margin-bottom:1rem;">
-    <div class="eind-score-balk">
-      <div class="eind-score-label">
-        <span class="eind-score-naam">Jouw groep — ${escH(speler.groep_naam || '')}</span>
-        <span class="eind-score-perc" style="color:${pctKleur};">${pct}%</span>
-      </div>
-      <div class="eind-score-track">
-        <div class="eind-score-fill" style="width:${pct}%;background:${pctKleur};"></div>
-      </div>
-      <div class="eind-score-detail">${potTotaal} van ${maxTotaal} punten behaald · ${mijnGroepStems.length} ronde${mijnGroepStems.length !== 1 ? 's' : ''}</div>
-    </div>
-    <hr style="border:none;border-top:1px solid var(--border);margin:0.75rem 0;">
-    <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
-      <span style="color:var(--muted);">Behaald</span>
-      <span style="font-family:'DM Mono',monospace;font-weight:700;color:${pctKleur};">${potTotaal} pt</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-top:0.3rem;">
-      <span style="color:var(--muted);">Maximum mogelijk</span>
-      <span style="font-family:'DM Mono',monospace;font-weight:700;color:var(--text2);">${maxTotaal} pt</span>
-    </div>
-    ${maxTotaal > 0 && maxTotaal < mijnGroepStems.length * 10
-      ? `<div style="font-size:0.68rem;color:var(--muted);margin-top:0.35rem;">* Het maximum is lager dan 100% omdat niet alle opties 10 punten waard waren.</div>` : ''}
-  </div>`;
+  // Schrijf mol-naam direct naar bestaand DOM-element
+  document.getElementById('reveal-mol-naam').textContent = mol?.naam || '?';
 
-  // Sabotage teruggespoeld
-  html += `<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--gold);margin-bottom:0.75rem;">📋 Sabotage-momenten</div>`;
-  cases.forEach(c => {
-    const molAntw = antwoorden.find(a => a.leerling_id === mol?.id && a.ronde_nr === c.ronde_nr);
-    html += `<div class="card" style="margin-bottom:0.65rem;">
-      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--blue);margin-bottom:0.4rem;">Ronde ${c.ronde_nr}</div>
-      <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.65rem;">${escH(c.vraag)}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;">
-        <div>
-          <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--green);margin-bottom:0.25rem;">✅ Correct</div>
-          <div style="font-size:0.77rem;color:var(--green-l);line-height:1.5;">${escH(c.correct_uitleg)}</div>
-        </div>
-        <div>
-          <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--red);margin-bottom:0.25rem;">🕵️ Sabotage</div>
-          <div style="font-size:0.77rem;color:var(--red-l);line-height:1.5;">${escH(c.fout_uitleg)}</div>
-          ${molAntw ? `<div style="margin-top:0.4rem;font-size:0.68rem;color:var(--muted);font-style:italic;">"${escH(molAntw.argument)}"</div>` : ''}
-        </div>
-      </div>
-    </div>`;
-  });
+  // Eigen gok — korte samenvatting in #reveal-eigen-gok
+  let eigenGokHtml = '';
+  if (!isMol) {
+    eigenGokHtml = `<span style="color:${heeftGeraden ? 'var(--green-l)' : 'var(--red-l)'};">${heeftGeraden ? '\u{1F389} Jij had de Mol geraden!' : '\u{1F605} Jij had de Mol niet geraden'}</span>`
+      + `<div style="font-size:0.78rem;color:var(--text2);margin-top:0.25rem;">Jij verdacht: ${escH(leerlingen.find(l => l.id === (mijnTest?.verdachte_id || mijnTest?.mol_verdachte_id))?.naam || '?')}</div>`;
+  } else {
+    eigenGokHtml = '<span style="color:var(--red-l);">\u{1F575}\uFE0F Jij was de Mol</span>';
+  }
+  const eigenGokEl = document.getElementById('reveal-eigen-gok');
+  if (eigenGokEl) eigenGokEl.innerHTML = eigenGokHtml;
 
-  // Voeg score-opbouw toe
-  const mijnScore = scoresArr.find(s => s.leerling_id === speler.id);
-  const nRondesReveal = sessieState?.sessie?.n_rondes || 3;
-  const scoreHtml = bouwScoreOpbouw(mijnScore, speler.is_mol, nRondesReveal);
-  html += `<div class="card" style="margin-top:1rem;">
-    <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.18em;
-      color:var(--gold);margin-bottom:0.75rem;">⭐ Jouw score</div>
-    ${scoreHtml}
-  </div>`;
-
-  renderEindstand(leerlingen, scoresArr);
-  document.getElementById('reveal-content').innerHTML = html;
-  // Toon afsluitknop voor leerling
+  // Toon afsluitknop indien aanwezig
   const afsluiting = document.getElementById('reveal-afsluiting');
   if (afsluiting) afsluiting.style.display = 'block';
+
+  renderEindstand(leerlingen, scoresArr);
 }
 
 function renderEindstand(leerlingen, scoresArr) {
