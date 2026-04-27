@@ -99,6 +99,9 @@ Werk volgens CLAUDE.md:
 - TDD: test eerst (rood), dan code (groen)
 - node --check na elke wijziging, npm test na elke werkende stap
 - HTML in HTML, JS in JS (template-patroon)
+- **Lees CLAUDE.md paragraaf "Tooling-beperkingen" voor je eerste
+  wijziging — Edit/Write tools werken niet op bestanden met emoji.
+  Gebruik Python of bash heredoc voor die bestanden.**
 
 Harde regels:
 1. Volg het ticket EXACT. Niks erbij, niks eraf.

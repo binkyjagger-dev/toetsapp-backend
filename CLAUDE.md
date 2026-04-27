@@ -143,3 +143,58 @@ Martijn is een onervaren developer die leert door te doen. Ga uit van:
 
 Liever te uitvoerig dan te beknopt. Vergelijking: schrijf zoals een goede 
 IKEA-handleiding, niet zoals een man-page.
+
+## Tooling-beperkingen (Cowork Edit/Write tools)
+
+De Edit- en Write-tools knippen bestanden af als het doelbestand
+emoji-tekens bevat (UTF-16 surrogate pair probleem). Het bestand lijkt
+opgeslagen maar bevat daarna "Unexpected end of input" bij node --check.
+
+**Aangetaste bestanden (bevatten emoji in broncode):**
+- netlify-deploy/mol-js/docent-sessie.js
+- netlify-deploy/mol-js/speler.js
+- netlify-deploy/mol-lesvorm.html
+
+**Regel: gebruik voor deze bestanden NOOIT Edit of Write.**
+Gebruik altijd de Python str.replace() methode of een bash heredoc.
+
+### Bestaand bestand wijzigen (str_replace via Python)
+
+```python
+python3 << 'ENDOFPYTHON'
+path = 'netlify-deploy/mol-js/docent-sessie.js'
+old  = '// exacte string die vervangen wordt'
+new  = '// nieuwe string'
+with open(path, 'r', encoding='utf-8') as f:
+    src = f.read()
+assert old in src, f"FOUT: old_string niet gevonden in {path}"
+with open(path, 'w', encoding='utf-8') as f:
+    f.write(src.replace(old, new, 1))
+print('OK')
+ENDOFPYTHON
+```
+
+Of via het hulpscript `scripts/safe_replace.py` (zie dat bestand).
+
+### Nieuw testbestand aanmaken (bash heredoc)
+
+```bash
+cat > tests/mijn-test.test.js << 'ENDOFFILE'
+// @jest-environment jsdom
+// ... testcode zonder emoji ...
+// Vermijd emoji in test-assertions; gebruik .toContain() of
+// expect.stringContaining() in plaats van letterlijke emoji-strings.
+ENDOFFILE
+```
+
+### Emoji in test-assertions vermijden
+
+```javascript
+// FOUT — emoji in string triggert truncatie bij Write/Edit:
+expect(result).toContain('🕵️ Mol');
+
+// GOED — matcher zonder letterlijke emoji:
+expect(result).toContain('Mol');
+// of:
+expect(result).toMatch(/Mol/);
+```
