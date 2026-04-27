@@ -557,7 +557,15 @@ function renderGroepshoofBekendmaking(leerlingen, state) {
   const badgeEl = document.getElementById('groepshoofd-eigen-badge');
   if (naamEl)  naamEl.textContent  = hoofd ? hoofd.naam : '—';
   if (badgeEl) badgeEl.style.display = speler.is_groepshoofd ? 'block' : 'none';
-  startCountdown('groepshoofd-countdown', 10, () => {});
+  startCountdown('groepshoofd-countdown', 10, async () => {
+    try {
+      await apiFetch('/api/mol/groep-ronde-start', {
+        method: 'POST',
+        body: JSON.stringify({ sessie_id: sessieId, groep_id: speler.groep_id }),
+      });
+    } catch (_) {}
+    pollSpelerStatus();
+  });
 }
 
 function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngediend,

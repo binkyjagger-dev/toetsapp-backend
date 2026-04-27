@@ -1281,6 +1281,19 @@ app.post('/api/mol/briefing-klaar', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// -- POST /api/mol/groep-ronde-start — groep gaat zelfstandig naar ronde 1 --
+app.post('/api/mol/groep-ronde-start', async (req, res) => {
+  try {
+    const { sessie_id, groep_id } = req.body;
+    if (!sessie_id || !groep_id)
+      return res.status(400).json({ error: 'sessie_id en groep_id verplicht' });
+    await supabase.from('mol_groepen')
+      .update({ fase: 'invoer', ronde_nr: 1 })
+      .eq('id', groep_id)
+      .eq('sessie_id', sessie_id);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // -- POST /api/mol/groepshoofd-stem — leerling stemt op groepshoofd -----------
 app.post('/api/mol/groepshoofd-stem', async (req, res) => {
@@ -1792,8 +1805,9 @@ async function bepaalGroepStatus(sessie_id, groep_id) {
     supabase.from('mol_antwoorden').select('*').eq('sessie_id', sessie_id),
     supabase.from('mol_groep_stemmen').select('*').eq('sessie_id', sessie_id),
     supabase.from('mol_test_antwoorden').select('*').eq('sessie_id', sessie_id),
+    supabase.from('mol_groepen').select('fase, ronde_nr').eq('id', groep_id).single(),
   ]);
-  const [r0, r1, r2, r3, r4, r5] = results.map(r => r || {});
+  const [r0, r1, r2, r3, r4, r5, r6] = results.map(r => r || {});
   const sessie        = r0.data;
   const allLeerlingen = r1.data;
   const briefing      = r2.data;
@@ -1808,8 +1822,12 @@ async function bepaalGroepStatus(sessie_id, groep_id) {
 
   // Briefing fase
   if (status === 'briefing') {
+    const groep    = r6.data;
     const klaarIds = new Set((briefing || []).map(b => b.leerling_id));
     const wacht_op = leerlingIds.filter(id => !klaarIds.has(id));
+    if (wacht_op.length === 0 && groep?.fase === 'invoer') {
+        return { fase: 'invoer', ronde_nr: groep.ronde_nr || 1, wacht_op: [] };
+    }
     return { fase: wacht_op.length === 0 ? 'ronde_1' : 'briefing', ronde_nr: 1, wacht_op };
   }
 
