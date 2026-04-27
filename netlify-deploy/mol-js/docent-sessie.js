@@ -239,6 +239,7 @@ let autoStartGetriggerd = false;
 async function refreshDashboardData() {
   const data = await apiFetch('/api/mol/sessies/' + sessieId + '/dashboard');
   const sessie = data.sessie || {};
+  if (data.sessie?.docent_code) docentCode = data.sessie.docent_code;
   const stats  = data.stats  || {};
   document.getElementById('dashboard-sessie-naam').textContent = sessie.les_naam || 'Sessie';
   document.getElementById('dashboard-klas-naam').textContent   = sessie.klas_naam || '';
@@ -257,8 +258,12 @@ async function refreshDashboardData() {
       g => g.spelers.length > 0 && g.spelers.every(s => s.online)
     );
     if (eenCompleet) {
-      autoStartGetriggerd = true;
-      await docentActie('briefing', 0);
+      try {
+        await docentActie('briefing', 0);
+        autoStartGetriggerd = true;
+      } catch(e) {
+        // vlag blijft false — volgende poll probeert opnieuw
+      }
     }
   }
 }
@@ -433,7 +438,7 @@ function renderDocentFase(sessie, leerlingen, groepen, cases, antwoorden, groepS
     // Check welke groepen compleet online zijn
     const groepStatus = groepen.map(g => {
       const leden = leerlingen.filter(l => l.groep_id === g.id);
-      const onlineCount = leden.filter(l => l.online_at && (nu2 - l.online_at) < 90000).length;
+      const onlineCount = leden.filter(l => l.online_at && (nu2 - l.online_at) < 30000).length;
       return { naam: g.naam, online: onlineCount, totaal: leden.length, compleet: onlineCount === leden.length && leden.length > 0 };
     });
     const eenCompleet = groepStatus.some(g => g.compleet);

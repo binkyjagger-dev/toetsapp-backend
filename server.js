@@ -1865,7 +1865,7 @@ app.get('/api/mol/sessies/:id/dashboard', verifyToken, async (req, res) => {
   try {
     const sid = req.params.id;
     const [{ data: sessie }, { data: groepen }, { data: leerlingen }] = await Promise.all([
-      supabase.from('mol_sessies').select('id, sessie_code, les_naam, klas_naam, status, leraar_id').eq('id', sid).single(),
+      supabase.from('mol_sessies').select('id, sessie_code, les_naam, klas_naam, status, leraar_id, docent_code').eq('id', sid).single(),
       supabase.from('mol_groepen').select('id, naam, fase').eq('sessie_id', sid),
       supabase.from('mol_leerlingen').select('id, naam, groep_id, is_groepshoofd, online_at').eq('sessie_id', sid),
     ]);
@@ -1876,7 +1876,7 @@ app.get('/api/mol/sessies/:id/dashboard', verifyToken, async (req, res) => {
     const spelersByGroep = {};
     let totalOnline = 0;
     (leerlingen || []).forEach(l => {
-      const online = l.online_at !== null && (nu - l.online_at) < 90000;
+      const online = l.online_at !== null && (nu - l.online_at) < 30000;
       if (online) totalOnline++;
       if (!spelersByGroep[l.groep_id]) spelersByGroep[l.groep_id] = [];
       spelersByGroep[l.groep_id].push({
@@ -1885,7 +1885,7 @@ app.get('/api/mol/sessies/:id/dashboard', verifyToken, async (req, res) => {
     });
 
     res.json({
-      sessie: { id: sessie.id, sessie_code: sessie.sessie_code, les_naam: sessie.les_naam, klas_naam: sessie.klas_naam, status: sessie.status },
+      sessie: { id: sessie.id, sessie_code: sessie.sessie_code, les_naam: sessie.les_naam, klas_naam: sessie.klas_naam, status: sessie.status, docent_code: sessie.docent_code },
       groepen: (groepen || []).map(g => ({ id: g.id, naam: g.naam, fase: g.fase, spelers: spelersByGroep[g.id] || [] })),
       stats: { online: totalOnline, aantal_groepen: (groepen || []).length, status_label: sessie.status === 'afgelopen' ? 'Gestopt' : 'Actief' },
     });

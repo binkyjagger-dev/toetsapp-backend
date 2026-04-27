@@ -4,6 +4,10 @@
  * TICKET-010 -- auto-start briefing
  * Verifieert dat refreshDashboardData() automatisch docentActie('briefing', 0)
  * aanroept zodra minstens een groep volledig online is en status 'setup' is.
+ *
+ * TICKET-011 -- twee scenario's toegevoegd:
+ * - autoStartGetriggerd blijft false als docentActie gooit (fix A)
+ * - docentCode wordt bijgewerkt vanuit dashboard-response (fix B)
  */
 
 const fs = require('fs');
@@ -51,9 +55,9 @@ const src = fs.readFileSync(
 );
 const indirectEval = eval;
 
-function maakData(status, groepen) {
+function maakData(status, groepen, docent_code) {
   return {
-    sessie: { id: 's1', sessie_code: 'AB7X', les_naam: 'Test', klas_naam: 'H4A', status },
+    sessie: { id: 's1', sessie_code: 'AB7X', les_naam: 'Test', klas_naam: 'H4A', status, docent_code: docent_code || null },
     groepen,
     stats: { online: 1, aantal_groepen: groepen.length, status_label: 'Test' },
   };
@@ -61,11 +65,10 @@ function maakData(status, groepen) {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  global.sessieId = 'test-sid';
-  document.body.innerHTML = DASHBOARD_IDS.map(id => `<div id="${id}"></div>`).join('');
-  // Re-eval reset module-level let-variabelen (incl. autoStartGetriggerd)
+  global.sessieId   = 'test-sid';
+  global.docentCode = null;
+  document.body.innerHTML = DASHBOARD_IDS.map(id => '<div id="' + id + '"></div>').join('');
   indirectEval(src);
-  // Mock docentActie NA de eval (eval definieert de echte functie opnieuw)
   global.docentActie = jest.fn().mockResolvedValue({});
   global.apiFetch    = jest.fn();
 });
@@ -103,8 +106,25 @@ describe('auto-start briefing', () => {
     const groepen = [{ id: 'g1', naam: 'A', fase: null,
       spelers: [{ id: 'sp1', naam: 'Anna', online: true }] }];
     global.apiFetch.mockResolvedValue(maakData('setup', groepen));
-    await refreshDashboardData(); // eerste aanroep: triggert
-    await refreshDashboardData(); // tweede aanroep: vlag staat op true
+    await refreshDashboardData();
+    await refreshDashboardData();
     expect(global.docentActie).toHaveBeenCalledTimes(1);
+  });
+
+  test('autoStartGetriggerd blijft false als docentActie gooit', async () => {
+    const groepen = [{ id: 'g1', naam: 'A', fase: null,
+      spelers: [{ id: 'sp1', naam: 'Anna', online: true }] }];
+    global.apiFetch.mockResolvedValue(maakData('setup', groepen));
+    global.docentActie = jest.fn().mockRejectedValue(new Error('403 Forbidden'));
+    await refreshDashboardData();
+    await refreshDashboardData();
+    expect(global.docentActie).toHaveBeenCalledTimes(2);
+  });
+
+  test('docentCode wordt bijgewerkt vanuit dashboard-response', async () => {
+    const groepen = [{ id: 'g1', naam: 'A', fase: null, spelers: [] }];
+    global.apiFetch.mockResolvedValue(maakData('setup', groepen, 'ABC123'));
+    await refreshDashboardData();
+    expect(global.docentCode).toBe('ABC123');
   });
 });

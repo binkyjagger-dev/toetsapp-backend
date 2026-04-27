@@ -51,7 +51,7 @@ function startHeartbeat() {
   // Meteen één keer sturen
   sendHeartbeat();
   // Daarna elke 20 seconden
-  heartbeatTimer = setInterval(sendHeartbeat, 20000);
+  heartbeatTimer = setInterval(sendHeartbeat, 10000);
 }
 
 function stopHeartbeat() {
@@ -114,7 +114,7 @@ async function pollSpelerStatus() {
   if (sessie.status === 'setup') {
     const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
     const nu3 = Date.now();
-    const onlineInGroep = mijnGroep.filter(l => l.online_at && (nu3 - l.online_at) < 90000).length;
+    const onlineInGroep = mijnGroep.filter(l => l.online_at && (nu3 - l.online_at) < 30000).length;
     const wTitle = document.querySelector('#screen-speler-wacht-briefing .page-title');
     const wSub   = document.querySelector('#screen-speler-wacht-briefing .page-sub');
     if (wTitle) wTitle.textContent = 'Wachten op groepsleden...';
