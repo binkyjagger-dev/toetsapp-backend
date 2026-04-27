@@ -333,9 +333,9 @@ function renderSpelerBriefing(leerlingen, groepen, sessie) {
   const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
   const groepNaam = mijnGroep.length > 0 ? mijnGroep[0].groep_naam : 'Jouw groep';
   const sec = document.getElementById('speler-briefing-sectie');
-  sec.style.display = 'block';
-  document.querySelector('#screen-speler-wacht .page-title').textContent = 'Jij bent in ' + groepNaam;
-  document.querySelector('#screen-speler-wacht .page-sub').textContent = 'Jouw groepsleden:';
+  if (!sec) return;
+  document.getElementById('briefing-speler-naam').textContent = speler.naam || '—';
+  document.getElementById('briefing-groep-naam').textContent = groepNaam;
 
   // ── Eerste keer: volledige render ────────────────────────────────────────────
   if (!briefingGerenderd) {
