@@ -234,6 +234,7 @@ function startPoll(fn, interval = 4000) {
 
 let dashboardPollInterval = null;
 let dashboardPollFails = 0;
+let autoStartGetriggerd = false;
 
 async function refreshDashboardData() {
   const data = await apiFetch('/api/mol/sessies/' + sessieId + '/dashboard');
@@ -250,6 +251,16 @@ async function refreshDashboardData() {
   if (stats.status_label === 'Actief')  statusEl.classList.add('status-actief');
   if (stats.status_label === 'Gestopt') statusEl.classList.add('status-gestopt');
   renderGroepskaarten(data.groepen || []);
+  // Auto-start: zodra een groep volledig online is, sessie naar briefing
+  if (data.sessie.status === 'setup' && !autoStartGetriggerd) {
+    const eenCompleet = (data.groepen || []).some(
+      g => g.spelers.length > 0 && g.spelers.every(s => s.online)
+    );
+    if (eenCompleet) {
+      autoStartGetriggerd = true;
+      await docentActie('briefing', 0);
+    }
+  }
 }
 
 async function renderDocentSessie() {
@@ -777,6 +788,7 @@ function startSessie(id, dCode, sCode) {
   sessieId   = id;
   docentCode = dCode;
   sessieCode = sCode;
+  autoStartGetriggerd = false;
   renderDocentSessie();
 }
 
