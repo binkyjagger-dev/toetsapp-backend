@@ -158,10 +158,17 @@ async function pollSpelerStatus() {
     const timerStemSec   = getFaseTimerSec(sessie, cases, ronde, 'stem');
     const faseTijd       = sessie.fase_gestart_op || Date.now();
     const mijnGroepVotes = (groepVotes || []).filter(v => v.groep_id === speler.groep_id && v.ronde_nr === ronde);
-    renderSpelerRonde(ronde, sessie.n_rondes, caseRonde, mijnAntwoord, alleIngediend,
-      alleAntwoorden, groepStem, mijnGroep, leerlingen,
-      'invoer', faseTijd, timerDiscSec, timerStemSec, mijnGroepVotes, scores || []);
-    showScreen('screen-speler-ronde');
+    if (mijnAntwoord && !alleIngediend) {
+      // Scherm 6: eigen antwoord ingediend, wachten op groepsgenoten
+      renderWachtNaIndienen(mijnAntwoord, mijnGroep, alleAntwoorden);
+      showScreen('screen-speler-wacht-ronde');
+    } else {
+      // Scherm 5: nog niet ingediend -- of iedereen al klaar (discussie volgt via poll)
+      renderSpelerRonde(ronde, sessie.n_rondes, caseRonde, mijnAntwoord, alleIngediend,
+        alleAntwoorden, groepStem, mijnGroep, leerlingen,
+        'invoer', faseTijd, timerDiscSec, timerStemSec, mijnGroepVotes, scores || []);
+      showScreen('screen-speler-ronde');
+    }
     return;
   }
 
@@ -190,6 +197,27 @@ async function pollSpelerStatus() {
     renderSpelerReveal(sessieState, scores || []);
     showScreen('screen-speler-reveal');
     return;
+  }
+}
+
+// Scherm 6: vult screen-speler-wacht-ronde na indienen individueel antwoord.
+// Wordt aangeroepen vanuit pollSpelerStatus zodra mijnAntwoord gezet is
+// maar nog niet iedereen in de groep heeft ingediend.
+function renderWachtNaIndienen(mijnAntwoord, mijnGroep, alleAntwoorden) {
+  const eigenEl = document.getElementById('wacht-ronde-eigen');
+  const gridEl  = document.getElementById('wacht-ronde-grid');
+  if (eigenEl) {
+    eigenEl.innerHTML =
+      '<div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;' +
+      'letter-spacing:0.08em;margin-bottom:0.3rem;">Jouw antwoord</div>' +
+      '<div style="font-weight:700;color:#fff;">' + escH(mijnAntwoord.antwoord || '') + '</div>';
+  }
+  if (gridEl) {
+    gridEl.innerHTML = mijnGroep.map(function(l) {
+      var klaar = alleAntwoorden.some(function(a) { return a.leerling_id === l.id; });
+      return '<div class="wacht-chip ' + (klaar ? 'klaar' : '') + '">' +
+        '<div class="dot"></div>' + escH(l.naam.split(' ')[0]) + '</div>';
+    }).join('');
   }
 }
 
@@ -649,23 +677,6 @@ function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngedie
     if (speler.is_mol) {
       setTimeout(() => selecteerOptie('fout'), 100);
     }
-  } else if (!alleIngediend) {
-    // FASE B: Eigen antwoord ingediend — wachten op anderen
-    faseLabel.textContent = `Ronde ${rondeNr} — Stap ② Wachten`;
-    const wachtLijst = mijnGroep.map(l => {
-      const isKlaar = alleAntwoorden.some(a => a.leerling_id === l.id);
-      return `<div class="wacht-chip ${isKlaar ? 'klaar' : ''}">
-        <div class="dot"></div>${escH(l.naam.split(' ')[0])}
-      </div>`;
-    }).join('');
-
-    content.innerHTML = `<div style="text-align:center;padding:1.5rem 0 1rem;">
-      <div style="font-size:2rem;margin-bottom:0.75rem;">✅</div>
-      <div style="font-weight:700;font-size:0.95rem;color:#fff;margin-bottom:0.3rem;">Jouw antwoord is ingediend</div>
-      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1.25rem;">Wachten tot iedereen klaar is...</p>
-      <div class="wacht-grid">${wachtLijst}</div>
-    </div>`;
-
   } else if (!groepStem && (faseSrv === 'stem' || (faseSrv === 'invoer' && alleIngediend))) {
     // STEM: kies groepsantwoord (direct na invoer, geen discussiefase)
     faseLabel.textContent = `Ronde ${rondeNr} — Stap ③ Groepsstemming`;
