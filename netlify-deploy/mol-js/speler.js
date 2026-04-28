@@ -158,12 +158,13 @@ async function pollSpelerStatus() {
     const timerStemSec   = getFaseTimerSec(sessie, cases, ronde, 'stem');
     const faseTijd       = sessie.fase_gestart_op || Date.now();
     const mijnGroepVotes = (groepVotes || []).filter(v => v.groep_id === speler.groep_id && v.ronde_nr === ronde);
-    if (mijnAntwoord && !alleIngediend) {
-      // Scherm 6: eigen antwoord ingediend, wachten op groepsgenoten
-      renderWachtNaIndienen(mijnAntwoord, mijnGroep, alleAntwoorden);
+    if (mijnAntwoord) {
+      // Scherm 6: eigen antwoord ingediend -- wachten op overgang naar discussie
+      // Ook tonen als alleIngediend=true: overgang naar discussie volgt via volgende poll
+      renderWachtNaIndienen(mijnAntwoord, mijnGroep, alleAntwoorden, caseRonde);
       showScreen('screen-speler-wacht-ronde');
     } else {
-      // Scherm 5: nog niet ingediend -- of iedereen al klaar (discussie volgt via poll)
+      // Scherm 5: speler heeft nog niet ingediend
       renderSpelerRonde(ronde, sessie.n_rondes, caseRonde, mijnAntwoord, alleIngediend,
         alleAntwoorden, groepStem, mijnGroep, leerlingen,
         'invoer', faseTijd, timerDiscSec, timerStemSec, mijnGroepVotes, scores || []);
@@ -201,22 +202,53 @@ async function pollSpelerStatus() {
 }
 
 // Scherm 6: vult screen-speler-wacht-ronde na indienen individueel antwoord.
-// Wordt aangeroepen vanuit pollSpelerStatus zodra mijnAntwoord gezet is
-// maar nog niet iedereen in de groep heeft ingediend.
-function renderWachtNaIndienen(mijnAntwoord, mijnGroep, alleAntwoorden) {
-  const eigenEl = document.getElementById('wacht-ronde-eigen');
-  const gridEl  = document.getElementById('wacht-ronde-grid');
+// caseData optioneel: gebruikt voor leesbare antwoordtekst bij MC-vragen.
+function renderWachtNaIndienen(mijnAntwoord, mijnGroep, alleAntwoorden, caseData) {
+  // Topbar vullen
+  const naamEl = document.getElementById('wacht-ronde-topbar-naam');
+  if (naamEl && speler) {
+    naamEl.textContent = (speler.naam || '') + (speler.groep_naam ? ' · ' + speler.groep_naam : '');
+  }
+
+  // Leesbare antwoordtekst ophalen
+  var antwoordTekst = mijnAntwoord.antwoord || '';
+  if (caseData && caseData.mc_opties && mijnAntwoord.mc_optie_id) {
+    var gevonden = caseData.mc_opties.find(function(o) { return o.id === mijnAntwoord.mc_optie_id; });
+    if (gevonden) antwoordTekst = gevonden.tekst;
+  } else if (antwoordTekst === 'correct') {
+    antwoordTekst = 'Correct antwoord';
+  } else if (antwoordTekst === 'fout') {
+    antwoordTekst = 'Alternatief antwoord';
+  }
+
+  // "Jouw antwoord" kaart vullen
+  var eigenEl = document.getElementById('wacht-ronde-eigen');
   if (eigenEl) {
     eigenEl.innerHTML =
-      '<div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;' +
-      'letter-spacing:0.08em;margin-bottom:0.3rem;">Jouw antwoord</div>' +
-      '<div style="font-weight:700;color:#fff;">' + escH(mijnAntwoord.antwoord || '') + '</div>';
+      '<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;' +
+      'letter-spacing:0.1em;color:var(--muted);margin-bottom:0.4rem;">Jouw antwoord</div>' +
+      '<div style="font-weight:700;color:#fff;font-size:0.95rem;">' + escH(antwoordTekst) + '</div>';
   }
+
+  // Statuslijst vullen met avatar-initialen en badge
+  var gridEl = document.getElementById('wacht-ronde-grid');
   if (gridEl) {
     gridEl.innerHTML = mijnGroep.map(function(l) {
       var klaar = alleAntwoorden.some(function(a) { return a.leerling_id === l.id; });
-      return '<div class="wacht-chip ' + (klaar ? 'klaar' : '') + '">' +
-        '<div class="dot"></div>' + escH(l.naam.split(' ')[0]) + '</div>';
+      var delen = l.naam.trim().split(' ');
+      var initialen = (delen[0][0] + (delen[1] ? delen[1][0] : '')).toUpperCase();
+      return '<div style="display:flex;align-items:center;justify-content:space-between;' +
+        'padding:0.6rem 0.75rem;border-bottom:1px solid var(--border);">' +
+        '<div style="display:flex;align-items:center;gap:0.65rem;">' +
+        '<div style="width:2rem;height:2rem;border-radius:50%;background:var(--bg3);' +
+        'display:flex;align-items:center;justify-content:center;font-size:0.7rem;' +
+        'font-weight:700;color:var(--muted);">' + escH(initialen) + '</div>' +
+        '<span style="font-size:0.88rem;color:#fff;">' + escH(delen[0]) + '</span>' +
+        '</div>' +
+        (klaar
+          ? '<span style="font-size:0.75rem;color:var(--green);font-weight:600;">✓ Ingediend</span>'
+          : '<span style="font-size:0.75rem;color:var(--muted);">Bezig…</span>') +
+        '</div>';
     }).join('');
   }
 }
