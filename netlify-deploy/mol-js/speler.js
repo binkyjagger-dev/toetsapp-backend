@@ -281,7 +281,7 @@ async function renderDiscussiescherm() {
         <div id="discussie-vraag" class="card" style="margin-bottom:1rem;">${escH(vraagTekst)}</div>
         <div id="discussie-gh-opties">` +
         opties.map(o => `
-          <div class="gh-optie" data-optie="${escH(o.id || o.tekst)}" style="cursor:pointer;padding:0.65rem 0.85rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.4rem;" onclick="geselecteerdeOptie='${escH(o.id || o.tekst)}'">
+          <div class="gh-optie" data-optie="${escH(o.id || o.tekst)}" style="cursor:pointer;padding:0.65rem 0.85rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.4rem;" onclick="geselecteerdeOptie='${escH(o.id || o.tekst)}'; document.getElementById('disc-groepsantwoord-knop').disabled=false; document.querySelectorAll('.gh-optie').forEach(function(el){el.style.border='1px solid var(--border)'; el.style.background=''}); this.style.border='1px solid var(--gold)'; this.style.background='rgba(200,169,81,0.08)';">
             <span>${escH(o.tekst)}</span>
             ${(o.id === eigenId || o.tekst === eigenId) ? '<span class="tag-jij" style="margin-left:0.5rem;color:var(--gold);">jij</span>' : ''}
           </div>`).join('') +
@@ -300,12 +300,44 @@ async function renderDiscussiescherm() {
     }
   }
 
+  // Topbar vullen (Bug E)
+  var topNaamEl = document.getElementById('discussie-speler-naam');
+  if (topNaamEl && speler) {
+    topNaamEl.textContent = (speler.naam || '') + (speler.groep_naam ? ' · ' + speler.groep_naam : '');
+  }
+
+  // Leesbare eigen antwoordtekst bepalen (Bug C)
+  var eigenTekst = '';
+  if (res.eigen_antwoord) {
+    if (res.opties && res.eigen_antwoord.mc_optie_id) {
+      var gevOpt = res.opties.find(function(o) { return o.id === res.eigen_antwoord.mc_optie_id; });
+      eigenTekst = gevOpt ? gevOpt.tekst : res.eigen_antwoord.antwoord || '';
+    } else if (res.eigen_antwoord.antwoord === 'correct') {
+      eigenTekst = 'Correct antwoord';
+    } else if (res.eigen_antwoord.antwoord === 'fout') {
+      eigenTekst = 'Alternatief antwoord';
+    } else {
+      eigenTekst = res.eigen_antwoord.antwoord || '';
+    }
+  }
+  if (eigenEl) eigenEl.textContent = eigenTekst;
+
   if (res.is_groepshoofd) {
-    if (instrEl) instrEl.textContent = 'Kies het groepsantwoord en druk op Groepsantwoord';
-    if (btnEl) btnEl.style.display = 'block';
+    // Bug G: vervang Discussiefase-banner door groepshoofd-banner (andere stijl + tekst)
+    var bannerEl = document.getElementById('discussie-banner');
+    if (bannerEl) {
+      bannerEl.style.background = 'rgba(200,169,81,0.10)';
+      bannerEl.style.borderColor = 'rgba(200,169,81,0.35)';
+      bannerEl.innerHTML = '<strong style="color:var(--gold);">👑 Jij bent het groepshoofd</strong>' +
+        '<div id="disc-instructie" style="font-size:0.82rem;color:var(--muted);margin-top:0.3rem;">' +
+        'Bespreek samen welk antwoord de groep kiest, selecteer het en druk op Groepsantwoord indienen.' +
+        '</div>';
+    }
+    if (btnEl) { btnEl.style.display = 'block'; btnEl.disabled = true; }
   } else {
+    // Gewone speler (Bug F)
     if (hoofdEl) hoofdEl.textContent = res.groepshoofd_naam || '';
-    if (instrEl) instrEl.textContent = 'Kies als groep voor een uniform antwoord en bespreek wat het antwoord wordt';
+    if (instrEl) instrEl.textContent = 'Bespreek samen welk antwoord de groep kiest';
     if (btnEl) btnEl.style.display = 'none';
   }
   showScreen('screen-speler-discussie');
