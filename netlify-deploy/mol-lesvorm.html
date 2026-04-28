@@ -1218,14 +1218,14 @@ select { cursor: pointer; }
 <div id="screen-speler-ronde" class="screen">
   <div class="topbar">
     <div class="topbar-brand" id="ronde-speler-naam">—</div>
-    <div class="topbar-right"><span class="topbar-tag tag-speler" id="ronde-tag">Ronde 1</span></div>
+    <div class="topbar-right"><span class="topbar-tag tag-speler" id="ronde-topbar-label">Ronde</span></div>
+  </div>
+  <div style="height:4px;background:var(--bg2);margin:-1px 0 0;">
+    <div id="ronde-progress" style="height:100%;width:40%;background:var(--gold);transition:width 0.4s;"></div>
   </div>
   <div class="content">
-    <div style="background:rgba(200,169,81,0.08);border:1px solid rgba(200,169,81,0.25);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:var(--gold-l);">
-      Kies het antwoord dat jij het meest juist vindt. Denk goed na — je antwoord telt mee voor jouw eindscore.
-    </div>
-    <div id="ronde-vraag-container"></div>
-    <button class="btn btn-gold btn-full" id="ronde-submit-btn" disabled onclick="submitRondeAntwoord()">Antwoord indienen →</button>
+    <div id="ronde-fase-label" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.75rem;"></div>
+    <div id="ronde-content"></div>
   </div>
 </div>
 
