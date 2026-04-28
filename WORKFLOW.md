@@ -99,6 +99,13 @@ Werk volgens CLAUDE.md:
 - TDD: test eerst (rood), dan code (groen)
 - node --check na elke wijziging, npm test na elke werkende stap
 - HTML in HTML, JS in JS (template-patroon)
+- **HTML/JS-contract controleren bij render-functies:** raak je een
+  functie aan die `getElementById` gebruikt, grep dan alle IDs die die
+  functie opvraagt en controleer of ze bestaan in mol-lesvorm.html:
+  `grep 'id="<het-id>"' netlify-deploy/mol-lesvorm.html`
+  Ontbreekt een ID én maakt de functie het niet zelf aan in innerHTML?
+  Dan hoort een HTML-fix in hetzelfde ticket. Zonder die fix faalt de
+  DOM-contracttest (tests/dom-contract.test.js).
 - **Lees CLAUDE.md paragraaf "Tooling-beperkingen" voor je eerste
   wijziging — Edit/Write tools werken niet op bestanden met emoji.
   Gebruik Python of bash heredoc voor die bestanden.**
