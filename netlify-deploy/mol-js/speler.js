@@ -612,20 +612,9 @@ function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngedie
       ${caseData.context ? `<div class="case-context">${escH(caseData.context)}</div>` : ''}
     </div>`;
 
-    // Mol ziet het foute argument
-    if (speler.is_mol) {
-      html += `<div class="mol-secret" style="margin-bottom:1rem;">
-        <div class="mol-secret-title" style="font-size:0.88rem;">🕵️ Jouw sabotage-instructie</div>
-        <div class="mol-fout-arg">
-          <div class="mol-fout-label">Argument dat jij moet verdedigen</div>
-          <div class="mol-fout-text">${escH(caseData.fout_uitleg)}</div>
-        </div>
-      </div>`;
-    }
-
     const isMc = caseData.vraagtype === 'mc' && caseData.mc_opties && caseData.mc_opties.length > 0;
     html += `<div class="card">
-      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.75rem;color:#fff;">${isMc ? 'Kies het juiste antwoord' : 'Kies jouw standpunt'}</div>
+      <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;line-height:1.5;">Kies het antwoord dat jij het meest juist vindt. Denk goed na — je antwoord telt mee voor jouw eindscore.</div>
       <div class="antwoord-opties" id="keuze-opties">
         ${isMc
           ? caseData.mc_opties.map((o, i) =>
@@ -641,10 +630,8 @@ function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngedie
         }
       </div>
     </div>
-    <div class="card" id="argument-sectie" style="display:none;">
-      <div style="font-weight:700;font-size:0.88rem;margin-bottom:0.5rem;color:#fff;">Onderbouw jouw keuze</div>
-      <textarea id="argument-input" rows="4" placeholder="Leg uit waarom jij dit antwoord kiest. Gebruik economische begrippen uit de les." autocomplete="off"></textarea>
-      <button class="btn btn-gold btn-full" style="margin-top:0.75rem;" id="submit-antwoord-btn" onclick="submitAntwoord(${rondeNr})">
+    <div style="margin-top:1rem;">
+      <button class="btn btn-gold btn-full" id="submit-antwoord-btn" style="display:none;" onclick="submitAntwoord(${rondeNr})">
         Antwoord indienen →
       </button>
       <div id="antwoord-error" class="error-msg"></div>
@@ -652,23 +639,16 @@ function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngedie
 
     content.innerHTML = html;
 
-    // Leeg het tekstveld altijd bij een nieuwe render van de invoer-fase
+    // Zorg dat de indienknop verborgen start bij nieuwe render
     setTimeout(() => {
-      const ta = document.getElementById('argument-input');
-      if (ta) ta.value = '';
-      const sec = document.getElementById('argument-sectie');
-      if (sec) sec.style.display = 'none';
+      const btn = document.getElementById('submit-antwoord-btn');
+      if (btn) btn.style.display = 'none';
     }, 10);
 
     // Mol heeft vaste keuze (fout)
     if (speler.is_mol) {
       setTimeout(() => selecteerOptie('fout'), 100);
     }
-    // Update opties naar MC als vraagtype mc is
-    if (caseData.vraagtype === 'mc' && caseData.mc_opties && caseData.mc_opties.length > 0) {
-      setTimeout(() => renderMcKeuzeVoorSpeler(caseData, rondeNr), 50);
-    }
-
   } else if (!alleIngediend) {
     // FASE B: Eigen antwoord ingediend — wachten op anderen
     faseLabel.textContent = `Ronde ${rondeNr} — Stap ② Wachten`;
@@ -788,7 +768,8 @@ function selecteerOptie(optie) {
   geselecteerdeOptie = optie;
   document.querySelectorAll('.antwoord-optie').forEach(b => b.classList.remove('selected'));
   document.getElementById('opt-' + optie)?.classList.add('selected');
-  document.getElementById('argument-sectie').style.display = 'block';
+  const btn = document.getElementById('submit-antwoord-btn');
+  if (btn) btn.style.display = 'block';
 }
 
 function selecteerMcOptie(optieId, correctheid) {
@@ -796,13 +777,8 @@ function selecteerMcOptie(optieId, correctheid) {
   geselecteerdeMcOptieId = optieId;
   document.querySelectorAll('.antwoord-optie').forEach(b => b.classList.remove('selected'));
   document.getElementById('opt-' + optieId)?.classList.add('selected');
-  // Bij MC geen open tekstveld — pre-fill argument met optie-tekst
-  const argInput = document.getElementById('argument-input');
-  const gekozenOptie = document.querySelector(`#opt-${optieId}`);
-  if (argInput && gekozenOptie) {
-    argInput.value = gekozenOptie.innerText.trim().replace(/^[A-D]\s+/, '');
-  }
-  document.getElementById('argument-sectie').style.display = 'block';
+  const btn = document.getElementById('submit-antwoord-btn');
+  if (btn) btn.style.display = 'block';
 }
 
 function selecteerGroepsLid(id) {
@@ -814,10 +790,8 @@ function selecteerGroepsLid(id) {
 }
 
 async function submitAntwoord(rondeNr) {
-  const arg = document.getElementById('argument-input')?.value.trim();
   const err = document.getElementById('antwoord-error');
-  if (!geselecteerdeOptie) { err.textContent = 'Kies een standpunt.'; err.style.display='block'; return; }
-  if (!arg || arg.length < 10) { err.textContent = 'Geef een onderbouwing (minimaal 10 tekens).'; err.style.display='block'; return; }
+  if (!geselecteerdeOptie) { err.textContent = 'Kies eerst een antwoord.'; err.style.display='block'; return; }
   err.style.display = 'none';
   const btn = document.getElementById('submit-antwoord-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Indienen...';
@@ -829,7 +803,7 @@ async function submitAntwoord(rondeNr) {
         ronde_nr:     rondeNr,
         leerling_id:  speler.id,
         antwoord:     geselecteerdeOptie,
-        argument:     arg,
+        argument:     '',
         mc_optie_id:  geselecteerdeMcOptieId || null,
       }),
     });
