@@ -1401,20 +1401,7 @@ app.post('/api/mol/antwoord', async (req, res) => {
     }]);
     if (error) return res.status(500).json({ error: error.message });
 
-    // Check of alle leerlingen nu ingediend hebben → direct naar discussie
-    const { data: alleLeerlingen } = await supabase
-      .from('mol_leerlingen').select('id').eq('sessie_id', sessie_id);
-    const { data: alleAntwoorden } = await supabase
-      .from('mol_antwoorden').select('id').eq('sessie_id', sessie_id).eq('ronde_nr', ronde_nr);
-    const iederKlaar = alleLeerlingen && alleAntwoorden &&
-      alleAntwoorden.length >= alleLeerlingen.length;
-    if (iederKlaar) {
-      // Sla discussiefase over — direct naar stemfase
-      await supabase.from('mol_sessies')
-        .update({ ronde_fase: 'stem', fase_gestart_op: Date.now() })
-        .eq('id', sessie_id);
-    }
-    res.json({ ok: true, ieder_klaar: iederKlaar });
+    res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
