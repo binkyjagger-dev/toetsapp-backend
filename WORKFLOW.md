@@ -249,8 +249,8 @@ Self-check:
 Opgemerkt, niet opgepakt:
   - <observatie>
 
-Commit-instructie voor Martijn (uitvoeren in PowerShell):
-  1. Open PowerShell in de projectmap
+Commit-instructie voor Martijn (uitvoeren in de terminal):
+  1. Open een terminal in de projectmap
   2. Voer uit:
        git add <bestand1> <bestand2>
        git commit -m "TICKET-XXX: <samenvatting>"

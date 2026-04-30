@@ -16,7 +16,7 @@
 - Draai npm test — alle tests groen?
 - npm test draait automatisch lint:html mee
 - Een syntaxfout in index.html laat npm test nu falen voor je deployt
-- **Handmatige stap voor Martijn (PowerShell, niet door de agent):**
+- **Handmatige stap voor Martijn (terminal, niet door de agent):**
   `git add . && git commit -m "beschrijving"`
 
 ## Nooit
@@ -137,7 +137,7 @@ wijzigen), schrijf dan:
 
 Martijn is een onervaren developer die leert door te doen. Ga uit van:
 - Hij heeft geen parate kennis van CLI-tools, dashboards, of conventies
-- Hij heeft geen Linux-ervaring — alle commando's moeten in PowerShell werken
+- Hij werkt sinds april 2026 op Linux Mint 22.3. Commando's gebruiken bash-syntax (geen PowerShell).
 - Hij kan fouten herstellen als hij begrijpt wat er gebeurt, niet als hij 
   alleen een commando kopieert zonder context
 
