@@ -1813,7 +1813,28 @@ async function bepaalGroepStatus(sessie_id, groep_id) {
     const klaarIds = new Set((briefing || []).map(b => b.leerling_id));
     const wacht_op = leerlingIds.filter(id => !klaarIds.has(id));
     if (wacht_op.length === 0 && groep?.fase === 'invoer') {
-        return { fase: 'invoer', ronde_nr: groep.ronde_nr || 1, wacht_op: [] };
+      // Groep is door /api/mol/groep-ronde-start naar 'invoer' gezet
+      // (TICKET-013). Fase nu per groep afleiden uit antwoorden en
+      // groep_stemmen — analoog aan de ronde-tak hieronder.
+      const r = groep.ronde_nr || 1;
+      const heeftStem = (groepStemmen || []).some(
+        s => s.groep_id === groep_id && s.ronde_nr === r
+      );
+      if (heeftStem) {
+        return { fase: 'resultaat', ronde_nr: r, wacht_op: [] };
+      }
+      const antIds   = new Set((antwoorden || [])
+        .filter(a => a.ronde_nr === r).map(a => a.leerling_id));
+      const wachtAnt = leerlingIds.filter(id => !antIds.has(id));
+      if (wachtAnt.length === 0) {
+        const groepshoofd = leerlingen.find(l => l.is_groepshoofd);
+        return {
+          fase:     'discussie',
+          ronde_nr: r,
+          wacht_op: groepshoofd ? [groepshoofd.id] : [],
+        };
+      }
+      return { fase: 'invoer', ronde_nr: r, wacht_op: wachtAnt };
     }
     return { fase: wacht_op.length === 0 ? 'ronde_1' : 'briefing', ronde_nr: 1, wacht_op };
   }
