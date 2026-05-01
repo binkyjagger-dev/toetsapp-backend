@@ -1989,17 +1989,33 @@ app.post('/api/mol/sessies/:id/antwoord', async (req, res) => {
 app.get('/api/mol/sessies/:id/discussie-data', async (req, res) => {
   try {
     const { leerling_id, groep_id } = req.query;
-    const [r0, r1] = (await Promise.all([
+    const [r0, r1, r2, r3] = (await Promise.all([
       supabase.from('mol_leerlingen').select('*').eq('sessie_id', req.params.id),
       supabase.from('mol_antwoorden').select('*').eq('sessie_id', req.params.id),
+      supabase.from('mol_groepen').select('ronde_nr').eq('id', groep_id).single(),
+      supabase.from('mol_cases').select('*').eq('sessie_id', req.params.id),
     ])).map(r => r || {});
     const all = r0.data;
     const antw = r1.data;
+    const groep = r2.data;
+    const cases = r3.data || [];
+    const ronde_nr = groep?.ronde_nr || 1;
+    const caseR = cases.find(c => c.ronde_nr === ronde_nr);
+
     const leden = (all || []).filter(l => l.groep_id === groep_id);
     const mij = leden.find(l => l.id === leerling_id);
     const hoofd = leden.find(l => l.is_groepshoofd);
-    const eigen_antwoord = (antw || []).find(a => a.leerling_id === leerling_id) || null;
+    const eigen_antwoord = (antw || []).find(
+      a => a.leerling_id === leerling_id && a.ronde_nr === ronde_nr
+    ) || null;
+
+    const opties = (caseR?.mc_opties || []).map(o => ({ id: o.id, tekst: o.tekst }));
+
     res.json({
+      vraag_tekst:       caseR?.vraag || '',
+      vraagtype:         caseR?.vraagtype || 'mc',
+      ronde_nr,
+      opties,
       eigen_antwoord,
       andere_antwoorden: [],
       groepshoofd_id:    hoofd?.id || '',
