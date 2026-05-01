@@ -110,6 +110,7 @@ async function pollSpelerStatus() {
 
   const fase = groepStatus.fase;
   const ronde = groepStatus.ronde_nr || 1;
+  huidigeRondeNr = ronde;
 
   if (sessie.status === 'setup') {
     const mijnGroep = leerlingen.filter(l => l.groep_id === speler.groep_id);
@@ -179,7 +180,7 @@ async function pollSpelerStatus() {
   }
 
   if (fase === 'resultaat') {
-    await renderFeedbackScherm();
+    renderGroepsantwoordWachten(ronde);
     return;
   }
 
@@ -348,7 +349,7 @@ async function renderFeedbackScherm() {
     '/api/mol/sessies/' + sessieId +
     '/ronde-feedback?leerling_id=' + encodeURIComponent(speler.id) +
     '&groep_id=' + encodeURIComponent(speler.groep_id) +
-    '&ronde_nr=' + (speler.ronde_nr || 1)
+    '&ronde_nr=' + huidigeRondeNr
   );
 
   const scoreVal = document.getElementById('feedback-score-val');
@@ -400,7 +401,7 @@ async function submitGroepsantwoord() {
       leerling_id: speler.id,
       groep_id: speler.groep_id,
       antwoord,
-      ronde_nr: speler.ronde_nr || 1,
+      ronde_nr: huidigeRondeNr,
     }),
   });
   renderGroepsantwoordBevestiging(antwoord);
@@ -418,6 +419,45 @@ function renderGroepsantwoordBevestiging(antwoord) {
   if (tekstEl) tekstEl.textContent = antwoord;
   if (doorEl)  doorEl.textContent  = hoofd ? hoofd.naam : '---';
   startCountdown('groepsantwoord-countdown', 5, () => { pollSpelerStatus(); });
+}
+
+function renderGroepsantwoordWachten(rondeNr) {
+  if (lastRenderedFase === 'ronde_' + rondeNr + '_resultaat') return;
+  lastRenderedFase = 'ronde_' + rondeNr + '_resultaat';
+
+  const groepStem = (sessieState && sessieState.groepStemmen || []).find(
+    s => s.groep_id === speler.groep_id && s.ronde_nr === rondeNr
+  );
+  const caseR = (sessieState && sessieState.cases || []).find(c => c.ronde_nr === rondeNr);
+  const leden = (sessieState && sessieState.leerlingen || []).filter(l => l.groep_id === speler.groep_id);
+  const hoofd = leden.find(l => l.is_groepshoofd);
+
+  let antwoordTekst = (groepStem && groepStem.gekozen_argument) || '';
+  const optie = ((caseR && caseR.mc_opties) || []).find(o => o.id === antwoordTekst || o.tekst === antwoordTekst);
+  if (optie) antwoordTekst = optie.tekst;
+  else if (antwoordTekst === 'correct') antwoordTekst = 'Correct antwoord';
+  else if (antwoordTekst === 'fout')    antwoordTekst = 'Alternatief antwoord';
+
+  const tekstEl = document.getElementById('groepsantwoord-tekst');
+  const doorEl  = document.getElementById('groepsantwoord-door');
+  if (tekstEl) tekstEl.textContent = antwoordTekst;
+  if (doorEl)  doorEl.textContent  = (hoofd && hoofd.naam) || '---';
+
+  showScreen('screen-speler-groepsantwoord');
+  startCountdown('groepsantwoord-countdown', 10, async () => {
+    try {
+      await apiFetch('/api/mol/groep-volgende-fase', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessie_id: sessieId,
+          groep_id:  speler.groep_id,
+          huidige_ronde_nr: rondeNr,
+        }),
+      });
+    } catch (_) {}
+    lastRenderedFase = null;
+    pollSpelerStatus();
+  });
 }
 
 

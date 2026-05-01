@@ -11,6 +11,7 @@ let lastAutoAdvance = '';
 
 // ── Speler state ─────────────────────────────────────────
 let speler      = null;
+let huidigeRondeNr = 1;
 let testVerdachteId = null;
 let testRondeNr     = null;
 let testIngediend   = false;

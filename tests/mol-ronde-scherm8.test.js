@@ -30,6 +30,7 @@ describe('MOL-03 Fix 1 — scherm 8 na submitGroepsantwoord', () => {
     global.geselecteerdeMcOptieId = null;
     global.pollTimer = null;
     global.heartbeatTimer = null;
+    global.huidigeRondeNr = 1;
     global.showScreen = jest.fn();
     global.toast = jest.fn();
     global.apiFetch = jest.fn().mockResolvedValue({});

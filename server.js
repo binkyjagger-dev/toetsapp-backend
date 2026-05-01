@@ -1295,6 +1295,35 @@ app.post('/api/mol/groep-ronde-start', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// -- POST /api/mol/groep-volgende-fase ---------------------------------------
+// Idempotent: alleen advancen als groep.ronde_nr === huidige_ronde_nr.
+// Volgende ronde: ronde_nr+1, fase=invoer. Laatste ronde: fase=test.
+app.post('/api/mol/groep-volgende-fase', async (req, res) => {
+  try {
+    const { sessie_id, groep_id, huidige_ronde_nr } = req.body;
+    if (!sessie_id || !groep_id || huidige_ronde_nr === undefined) {
+      return res.status(400).json({ error: 'sessie_id, groep_id en huidige_ronde_nr verplicht' });
+    }
+    const [{ data: sessie }, { data: groep }] = await Promise.all([
+      supabase.from('mol_sessies').select('n_rondes').eq('id', sessie_id).single(),
+      supabase.from('mol_groepen').select('ronde_nr, fase').eq('id', groep_id).single(),
+    ]);
+    if (!groep) return res.status(404).json({ error: 'groep niet gevonden' });
+    if (groep.ronde_nr !== huidige_ronde_nr) {
+      return res.json({ ok: true, advanced: false });
+    }
+    const nRondes = sessie?.n_rondes || 1;
+    if (huidige_ronde_nr < nRondes) {
+      await supabase.from('mol_groepen')
+        .update({ ronde_nr: huidige_ronde_nr + 1, fase: 'invoer' })
+        .eq('id', groep_id);
+      return res.json({ ok: true, advanced: true, next: 'ronde', ronde_nr: huidige_ronde_nr + 1 });
+    }
+    await supabase.from('mol_groepen').update({ fase: 'test' }).eq('id', groep_id);
+    res.json({ ok: true, advanced: true, next: 'test' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // -- POST /api/mol/groepshoofd-stem — leerling stemt op groepshoofd -----------
 app.post('/api/mol/groepshoofd-stem', async (req, res) => {
   try {
@@ -1812,6 +1841,9 @@ async function bepaalGroepStatus(sessie_id, groep_id) {
     const groep    = r6.data;
     const klaarIds = new Set((briefing || []).map(b => b.leerling_id));
     const wacht_op = leerlingIds.filter(id => !klaarIds.has(id));
+    if (groep?.fase === 'test') {
+      return { fase: 'test', ronde_nr: groep.ronde_nr || 1, wacht_op: [] };
+    }
     if (wacht_op.length === 0 && groep?.fase === 'invoer') {
       // Groep is door /api/mol/groep-ronde-start naar 'invoer' gezet
       // (TICKET-013). Fase nu per groep afleiden uit antwoorden en

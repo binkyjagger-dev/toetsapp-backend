@@ -28,6 +28,7 @@ describe('Scherm 5 -- individuele vraag', () => {
     global.briefingGedrukt        = false;
     global.briefingGerenderd      = false;
     global.bekendmakingGetoond    = false;
+    global.huidigeRondeNr         = 1;
     global.pollTimer              = null;
     global.heartbeatTimer         = null;
     global.showScreen             = jest.fn();
