@@ -1294,7 +1294,7 @@ select { cursor: pointer; }
       <div id="feedback-score-val" style="font-size:2rem;font-weight:700;"></div>
     </div>
     <div id="feedback-content"></div>
-    <button class="btn btn-gold btn-full" id="feedback-volgende-btn" onclick="naarVolgendeRondeOfTest()">Verder →</button>
+    <button class="btn btn-gold btn-full" id="feedback-volgende-btn" onclick="feedbackVolgendeRonde()">Volgende</button>
   </div>
 </div>
 
@@ -1342,6 +1342,10 @@ select { cursor: pointer; }
       <div class="page-eyebrow">Eindstand</div>
       <div id="reveal-scores-lijst"></div>
     </div>
+    <button class="btn btn-gold btn-full" id="reveal-feedback-btn"
+      onclick="startFeedbackFlow()" style="margin-top:1rem;">
+      Bekijk feedback per ronde
+    </button>
   </div>
 </div>
 

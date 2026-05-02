@@ -344,12 +344,12 @@ async function renderDiscussiescherm() {
   showScreen('screen-speler-discussie');
 }
 
-async function renderFeedbackScherm() {
+async function renderFeedbackScherm(rondeNr) {
   const data = await apiFetch(
     '/api/mol/sessies/' + sessieId +
     '/ronde-feedback?leerling_id=' + encodeURIComponent(speler.id) +
     '&groep_id=' + encodeURIComponent(speler.groep_id) +
-    '&ronde_nr=' + huidigeRondeNr
+    '&ronde_nr=' + rondeNr
   );
 
   const scoreVal = document.getElementById('feedback-score-val');
@@ -377,18 +377,26 @@ async function renderFeedbackScherm() {
           <div class="feedback-uitleg" style="font-size:0.82rem;color:var(--muted);margin-top:0.35rem;">${escH(opt.feedback || '')}</div>
         </div>`).join('')}`;
   }
+  const nRondes = sessieState?.sessie?.n_rondes || 1;
+  const btn = document.getElementById('feedback-volgende-btn');
+  if (btn) {
+    btn.textContent = (rondeNr < nRondes) ? 'Volgende ronde' : 'Naar eindstand';
+  }
   showScreen('screen-speler-feedback');
 }
 
-function naarVolgendeRondeOfTest() {
-  const ronde   = sessieState?.sessie?.huidige_ronde || 1;
+function startFeedbackFlow() {
+  feedbackRondeNr = 1;
+  renderFeedbackScherm(feedbackRondeNr);
+}
+
+function feedbackVolgendeRonde() {
   const nRondes = sessieState?.sessie?.n_rondes || 1;
-  if (ronde < nRondes) {
-    startPoll(pollSpelerStatus, 3500);
+  if (feedbackRondeNr < nRondes) {
+    feedbackRondeNr += 1;
+    renderFeedbackScherm(feedbackRondeNr);
   } else {
-    renderSpelerTest(sessieState.leerlingen, sessieState);
-    showScreen('screen-speler-test');
-    clearInterval(pollTimer);
+    showScreen('screen-speler-reveal');
   }
 }
 

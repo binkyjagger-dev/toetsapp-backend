@@ -21,6 +21,7 @@ let geselecteerdeLidId = null;
 let briefingGerenderd = false;
 let briefingGedrukt = false;
 let groepshoofGedrukt = false;
+let feedbackRondeNr = 1;
 
 // ── Setup state ──────────────────────────────────────────
 let setupData   = {};

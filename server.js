@@ -2207,7 +2207,7 @@ app.get('/api/mol/sessies/:id/ronde-feedback', async (req, res) => {
     const { leerling_id, groep_id, ronde_nr } = req.query;
     const r = parseInt(ronde_nr, 10) || 1;
     const groepStatus = await bepaalGroepStatus(req.params.id, groep_id);
-    if (groepStatus.fase !== 'resultaat') {
+    if (groepStatus.fase !== 'resultaat' && groepStatus.fase !== 'reveal') {
       return res.status(403).json({ error: 'Ronde is nog niet afgerond' });
     }
     const [a, b, c] = (await Promise.all([
