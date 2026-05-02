@@ -159,14 +159,17 @@ describe('TICKET-017 — bepaalGroepStatus na advance', () => {
     expect(res.body.wacht_op).toEqual(['lid1', 'lid2']);
   });
 
-  it('AC7: groep met fase=test → fase=test, ronde_nr behouden, wacht_op=[]', async () => {
+  it('AC7: groep met fase=test → fase=test, ronde_nr behouden, wacht_op=alle leden zonder testantwoord', async () => {
+    // TICKET-018 wijzigt de fase=test-tak: zonder testAntwoorden in
+    // mol_test_antwoorden zijn alle leden nog wachtende. wacht_op
+    // wordt daardoor de volledige ledenlijst (was [] vóór TICKET-018).
     setStatus({ groepFase: 'test', rondeNr: 2 });
     const res = await request(app)
       .get('/api/mol/sessies/sid1/groep-status?groep_id=gid1');
     expect(res.status).toBe(200);
     expect(res.body.fase).toBe('test');
     expect(res.body.ronde_nr).toBe(2);
-    expect(res.body.wacht_op).toEqual([]);
+    expect(res.body.wacht_op.sort()).toEqual(['lid1', 'lid2'].sort());
   });
 
   it('AC8: andere groep met fase=invoer en ronde_nr=1 blijft ongewijzigd', async () => {

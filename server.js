@@ -1611,7 +1611,8 @@ async function berekenScoresIntern(sessie_id) {
     const scores = [];
 
     const aantalCorrectGeraden = (testAntwoorden || []).filter(
-      t => mol && t.leerling_id !== mol.id && t.mol_verdachte_id === mol.id
+      t => mol && t.leerling_id !== mol.id &&
+           (t.verdachte_id || t.mol_verdachte_id) === mol.id
     ).length;
 
     for (const leerling of (leerlingen || [])) {
@@ -1647,7 +1648,8 @@ async function berekenScoresIntern(sessie_id) {
 
         // Mol geraden
         const test = testAntwoorden?.find(t => t.leerling_id === leerling.id);
-        const molGeraden = test && mol && test.mol_verdachte_id === mol.id;
+        const molGeraden = test && mol &&
+          (test.verdachte_id || test.mol_verdachte_id) === mol.id;
         if (molGeraden) {
           const bonus = aantalCorrectGeraden > 0
             ? Math.round((1 / aantalCorrectGeraden) * 50)
@@ -1841,8 +1843,20 @@ async function bepaalGroepStatus(sessie_id, groep_id) {
     const groep    = r6.data;
     const klaarIds = new Set((briefing || []).map(b => b.leerling_id));
     const wacht_op = leerlingIds.filter(id => !klaarIds.has(id));
+    if (groep?.fase === 'reveal') {
+      return { fase: 'reveal', ronde_nr: groep.ronde_nr || 1, wacht_op: [] };
+    }
     if (groep?.fase === 'test') {
-      return { fase: 'test', ronde_nr: groep.ronde_nr || 1, wacht_op: [] };
+      const ingediendIds = new Set(
+        (testAntw || [])
+          .filter(t => leerlingIds.includes(t.leerling_id))
+          .map(t => t.leerling_id)
+      );
+      const wacht_test = leerlingIds.filter(id => !ingediendIds.has(id));
+      if (wacht_test.length === 0 && leerlingIds.length > 0) {
+        return { fase: 'reveal', ronde_nr: groep.ronde_nr || 1, wacht_op: [] };
+      }
+      return { fase: 'test', ronde_nr: groep.ronde_nr || 1, wacht_op: wacht_test };
     }
     if (wacht_op.length === 0 && groep?.fase === 'invoer') {
       // Groep is door /api/mol/groep-ronde-start naar 'invoer' gezet
@@ -2095,12 +2109,36 @@ app.post('/api/mol/sessies/:id/groepsantwoord', async (req, res) => {
 // -- POST /api/mol/sessies/:id/test --
 app.post('/api/mol/sessies/:id/test', async (req, res) => {
   try {
+    const sid = req.params.id;
     const { leerling_id, verdachte_id } = req.body;
     await supabase.from('mol_test_antwoorden').upsert([{
-      id: `test_${req.params.id}_${leerling_id}`,
-      sessie_id: req.params.id, leerling_id,
+      id: `test_${sid}_${leerling_id}`,
+      sessie_id: sid, leerling_id,
       verdachte_id, submitted_at: Date.now(),
     }]);
+    // Per-groep completion-check: zet fase op 'reveal' en bereken
+    // scores zodra alle leden van de groep een testantwoord hebben.
+    const { data: speler } = await supabase.from('mol_leerlingen')
+      .select('groep_id').eq('id', leerling_id).single();
+    const groep_id = speler?.groep_id;
+    if (groep_id) {
+      const { data: groep } = await supabase.from('mol_groepen')
+        .select('fase').eq('id', groep_id).single();
+      if (groep?.fase !== 'reveal') {
+        const { data: leden } = await supabase.from('mol_leerlingen')
+          .select('id').eq('sessie_id', sid).eq('groep_id', groep_id);
+        const { data: tests } = await supabase.from('mol_test_antwoorden')
+          .select('leerling_id').eq('sessie_id', sid);
+        const ledenIds = new Set((leden || []).map(l => l.id));
+        const ingediend = (tests || [])
+          .filter(t => ledenIds.has(t.leerling_id)).length;
+        if (ledenIds.size > 0 && ingediend >= ledenIds.size) {
+          await berekenScoresIntern(sid);
+          await supabase.from('mol_groepen')
+            .update({ fase: 'reveal' }).eq('id', groep_id);
+        }
+      }
+    }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2149,7 +2187,8 @@ app.get('/api/mol/sessies/:id/resultaten', verifyToken, async (req, res) => {
     const ledenIds = new Set(leden.map(l => l.id));
     const correctGeraden = new Set(
       (testAntw || [])
-        .filter(t => ledenIds.has(t.leerling_id) && t.verdachte_id === mol_id)
+        .filter(t => ledenIds.has(t.leerling_id) &&
+                     (t.verdachte_id || t.mol_verdachte_id) === mol_id)
         .map(t => t.leerling_id)
     );
     const scores = (scoresData || []).filter(s => ledenIds.has(s.leerling_id));
