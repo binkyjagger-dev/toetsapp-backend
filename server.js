@@ -2111,11 +2111,14 @@ app.post('/api/mol/sessies/:id/test', async (req, res) => {
   try {
     const sid = req.params.id;
     const { leerling_id, verdachte_id } = req.body;
-    await supabase.from('mol_test_antwoorden').upsert([{
-      id: `test_${sid}_${leerling_id}`,
-      sessie_id: sid, leerling_id,
-      verdachte_id, submitted_at: Date.now(),
-    }]);
+    const { error: insertErr } = await supabase
+      .from('mol_test_antwoorden').upsert([{
+        id: `test_${sid}_${leerling_id}`,
+        sessie_id: sid, leerling_id,
+        mol_verdachte_id: verdachte_id,
+        submitted_at: Date.now(),
+      }]);
+    if (insertErr) return res.status(500).json({ error: insertErr.message });
     // Per-groep completion-check: zet fase op 'reveal' en bereken
     // scores zodra alle leden van de groep een testantwoord hebben.
     const { data: speler } = await supabase.from('mol_leerlingen')
