@@ -102,6 +102,9 @@ describe('Fix 2 — berekenScoresIntern: mc_opties.punten voor individueel antwo
     const calls = scoresChain.upsert.mock.calls;
     const spelerCall = calls.find(c => c[0][0].leerling_id === 'speler-1');
     expect(spelerCall).toBeDefined();
+    // Oud: 8 (indiv 8 + groep 0 + mol_geraden 0).
+    // Nieuw: 8 (indiv 8 + groep 0 + mol_geraden 0 — TICKET-022, formule
+    // ongewijzigd voor deze fixture: geen groepsantwoord, raadt WRONG).
     expect(spelerCall[0][0].totaal).toBe(8);
   });
 
@@ -115,6 +118,7 @@ describe('Fix 2 — berekenScoresIntern: mc_opties.punten voor individueel antwo
     const calls = scoresChain.upsert.mock.calls;
     const spelerCall = calls.find(c => c[0][0].leerling_id === 'speler-1');
     expect(spelerCall).toBeDefined();
+    // Oud: 0. Nieuw: 0 (TICKET-022 — indiv 0 + geen groep + raadt WRONG).
     expect(spelerCall[0][0].totaal).toBe(0);
   });
 });
@@ -149,8 +153,10 @@ describe('Fix 3 — berekenScoresIntern: proportionele Mol-test bonus', () => {
     const calls = scoresChain.upsert.mock.calls;
     const s1 = calls.find(c => c[0][0].leerling_id === 'speler-1');
     const s2 = calls.find(c => c[0][0].leerling_id === 'speler-2');
-    expect(s1[0][0].totaal).toBe(25);
-    expect(s2[0][0].totaal).toBe(25);
+    // Oud: 25 (round(1/2 * 50)). Nieuw: 10 (TICKET-022 —
+    // detectivePot/raders = (10+10*1)/2 = 10).
+    expect(s1[0][0].totaal).toBe(10);
+    expect(s2[0][0].totaal).toBe(10);
   });
 
   it('Test 4: 0 spelers raden mol correct -> bonus = 0 (geen deling door nul)', async () => {
@@ -167,6 +173,8 @@ describe('Fix 3 — berekenScoresIntern: proportionele Mol-test bonus', () => {
 
     const calls = scoresChain.upsert.mock.calls;
     const s1 = calls.find(c => c[0][0].leerling_id === 'speler-1');
+    // Oud: 0. Nieuw: 0 (TICKET-022 — speler raadt WRONG, geen indiv,
+    // geen groep → mol_geraden 0).
     expect(s1[0][0].totaal).toBe(0);
   });
 
@@ -184,7 +192,10 @@ describe('Fix 3 — berekenScoresIntern: proportionele Mol-test bonus', () => {
 
     const calls = scoresChain.upsert.mock.calls;
     const molCall = calls.find(c => c[0][0].leerling_id === 'mol-1');
-    expect(molCall[0][0].totaal).toBe(50);
+    // Oud: 50 (round(1*50)). Nieuw: 30 (TICKET-022 —
+    // indiv 0 + rolbonus 10 + sabotage 0 (cases leeg) +
+    // niet_ontmaskerd round((1-0/1) * (10+10*1)) = 20 → totaal 30).
+    expect(molCall[0][0].totaal).toBe(30);
   });
 
   it('Test 6: Mol krijgt 0 pts als alle niet-mol spelers hem raden', async () => {
@@ -203,6 +214,9 @@ describe('Fix 3 — berekenScoresIntern: proportionele Mol-test bonus', () => {
 
     const calls = scoresChain.upsert.mock.calls;
     const molCall = calls.find(c => c[0][0].leerling_id === 'mol-1');
-    expect(molCall[0][0].totaal).toBe(0);
+    // Oud: 0 (round((1-1/1)*50)=0). Nieuw: 10 (TICKET-022 —
+    // indiv 0 + rolbonus 10 + sabotage 0 +
+    // niet_ontmaskerd round((1-1/1) * 20) = 0 → totaal 10).
+    expect(molCall[0][0].totaal).toBe(10);
   });
 });

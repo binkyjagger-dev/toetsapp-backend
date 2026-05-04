@@ -82,6 +82,12 @@ function bouwScoreOpbouw(score, isMol, nRondes) {
     if (molPt !== undefined) rijen.push({ label: 'Mol correct geraden', val: molPt });
   } else {
     for (let r = 1; r <= nRondes; r++) {
+      const ind = opbouw['ronde_' + r + '_individueel'];
+      if (ind !== undefined) rijen.push({ label: `Ronde ${r} — individueel antwoord`, val: ind });
+    }
+    const rol = opbouw['mol_rolbonus'];
+    if (rol !== undefined) rijen.push({ label: 'Mol-rolbonus', val: rol });
+    for (let r = 1; r <= nRondes; r++) {
       const sab = opbouw['ronde_' + r + '_sabotage'];
       if (sab !== undefined) rijen.push({ label: `Ronde ${r} — sabotage geslaagd`, val: sab });
     }

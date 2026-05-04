@@ -12,6 +12,7 @@ const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
+const SCORE = require('./lib/scoreConfig');
 
 const app = express();
 app.use(cors());
@@ -1591,6 +1592,24 @@ app.post('/api/mol/test-antwoord', async (req, res) => {
 });
 
 // -- Score-berekening (intern) -------------------------------------------------
+// TICKET-022: nieuwe puntenverdeling-spec. Constants uit lib/scoreConfig.js.
+
+function bepaalFoutePerRonde(antwoorden, cases, leerlingen, mol, r) {
+  const caseR = (cases || []).find(c => c.ronde_nr === r);
+  if (!caseR?.mc_opties || caseR.mc_opties.length === 0) return 0;
+  const maxPunten  = Math.max(...caseR.mc_opties.map(o => o.punten || 0));
+  const correctIds = new Set(
+    caseR.mc_opties.filter(o => (o.punten || 0) === maxPunten).map(o => o.id)
+  );
+  const nietMolIds = new Set(
+    (leerlingen || []).filter(l => !l.is_mol).map(l => l.id)
+  );
+  return (antwoorden || [])
+    .filter(a => a.ronde_nr === r && nietMolIds.has(a.leerling_id))
+    .filter(a => !correctIds.has(a.mc_optie_id))
+    .length;
+}
+
 async function berekenScoresIntern(sessie_id) {
   try {
     const [
@@ -1606,82 +1625,80 @@ async function berekenScoresIntern(sessie_id) {
       supabase.from('mol_cases').select('*').eq('sessie_id', sessie_id),
     ]);
 
-    const mol = leerlingen?.find(l => l.is_mol);
-    const nRondes = sessie?.n_rondes || 3;
-    const scores = [];
-
-    const aantalCorrectGeraden = (testAntwoorden || []).filter(
+    const mol           = (leerlingen || []).find(l => l.is_mol);
+    const nietMolCount  = (leerlingen || []).filter(l => !l.is_mol).length;
+    const nRondes       = sessie?.n_rondes || 3;
+    const detectivePot  = SCORE.DETECTIVE_BASIS + SCORE.DETECTIVE_PER_RONDE * nRondes;
+    const aantalRaders  = (testAntwoorden || []).filter(
       t => mol && t.leerling_id !== mol.id &&
            (t.verdachte_id || t.mol_verdachte_id) === mol.id
     ).length;
 
+    const scores = [];
+
     for (const leerling of (leerlingen || [])) {
-      const isMol = leerling.is_mol;
+      const isMol  = leerling.is_mol;
       const opbouw = {};
-      let totaal = 0;
+      let totaal  = 0;
 
-      if (!isMol) {
-        // -- Niet-Mol scoring ----------------------------------
-        let indivPunten = 0;
-        for (let r = 1; r <= nRondes; r++) {
-          const ant     = antwoorden?.find(a => a.leerling_id === leerling.id && a.ronde_nr === r);
-          const molCase = cases?.find(c => c.ronde_nr === r);
-          const opties  = molCase?.mc_opties || [];
-          const optie   = opties.find(o => o.id === ant?.mc_optie_id);
-          const pnt     = optie?.punten || 0;
-          indivPunten += pnt;
-          opbouw['ronde_' + r + '_individueel'] = pnt;
-        }
-        totaal += indivPunten;
-
-        // Groepsantwoord punten
-        let groepPunten = 0;
-        for (let r = 1; r <= nRondes; r++) {
-          const stem = groepStemmen?.find(s => s.groep_id === leerling.groep_id && s.ronde_nr === r);
-          if (stem) {
-            const bonus = stem.is_correct ? 10 : -5;
-            groepPunten += bonus;
-            opbouw['ronde_' + r + '_groep'] = bonus;
-          }
-        }
-        totaal += groepPunten;
-
-        // Mol geraden
-        const test = testAntwoorden?.find(t => t.leerling_id === leerling.id);
-        const molGeraden = test && mol &&
-          (test.verdachte_id || test.mol_verdachte_id) === mol.id;
-        if (molGeraden) {
-          const bonus = aantalCorrectGeraden > 0
-            ? Math.round((1 / aantalCorrectGeraden) * 50)
-            : 0;
-          totaal += bonus;
-          opbouw['mol_geraden'] = bonus;
-        } else {
-          opbouw['mol_geraden'] = 0;
-        }
-      } else {
-        // -- Mol scoring ---------------------------------------
-        for (let r = 1; r <= nRondes; r++) {
-          const stem = groepStemmen?.find(s => s.groep_id === leerling.groep_id && s.ronde_nr === r);
-          if (stem && !stem.is_correct) {
-            totaal += 20;
-            opbouw['ronde_' + r + '_sabotage'] = 20;
-          } else {
-            opbouw['ronde_' + r + '_sabotage'] = 0;
-          }
-        }
-        const nietMolCount = leerlingen.filter(l => !l.is_mol).length;
-        const molBonus = nietMolCount > 0
-          ? Math.round((1 - (aantalCorrectGeraden / nietMolCount)) * 50)
-          : 0;
-        totaal += molBonus;
-        opbouw['niet_ontmaskerd'] = molBonus;
+      // Individuele MC — voor iedereen (mol speelt mee).
+      for (let r = 1; r <= nRondes; r++) {
+        const ant   = (antwoorden || []).find(a => a.leerling_id === leerling.id && a.ronde_nr === r);
+        const caseR = (cases || []).find(c => c.ronde_nr === r);
+        const optie = (caseR?.mc_opties || []).find(o => o.id === ant?.mc_optie_id);
+        const pnt   = optie?.punten || 0;
+        opbouw['ronde_' + r + '_individueel'] = pnt;
+        totaal += pnt;
       }
 
-      // Clamp op 0
+      if (!isMol) {
+        // Groepsantwoord +5 / -2.
+        for (let r = 1; r <= nRondes; r++) {
+          const stem = (groepStemmen || []).find(
+            s => s.groep_id === leerling.groep_id && s.ronde_nr === r
+          );
+          if (stem) {
+            const bonus = stem.is_correct ? SCORE.GROEP_CORRECT : SCORE.GROEP_FOUT;
+            opbouw['ronde_' + r + '_groep'] = bonus;
+            totaal += bonus;
+          }
+        }
+
+        // Mol-rader-bonus: detectivePot / aantalRaders.
+        const test = (testAntwoorden || []).find(t => t.leerling_id === leerling.id);
+        const heeftGeraden = test && mol &&
+          (test.verdachte_id || test.mol_verdachte_id) === mol.id;
+        const bonus = heeftGeraden && aantalRaders > 0
+          ? Math.round(detectivePot / aantalRaders)
+          : 0;
+        opbouw['mol_geraden'] = bonus;
+        totaal += bonus;
+
+      } else {
+        // Mol-rolbonus.
+        opbouw['mol_rolbonus'] = SCORE.MOL_ROLBONUS;
+        totaal += SCORE.MOL_ROLBONUS;
+
+        // Sabotage per ronde = 3 * foutePerRonde (niet-mollen die niet-max kozen).
+        for (let r = 1; r <= nRondes; r++) {
+          const fout = bepaalFoutePerRonde(antwoorden, cases, leerlingen, mol, r);
+          const sab  = SCORE.SABOTAGE_PER_FOUT * fout;
+          opbouw['ronde_' + r + '_sabotage'] = sab;
+          totaal += sab;
+        }
+
+        // Niet-ontmaskerd-bonus: (1 - raders/nietMol) * pot.
+        const ontmFactor = nietMolCount > 0
+          ? (1 - aantalRaders / nietMolCount)
+          : 0;
+        const ontm = Math.round(ontmFactor * detectivePot);
+        opbouw['niet_ontmaskerd'] = ontm;
+        totaal += ontm;
+      }
+
       totaal = Math.max(0, totaal);
       scores.push({
-        id:         `score_${sessie_id}_${leerling.id}`,
+        id:          `score_${sessie_id}_${leerling.id}`,
         sessie_id,
         leerling_id: leerling.id,
         totaal,
@@ -1689,7 +1706,6 @@ async function berekenScoresIntern(sessie_id) {
       });
     }
 
-    // Sla scores op
     for (const score of scores) {
       await supabase.from('mol_scores').upsert([score]);
     }
