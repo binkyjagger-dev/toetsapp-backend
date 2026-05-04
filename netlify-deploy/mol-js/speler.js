@@ -785,9 +785,16 @@ function renderSpelerRonde(rondeNr, nRondes, caseData, mijnAntwoord, alleIngedie
       if (btn) btn.style.display = 'none';
     }, 10);
 
-    // Mol heeft vaste keuze (fout)
+    // Mol heeft vaste keuze: sabotage-default.
     if (speler.is_mol) {
-      setTimeout(() => selecteerOptie('fout'), 100);
+      setTimeout(() => {
+        const isMc = caseData.vraagtype === 'mc' && caseData.mc_opties && caseData.mc_opties.length > 0;
+        if (isMc) {
+          selecteerMcOptie(kiesMolSabotageOptie(caseData.mc_opties).id, 'fout');
+        } else {
+          selecteerOptie('fout');
+        }
+      }, 100);
     }
   } else if (!groepStem && (faseSrv === 'stem' || (faseSrv === 'invoer' && alleIngediend))) {
     // STEM: kies groepsantwoord (direct na invoer, geen discussiefase)
@@ -902,6 +909,13 @@ function selecteerMcOptie(optieId, correctheid) {
   document.getElementById('opt-' + optieId)?.classList.add('selected');
   const btn = document.getElementById('submit-antwoord-btn');
   if (btn) btn.style.display = 'block';
+}
+
+// Mol-sabotage: kies de eerste MC-optie die niet de max-punten heeft.
+// Fallback: eerste optie als alle opties dezelfde punten hebben.
+function kiesMolSabotageOptie(mcOpties) {
+  const maxP = Math.max(...mcOpties.map(o => o.punten || 0));
+  return mcOpties.find(o => (o.punten || 0) !== maxP) || mcOpties[0];
 }
 
 function selecteerGroepsLid(id) {
